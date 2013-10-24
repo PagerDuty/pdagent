@@ -9,9 +9,6 @@
 # http://developer.pagerduty.com/documentation/integration/events
 #
 
-import json
-import urllib2
-
 from pdagentutil import integration_api_post
 
 
@@ -27,7 +24,7 @@ def trigger_event(service_key, incident_key, description):
     print "Triggering incident..."
     http_code, result = integration_api_post(d)
     print "HTTP status code:", http_code
-    print "Response JSON:", repr(result)
+    print "Response data:", repr(result)
     if result["status"] == "success":
         incident_key = result["incident_key"]
         print "Success! incident_key =", incident_key
