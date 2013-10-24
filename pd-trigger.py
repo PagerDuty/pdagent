@@ -12,7 +12,8 @@
 import json
 import urllib2
 
-EVENTS_API_BASE = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+from pdagentutil import integration_api_post
+
 
 def trigger_event(service_key, incident_key, description):
     d = {
@@ -23,18 +24,10 @@ def trigger_event(service_key, incident_key, description):
     if incident_key:
         d["incident_key"] = incident_key
 
-    #print repr(d)
-    j = json.dumps(d)
-    #print repr(j)
-    
-    request = urllib2.Request(EVENTS_API_BASE)
-    request.add_header("Content-type", "application/json")
-    request.add_data(j)
-
     print "Triggering incident..."
-    response = urllib2.urlopen(request)
-    result = json.loads(response.read())
-
+    http_code, result = integration_api_post(d)
+    print "HTTP status code:", http_code
+    print "Response JSON:", repr(result)
     if result["status"] == "success":
         incident_key = result["incident_key"]
         print "Success! incident_key =", incident_key
@@ -42,7 +35,7 @@ def trigger_event(service_key, incident_key, description):
         print "Error! Reason:", str(response)
 
 
-def main():
+def build_opt_parser():
     from optparse import OptionParser, make_option
     usage = "Usage: %prog -s <service-key> [-i <incident-key>] -d <description> [-f KEY=VALUE ...]"
     option_list = [
@@ -50,12 +43,13 @@ def main():
         make_option("-i", "--incident-key", dest="incident_key", help="Incident Key"),
         make_option("-d", "--description", dest="description", help="Short description of the problem"),
         ]
-    parser = OptionParser(usage, option_list)
+    return OptionParser(usage, option_list)
 
+def main():
+    parser = build_opt_parser()
     (options, args) = parser.parse_args()
-
     if len(args):
-        parser.error("incorrect number of arguments")
+        parser.error("Incorrect number of arguments")
     if not options.service_key:
         parser.error("Service key is required")
     if not options.description:
