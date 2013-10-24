@@ -1,6 +1,6 @@
 #
 # Python script to trigger an incident in PagerDuty.
-# 
+#
 # Copyright (c) 2013, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
 #
@@ -26,4 +26,14 @@ def integration_api_post(data):
     result = json.loads(response.read())
 
     return http_code, result
+
+
+def build_send_opt_parser(usage):
+    from optparse import OptionParser, make_option
+    option_list = [
+        make_option("-s", "--service-key", dest="service_key", help="Service API Key"),
+        make_option("-i", "--incident-key", dest="incident_key", help="Incident Key"),
+        make_option("-d", "--description", dest="description", help="Short description of the problem"),
+        ]
+    return OptionParser(usage, option_list)
 
