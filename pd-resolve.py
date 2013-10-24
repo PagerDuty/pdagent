@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Python script to acknowledge an incident in PagerDuty.
+# Python script to resolve an incident in PagerDuty.
 #
 # Copyright (c) 2013, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
@@ -12,15 +12,15 @@
 from pdagentutil import integration_api_post, build_send_opt_parser
 
 
-def acknowledge_event(service_key, incident_key, description):
+def resolve_event(service_key, incident_key, description):
     d = {
         "service_key": service_key,
-        "event_type": "acknowledge",
+        "event_type": "resolve",
         "incident_key": incident_key,
         "description": description
     }
 
-    print "Acknowledging incident..."
+    print "Resolving incident..."
     http_code, result = integration_api_post(d)
     print "HTTP status code:", http_code
     print "Response data:", repr(result)
@@ -39,7 +39,7 @@ def main():
     if not options.service_key:
         parser.error("Service key is required")
 
-    acknowledge_event(options.service_key, options.incident_key, options.description)
+    resolve_event(options.service_key, options.incident_key, options.description)
 
 if __name__ == "__main__":
     main()
