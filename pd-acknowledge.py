@@ -9,18 +9,19 @@
 # http://developer.pagerduty.com/documentation/integration/events
 #
 
-from pdagentutil import integration_api_post, build_send_opt_parser
+from pdagentutil import integration_api_post, build_send_opt_parser, parse_fields
 
 
-def acknowledge_event(service_key, incident_key, description):
+def acknowledge_event(service_key, incident_key, description, details):
     d = {
         "service_key": service_key,
         "event_type": "acknowledge",
         "incident_key": incident_key,
+        "details": details,
     }
     if description is not None:
         d["description"] = description
-    print repr(d)
+
     print "Acknowledging incident..."
     http_code, result = integration_api_post(d)
     print "HTTP status code:", http_code
@@ -40,7 +41,8 @@ def main():
     if not options.service_key:
         parser.error("Service key is required")
 
-    acknowledge_event(options.service_key, options.incident_key, options.description)
+    details = parse_fields(options.fields)
+    acknowledge_event(options.service_key, options.incident_key, options.description, details)
 
 if __name__ == "__main__":
     main()
