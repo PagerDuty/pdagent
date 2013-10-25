@@ -9,29 +9,7 @@
 # http://developer.pagerduty.com/documentation/integration/events
 #
 
-from pdagentutil import integration_api_post, build_send_opt_parser, parse_fields
-
-
-def trigger_event(service_key, incident_key, description, details):
-    d = {
-        "service_key": service_key,
-        "event_type": "trigger",
-        "description": description,
-        "details": details,
-    }
-    if incident_key:
-        d["incident_key"] = incident_key
-
-    print "Triggering incident..."
-    http_code, result = integration_api_post(d)
-    print "HTTP status code:", http_code
-    print "Response data:", repr(result)
-    if result["status"] == "success":
-        incident_key = result["incident_key"]
-        print "Success! incident_key =", incident_key
-    else:
-        print "Error! Reason:", str(response)
-
+from pdagentutil import send_event, build_send_opt_parser, parse_fields
 
 def main():
     usage = "Usage: %prog -s <service-key> [-i <incident-key>] -d <description> [-f KEY=VALUE ...]"
@@ -45,7 +23,7 @@ def main():
         parser.error("Problem description is required")
 
     details = parse_fields(options.fields)
-    trigger_event(options.service_key, options.incident_key, options.description, details)
+    send_event("trigger", options.service_key, options.incident_key, options.description, details)
 
 if __name__ == "__main__":
     main()
