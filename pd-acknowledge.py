@@ -17,9 +17,10 @@ def acknowledge_event(service_key, incident_key, description):
         "service_key": service_key,
         "event_type": "acknowledge",
         "incident_key": incident_key,
-        "description": description
     }
-
+    if description is not None:
+        d["description"] = description
+    print repr(d)
     print "Acknowledging incident..."
     http_code, result = integration_api_post(d)
     print "HTTP status code:", http_code

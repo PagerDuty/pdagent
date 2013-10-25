@@ -17,8 +17,10 @@ def resolve_event(service_key, incident_key, description):
         "service_key": service_key,
         "event_type": "resolve",
         "incident_key": incident_key,
-        "description": description
     }
+    if description is not None:
+        d["description"] = description
+    print repr(d)
 
     print "Resolving incident..."
     http_code, result = integration_api_post(d)
