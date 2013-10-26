@@ -1,5 +1,5 @@
 #
-# Python script to trigger an incident in PagerDuty.
+# Python utility module for sending events to PagerDuty Integration API.
 #
 # Copyright (c) 2013, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
