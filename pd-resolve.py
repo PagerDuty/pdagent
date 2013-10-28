@@ -9,10 +9,9 @@
 # http://developer.pagerduty.com/documentation/integration/events
 #
 
-from pdagentutil import send_event, build_send_opt_parser, parse_fields
-
 
 def main():
+    from pdagent.pdagentutil import send_event, build_send_opt_parser, parse_fields
     usage = "Usage: %prog -s <service-key> -i <incident-key> [-d <description>] [-f KEY=VALUE ...]"
     parser = build_send_opt_parser(usage)
     (options, args) = parser.parse_args()
@@ -25,5 +24,9 @@ def main():
     send_event("resolve", options.service_key, options.incident_key, options.description, details)
 
 if __name__ == "__main__":
+    import sys
+    from os.path import abspath, dirname, join
+    proj_dir = dirname(dirname(abspath(__file__)))
+    sys.path.append(proj_dir)
     main()
 
