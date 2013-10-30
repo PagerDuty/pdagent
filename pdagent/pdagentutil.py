@@ -44,18 +44,23 @@ def send_event(event_type, service_key, incident_key, description, details):
         print "Error! Reason:", str(response)
 
 
-def build_send_opt_parser(usage):
-    from optparse import OptionParser, make_option
-    option_list = [
-        make_option("-s", "--service-key", dest="service_key", help="Service API Key"),
-        make_option("-i", "--incident-key", dest="incident_key", help="Incident Key"),
-        make_option("-d", "--description", dest="description", help="Short description of the problem"),
-        make_option("-f", "--field", action="append", dest="fields",
+def build_send_arg_parser(description, incident_key_required):
+    from pdagent.argparse import ArgumentParser
+    parser = ArgumentParser(description=description)
+    parser.add_argument("-k", "--service-key", dest="service_key", required=True,
+            help="Service API Key")
+    parser.add_argument("-i", "--incident-key", dest="incident_key", required=incident_key_required,
+            help="Incident Key"),
+    parser.add_argument("-d", "--description", dest="description", required=True,
+            help="Short description of the problem"),
+    parser.add_argument("-f", "--field", action="append", dest="fields",
             help="Add given KEY=VALUE pair to the event details"
-            ),
-        ]
-    return OptionParser(usage, option_list)
+            )
+    return parser
+
 
 def parse_fields(fields):
+    if fields is None:
+        return {}
     return dict(f.split("=", 2) for f in fields)
 

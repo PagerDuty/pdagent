@@ -11,17 +11,12 @@
 
 
 def main():
-    from pdagent.pdagentutil import send_event, build_send_opt_parser, parse_fields
-    usage = "Usage: %prog -s <service-key> -i <incident-key> [-d <description>] [-f KEY=VALUE ...]"
-    parser = build_send_opt_parser(usage)
-    (options, args) = parser.parse_args()
-    if len(args):
-        parser.error("Incorrect number of arguments")
-    if not options.service_key:
-        parser.error("Service key is required")
-
-    details = parse_fields(options.fields)
-    send_event("resolve", options.service_key, options.incident_key, options.description, details)
+    from pdagent.pdagentutil import send_event, build_send_arg_parser, parse_fields
+    description="Send a resolve event to PagerDuty."
+    parser = build_send_arg_parser(description, True)
+    args = parser.parse_args()
+    details = parse_fields(args.fields)
+    send_event("resolve", args.service_key, args.incident_key, args.description, details)
 
 if __name__ == "__main__":
     import sys
