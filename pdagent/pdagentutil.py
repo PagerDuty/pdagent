@@ -14,22 +14,15 @@ import urllib2
 EVENTS_API_BASE = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
 def send_event(event_type, service_key, incident_key, description, details):
-    d = {
-        "service_key": service_key,
-        "event_type": event_type,
-        "incident_key": incident_key,
-        "details": details,
-    }
-    if description is not None:
-        d["description"] = description
-
     print "Sending %s..." % event_type
 
-    j = json.dumps(d)
+    j = _build_event_json_str(event_type, service_key, incident_key, description, details)
+    send_event_json_str(j)
 
+def send_event_json_str(event_str):
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
-    request.add_data(j)
+    request.add_data(event_str)
 
     response = urllib2.urlopen(request)
     http_code = response.getcode()
@@ -37,9 +30,30 @@ def send_event(event_type, service_key, incident_key, description, details):
 
     print "HTTP status code:", http_code
     print "Response data:", repr(result)
+    incident_key = None
     if result["status"] == "success":
         incident_key = result["incident_key"]
         print "Success! incident_key =", incident_key
     else:
         print "Error! Reason:", str(response)
+    return (incident_key, http_code)
 
+def queue_event(event_type, service_key, incident_key, description, details):
+    from pdqueue import PDQueue
+    print "Queuing %s..." % event_type
+
+    event = _build_event_json_str(event_type, service_key, incident_key, description, details)
+    PDQueue().enqueue(event)
+
+def _build_event_json_str(event_type, service_key, incident_key, description, details):
+    d = {
+        "service_key": service_key,
+        "event_type": event_type,
+        "details": details,
+    }
+    if incident_key is not None:
+        d["incident_key"] = incident_key
+    if description is not None:
+        d["description"] = description
+
+    return json.dumps(d)
