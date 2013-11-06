@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 '''
-    Server Density
-    www.serverdensity.com
+    PagerDuty
+    www.pagerduty.com
     ----
-    Server monitoring agent for Linux, FreeBSD and Mac OS X
+    Monitoring system agent for PagerDuty integration.
 
-    Licensed under Simplified BSD License (see LICENSE)
+    See LICENSE.TXT for licensing details.
 '''
 
 import logging
@@ -15,7 +15,7 @@ agentConfig = {}
 agentConfig['logging'] = logging.INFO
 agentConfig['checkFreq'] = 60
 
-agentConfig['version'] = '1.12.4'
+agentConfig['version'] = '0.1'
 
 rawConfig = {}
 
@@ -38,9 +38,13 @@ import time
 # and will error before the message is shown
 import subprocess
 
+# Fix classpath to reach custom modules
+from os.path import abspath, dirname, join
+proj_dir = dirname(dirname(abspath(__file__)))
+sys.path.append(proj_dir)
+
 # Custom modules
-from checks import checks
-from daemon import Daemon
+from pdagent.daemon import Daemon
 
 # Config handling
 try:
