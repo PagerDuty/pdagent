@@ -39,9 +39,10 @@ import time
 # and will error before the message is shown
 import subprocess
 
+# Calculate project directory
+proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
 # Fix classpath to reach custom modules
-from os.path import abspath, dirname, join
-proj_dir = dirname(dirname(abspath(__file__)))
 sys.path.append(proj_dir)
 
 # Custom modules
@@ -49,17 +50,9 @@ from pdagent.daemon import Daemon
 
 # Config handling
 try:
-    path = os.path.realpath(__file__)
-    path = os.path.dirname(path)
-
     config = ConfigParser.ConfigParser()
 
-    if os.path.exists('/etc/sd-agent/conf.d/'):
-        configPath = '/etc/sd-agent/conf.d/'
-    elif os.path.exists('/etc/sd-agent/config.cfg'):
-        configPath = '/etc/sd-agent/config.cfg'
-    else:
-        configPath = path + '/config.cfg'
+    configPath = os.path.join(proj_dir, "bin", "config.cfg")
 
     if os.access(configPath, os.R_OK) == False:
         print 'Unable to read the config file at ' + configPath
