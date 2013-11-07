@@ -202,17 +202,7 @@ if __name__ == '__main__':
 
     argLen = len(sys.argv)
 
-    if argLen == 3 or argLen == 4: # needs to accept case when --clean is passed
-        if sys.argv[2] == 'init':
-            # This path added for newer Linux packages which run under
-            # a separate sd-agent user account.
-            if os.path.exists('/var/run/sd-agent/'):
-                pidFile = '/var/run/sd-agent/sd-agent.pid'
-            else:
-                pidFile = '/var/run/sd-agent.pid'
-
-    else:
-        pidFile = os.path.join(agentConfig['pidfileDirectory'], 'sd-agent.pid')
+    pidFile = os.path.join(agentConfig['pidfileDirectory'], 'sd-agent.pid')
 
     if os.access(agentConfig['pidfileDirectory'], os.W_OK) == False:
         print 'Unable to write the PID file at ' + pidFile
@@ -221,7 +211,7 @@ if __name__ == '__main__':
 
     mainLogger.info('PID: %s', pidFile)
 
-    if argLen == 4 and sys.argv[3] == '--clean':
+    if argLen == 3 and sys.argv[2] == '--clean':
         mainLogger.info('--clean')
         try:
             os.remove(pidFile)
