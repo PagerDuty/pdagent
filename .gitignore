@@ -3,3 +3,8 @@
 
 .DS_Store
 
+
+bin/sd-agent.log
+bin/sd-agent.pid
+
+
