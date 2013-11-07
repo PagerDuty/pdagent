@@ -20,11 +20,12 @@ def send_event(event_type, service_key, incident_key, description, details):
     send_event_json_str(j)
 
 def send_event_json_str(event_str):
+    from pdagent import httpswithverify 
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(event_str)
 
-    response = urllib2.urlopen(request)
+    response = httpswithverify.urlopen(request)
     http_code = response.getcode()
     result = json.loads(response.read())
 
