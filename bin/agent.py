@@ -70,10 +70,7 @@ try:
     agentConfig['agentKey'] = config.get('Main', 'agent_key')
 
     # Tmp path
-    if os.path.exists('/var/log/sd-agent/'):
-        agentConfig['tmpDirectory'] = '/var/log/sd-agent/'
-    else:
-        agentConfig['tmpDirectory'] = '/tmp/' # default which may be overriden in the config later
+    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "bin") # default which may be overriden in the config later
 
     agentConfig['pidfileDirectory'] = agentConfig['tmpDirectory']
 
