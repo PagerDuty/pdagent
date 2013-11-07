@@ -9,6 +9,7 @@
 '''
 
 import logging
+import logging.handlers
 
 # General config
 agentConfig = {}
@@ -226,6 +227,11 @@ for section in config.sections():
     for option in config.options(section):
         rawConfig[section][option] = config.get(section, option)
 
+
+def tick(sc):
+    mainLogger.info("Tick!")
+    sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
+
 # Override the generic daemon class to run our checks
 class agent(Daemon):
 
@@ -248,15 +254,12 @@ class agent(Daemon):
 
         mainLogger.info('System: ' + str(systemStats))
 
-        mainLogger.debug('Creating checks instance')
+        mainLogger.debug('Creating tick instance')
 
-        # Checks instance
-        c = checks(agentConfig, rawConfig, mainLogger)
-
-        # Schedule the checks
+        # Schedule the tick
         mainLogger.info('checkFreq: %s', agentConfig['checkFreq'])
         s = sched.scheduler(time.time, time.sleep)
-        c.doChecks(s, True, systemStats) # start immediately (case 28315)
+        tick(s) # start immediately (case 28315)
         s.run()
 
     def cpuCores(self):
