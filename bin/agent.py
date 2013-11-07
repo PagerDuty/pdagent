@@ -146,33 +146,6 @@ if (re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.com)', agentConfig
     print 'Agent will now quit'
     sys.exit(1)
 
-# Check apache_status_url is not empty (case 27073)
-if 'apacheStatusUrl' in agentConfig and agentConfig['apacheStatusUrl'] == None:
-    print 'You must provide a config value for apache_status_url. If you do not wish to use Apache monitoring, leave it as its default value - http://www.example.com/server-status/?auto'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-if 'nginxStatusUrl' in agentConfig and agentConfig['nginxStatusUrl'] == None:
-    print 'You must provide a config value for nginx_status_url. If you do not wish to use Nginx monitoring, leave it as its default value - http://www.example.com/nginx_status'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-if 'MySQLServer' in agentConfig and agentConfig['MySQLServer'] != '' and 'MySQLUser' in agentConfig and agentConfig['MySQLUser'] != '' and 'MySQLPass' in agentConfig:
-    try:
-        import MySQLdb
-    except ImportError:
-        print 'You have configured MySQL for monitoring, but the MySQLdb module is not installed. For more info, see: http://www.serverdensity.com/docs/agent/mysqlstatus/'
-        print 'Agent will now quit'
-        sys.exit(1)
-
-if 'MongoDBServer' in agentConfig and agentConfig['MongoDBServer'] != '':
-    try:
-        import pymongo
-    except ImportError:
-        print 'You have configured MongoDB for monitoring, but the pymongo module is not installed. For more info, see: http://www.serverdensity.com/docs/agent/mongodbstatus/'
-        print 'Agent will now quit'
-        sys.exit(1)
-
 for section in config.sections():
     rawConfig[section] = {}
 
