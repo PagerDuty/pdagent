@@ -59,11 +59,7 @@ try:
         print 'Agent will now quit'
         sys.exit(1)
 
-    if os.path.isdir(configPath):
-       for configFile in glob.glob(os.path.join(configPath, "*.cfg")):
-           config.read(configFile)
-    else:
-       config.read(configPath)
+    config.read(configPath)
 
     # Core config
     agentConfig['sdUrl'] = config.get('Main', 'sd_url')
