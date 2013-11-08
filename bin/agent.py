@@ -200,7 +200,14 @@ if __name__ == '__main__':
     mainLogger.info('sd_url: %s', agentConfig['sdUrl'])
     mainLogger.info('agent_key: %s', agentConfig['agentKey'])
 
-    argLen = len(sys.argv)
+    from pdagent.argparse import ArgumentParser
+    description="PagerDuty Agent daemon process."
+    parser = ArgumentParser(description=description)
+    parser.add_argument('action', choices=['start','stop','restart','status'])
+    parser.add_argument("--clean", action="store_false", dest="clean",
+            help="Remove old pid file")
+
+    args = parser.parse_args()
 
     pidFile = os.path.join(agentConfig['pidfileDirectory'], 'sd-agent.pid')
 
@@ -211,7 +218,7 @@ if __name__ == '__main__':
 
     mainLogger.info('PID: %s', pidFile)
 
-    if argLen == 3 and sys.argv[2] == '--clean':
+    if args.clean:
         mainLogger.info('--clean')
         try:
             os.remove(pidFile)
@@ -223,46 +230,42 @@ if __name__ == '__main__':
     daemon = agent(pidFile)
 
     # Control options
-    if argLen == 2 or argLen == 3 or argLen == 4:
-        if 'start' == sys.argv[1]:
-            mainLogger.info('Action: start')
-            daemon.start()
+    if 'start' == args.action:
+        mainLogger.info('Action: start')
+        daemon.start()
 
-        elif 'stop' == sys.argv[1]:
-            mainLogger.info('Action: stop')
-            daemon.stop()
+    elif 'stop' == args.action:
+        mainLogger.info('Action: stop')
+        daemon.stop()
 
-        elif 'restart' == sys.argv[1]:
-            mainLogger.info('Action: restart')
-            daemon.restart()
+    elif 'restart' == args.action:
+        mainLogger.info('Action: restart')
+        daemon.restart()
 
-        elif 'foreground' == sys.argv[1]:
-            mainLogger.info('Action: foreground')
-            daemon.run()
+    elif 'foreground' == args.action:
+        mainLogger.info('Action: foreground')
+        daemon.run()
 
-        elif 'status' == sys.argv[1]:
-            mainLogger.info('Action: status')
+    elif 'status' == args.action:
+        mainLogger.info('Action: status')
 
-            try:
-                pf = file(pidFile,'r')
-                pid = int(pf.read().strip())
-                pf.close()
-            except IOError:
-                pid = None
-            except SystemExit:
-                pid = None
+        try:
+            pf = file(pidFile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+        except SystemExit:
+            pid = None
 
-            if pid:
-                print 'sd-agent is running as pid %s.' % pid
-            else:
-                print 'sd-agent is not running.'
-
+        if pid:
+            print 'sd-agent is running as pid %s.' % pid
         else:
-            print 'Unknown command'
-            sys.exit(1)
-
-        sys.exit(0)
+            print 'sd-agent is not running.'
 
     else:
-        print 'usage: %s start|stop|restart|status' % sys.argv[0]
+        print 'Unknown command'
         sys.exit(1)
+
+    sys.exit(0)
+
