@@ -66,10 +66,10 @@ try:
     config.read(configPath)
 
     # Core config
-    agentConfig['sdUrl'] = config.get('Main', 'sd_url')
+    agentConfig['pdUrl'] = config.get('Main', 'pd_url')
 
-    if agentConfig['sdUrl'].endswith('/'):
-        agentConfig['sdUrl'] = agentConfig['sdUrl'][:-1]
+    if agentConfig['pdUrl'].endswith('/'):
+        agentConfig['pdUrl'] = agentConfig['pdUrl'][:-1]
 
     agentConfig['agentKey'] = config.get('Main', 'agent_key')
 
@@ -125,31 +125,15 @@ except ConfigParser.NoOptionError, e:
     print 'There are some items missing from your config file, but nothing fatal'
 
 # Check to make sure the default config values have been changed (only core config values)
-if agentConfig['sdUrl'] == 'http://example.serverdensity.com' \
+if agentConfig['pdUrl'] == 'http://example.pagerduty.com' \
         or agentConfig['agentKey'] == 'keyHere':
     print 'You have not modified config.cfg for your server'
     print 'Agent will now quit'
     sys.exit(1)
 
-# Check to make sure sd_url is in correct
-if (
-        re.match(
-            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.com)',
-            agentConfig['sdUrl']
-            )
-        == None
-    ) \
-   and \
-   (
-        re.match(
-            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.io)',
-            agentConfig['sdUrl']
-            )
-        == None
-    ):
-    print 'Your sd_url is incorrect.' \
-        ' It needs to be in the form https://example.serverdensity.com' \
-        ' or https://example.serverdensity.io'
+# Check to make sure pd_url is in correct
+if re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)', agentConfig['pdUrl']) == None:
+    print 'Your pd_url is incorrect. It needs to be in the form https://example.pagerduty.com'
     print 'Agent will now quit'
     sys.exit(1)
 
@@ -236,7 +220,7 @@ if __name__ == '__main__':
     mainLogger.info('sd-agent %s started', agentConfig['version'])
     mainLogger.info('--')
 
-    mainLogger.info('sd_url: %s', agentConfig['sdUrl'])
+    mainLogger.info('pd_url: %s', agentConfig['pdUrl'])
     mainLogger.info('agent_key: %s', agentConfig['agentKey'])
 
     from pdagent.argparse import ArgumentParser
