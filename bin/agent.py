@@ -52,7 +52,7 @@ from pdagent.daemon import Daemon
 try:
     config = ConfigParser.ConfigParser()
 
-    configPath = os.path.join(proj_dir, "bin", "config.cfg")
+    configPath = os.path.join(proj_dir, "conf", "config.cfg")
 
     if os.access(configPath, os.R_OK) == False:
         print 'Unable to read the config file at ' + configPath
