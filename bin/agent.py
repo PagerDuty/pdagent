@@ -24,7 +24,11 @@ rawConfig = {}
 # We need 2.4 above because some modules (like subprocess) were only introduced in 2.4.
 import sys
 if int(sys.version_info[1]) <= 3:
-    print 'You are using an outdated version of Python. Please update to v2.4 or above (v3 is not supported). For newer OSs, you can update Python without affecting your system install. See http://blog.boxedice.com/2010/01/19/updating-python-on-rhelcentos/ If you are running RHEl 4 / CentOS 4 then you will need to compile Python manually.'
+    print 'You are using an outdated version of Python.' \
+        ' Please update to v2.4 or above (v3 is not supported).' \
+        ' For newer OSs, you can update Python without affecting your system install.' \
+        ' See http://blog.boxedice.com/2010/01/19/updating-python-on-rhelcentos/' \
+        ' If you are running RHEl 4 / CentOS 4 then you will need to compile Python manually.'
     sys.exit(1)
 
 # Core modules
@@ -70,7 +74,8 @@ try:
     agentConfig['agentKey'] = config.get('Main', 'agent_key')
 
     # Tmp path
-    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "tmp") # default which may be overriden in the config later
+    # default which may be overriden in the config later
+    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "tmp")
 
     agentConfig['pidfileDirectory'] = agentConfig['tmpDirectory']
 
@@ -120,15 +125,31 @@ except ConfigParser.NoOptionError, e:
     print 'There are some items missing from your config file, but nothing fatal'
 
 # Check to make sure the default config values have been changed (only core config values)
-if agentConfig['sdUrl'] == 'http://example.serverdensity.com' or agentConfig['agentKey'] == 'keyHere':
+if agentConfig['sdUrl'] == 'http://example.serverdensity.com' \
+        or agentConfig['agentKey'] == 'keyHere':
     print 'You have not modified config.cfg for your server'
     print 'Agent will now quit'
     sys.exit(1)
 
 # Check to make sure sd_url is in correct
-if (re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.com)', agentConfig['sdUrl']) == None) \
-   and (re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.io)', agentConfig['sdUrl']) == None):
-    print 'Your sd_url is incorrect. It needs to be in the form https://example.serverdensity.com or https://example.serverdensity.io'
+if (
+        re.match(
+            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.com)',
+            agentConfig['sdUrl']
+            )
+        == None
+    ) \
+   and \
+   (
+        re.match(
+            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(serverdensity.io)',
+            agentConfig['sdUrl']
+            )
+        == None
+    ):
+    print 'Your sd_url is incorrect.' \
+        ' It needs to be in the form https://example.serverdensity.com' \
+        ' or https://example.serverdensity.io'
     print 'Agent will now quit'
     sys.exit(1)
 
@@ -151,7 +172,12 @@ class agent(Daemon):
 
         # Get some basic system stats to post back for development/testing
         import platform
-        systemStats = {'machine': platform.machine(), 'platform': sys.platform, 'processor': platform.processor(), 'pythonV': platform.python_version()}
+        systemStats = {
+            'machine': platform.machine(),
+            'platform': sys.platform,
+            'processor': platform.processor(),
+            'pythonV': platform.python_version()
+            }
 
         if sys.platform == 'linux2':
             systemStats['nixV'] = platform.dist()
@@ -195,7 +221,9 @@ if __name__ == '__main__':
         print 'Agent will now quit'
         sys.exit(1)
 
-    handler = logging.handlers.RotatingFileHandler(logFile, maxBytes=10485760, backupCount=5) # 10MB files
+    # 10MB files
+    handler = logging.handlers.RotatingFileHandler(logFile, maxBytes=10485760, backupCount=5)
+
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     handler.setFormatter(formatter)
