@@ -70,7 +70,7 @@ try:
     agentConfig['agentKey'] = config.get('Main', 'agent_key')
 
     # Tmp path
-    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "bin") # default which may be overriden in the config later
+    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "tmp") # default which may be overriden in the config later
 
     agentConfig['pidfileDirectory'] = agentConfig['tmpDirectory']
 
@@ -176,10 +176,21 @@ class agent(Daemon):
 # Control of daemon
 if __name__ == '__main__':
 
-    # Logging
-    logFile = os.path.join(agentConfig['tmpDirectory'], 'sd-agent.log')
+    tmpDirectory = agentConfig['tmpDirectory']
 
-    if os.access(agentConfig['tmpDirectory'], os.W_OK) == False:
+    # Tmp directory
+    if not os.path.exists(tmpDirectory):
+        try:
+            os.mkdir(tmpDirectory)
+        except OSError:
+            print 'Unable to create the tmp directory at ' + tmpDirectory
+            print 'Agent will now quit'
+            sys.exit(1)
+
+    # Logging
+    logFile = os.path.join(tmpDirectory, 'sd-agent.log')
+
+    if os.access(tmpDirectory, os.W_OK) == False:
         print 'Unable to write the log file at ' + logFile
         print 'Agent will now quit'
         sys.exit(1)
