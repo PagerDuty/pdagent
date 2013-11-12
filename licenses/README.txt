@@ -9,3 +9,5 @@ argparse                        1.2.1           https://code.google.com/p/argpar
 backports.ssl_match_hostname    3.4.0.2         https://pypi.python.org/pypi/backports.ssl_match_hostname/
 ca_certs.pem                    011a86ed18fe    http://mxr.mozilla.org/mozilla-central/source/security/nss/lib/ckfw/builtins/certdata.txt?rev=011a86ed18fe
                                                 (PEM-encoded certificate bundle was generated from above source)
+daemon                          43f94cb         https://github.com/serverdensity/sd-agent
+
