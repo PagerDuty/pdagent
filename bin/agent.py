@@ -51,6 +51,8 @@ sys.path.append(proj_dir)
 
 # Custom modules
 from pdagent.daemon import Daemon
+from pdagent.pdqueue import PDQueue
+from backports.ssl_match_hostname import CertificateError
 
 # Config handling
 try:
@@ -78,6 +80,8 @@ try:
     agentConfig['tmpDirectory'] = os.path.join(proj_dir, "tmp")
 
     agentConfig['pidfileDirectory'] = agentConfig['tmpDirectory']
+
+    agentConfig['queueDirectory'] = os.path.join(proj_dir, "queue")
 
     # Plugin config
     if config.has_option('Main', 'plugin_directory'):
@@ -111,6 +115,9 @@ try:
     if config.has_option('Main', 'pidfile_directory'):
         agentConfig['pidfileDirectory'] = config.get('Main', 'pidfile_directory')
 
+    if config.has_option('Main', 'queue_directory'):
+        agentConfig['queueDirectory'] = config.get('Main', 'queue_directory')
+
 except ConfigParser.NoSectionError, e:
     print 'Config file not found or incorrectly formatted'
     print 'Agent will now quit'
@@ -131,7 +138,7 @@ if agentConfig['pdUrl'] == 'http://example.pagerduty.com' \
     print 'Agent will now quit'
     sys.exit(1)
 
-# Check to make sure pd_url is in correct
+# Check to make sure pd_url format is correct
 if re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)', agentConfig['pdUrl']) == None:
     print 'Your pd_url is incorrect. It needs to be in the form https://example.pagerduty.com'
     print 'Agent will now quit'
@@ -145,8 +152,31 @@ for section in config.sections():
 
 
 def tick(sc):
-    mainLogger.info("Tick!")
+    # flush the event queue.
+    mainLogger.info("Flushing event queue")
+    try:
+        pdQueue.flush()
+    except CertificateError as e:
+        mainLogger.error("Server certificate validation error while flushing queue: %s" % str(e))
+    except IOError as e:
+        mainLogger.error("Error while flushing queue: %s" % str(e))
+
+    # schedule next tick.
     sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
+
+def _ensureWritableDirectories(*directories):
+    problemDirectories = []
+    for directory in set(directories):
+        if not os.path.exists(directory):
+            try:
+                os.mkdir(directory)
+            except OSError:
+                pass  # handled in the check for valid existence immediately below
+        if os.access(directory, os.W_OK) == False:
+            problemDirectories.append(directory)
+
+    return problemDirectories
+
 
 # Override the generic daemon class to run our checks
 class agent(Daemon):
@@ -186,24 +216,20 @@ class agent(Daemon):
 # Control of daemon
 if __name__ == '__main__':
 
-    tmpDirectory = agentConfig['tmpDirectory']
+    problemDirectories = _ensureWritableDirectories( \
+            agentConfig['tmpDirectory'], \
+            agentConfig['pidfileDirectory'], \
+            agentConfig['queueDirectory'])
+    if problemDirectories:
+        for d in problemDirectories:
+            print 'Directory %s: cannot create or is not writable' % d
+        print 'Agent will now quit'
+        sys.exit(1)
 
-    # Tmp directory
-    if not os.path.exists(tmpDirectory):
-        try:
-            os.mkdir(tmpDirectory)
-        except OSError:
-            print 'Unable to create the tmp directory at ' + tmpDirectory
-            print 'Agent will now quit'
-            sys.exit(1)
+    tmpDirectory = agentConfig['tmpDirectory']
 
     # Logging
     logFile = os.path.join(tmpDirectory, 'sd-agent.log')
-
-    if os.access(tmpDirectory, os.W_OK) == False:
-        print 'Unable to write the log file at ' + logFile
-        print 'Agent will now quit'
-        sys.exit(1)
 
     # 10MB files
     handler = logging.handlers.RotatingFileHandler(logFile, maxBytes=10485760, backupCount=5)
@@ -248,6 +274,9 @@ if __name__ == '__main__':
         except OSError:
             # Did not find pid file
             pass
+
+    # queue to work on.
+    pdQueue = PDQueue(queue_dir=agentConfig["queueDirectory"])
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
