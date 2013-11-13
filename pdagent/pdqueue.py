@@ -3,6 +3,10 @@ import os
 import re
 import time
 
+class EmptyQueue(Exception):
+    pass
+
+
 class PDQueue(object):
     """
     This class implements a simple directory based queue for PagerDuty events
@@ -22,9 +26,16 @@ class PDQueue(object):
             and os.access(self.queue_dir, os.W_OK)):
             raise Exception("Can't read/write to directory %s, please check permissions." % self.queue_dir)
 
+    def _listdir(self):
+        return os.listdir(self.queue_dir)
+
+    def _readfile(self, fname):
+        fname_abs = os.path.join(self.queue_dir, fname)
+        return open(fname_abs).read()
+
     # Get the list of files from the queue directory
     def _queued_files(self):
-        files = os.listdir(self.queue_dir)
+        files = self._listdir()
         pd_names = re.compile("pd_")
         pd_file_names = filter(pd_names.match, files)
 
@@ -64,6 +75,27 @@ class PDQueue(object):
     def enqueue(self, event_json_str):
         process_id = os.getpid()
         time_seconds = int(time.time())
-        file_name = "%s/pd_%d_%d" % (self.queue_dir, time_seconds, process_id)
-        with open(file_name, "w", 0600) as f:
+        fname = "pd_%d_%d" % (time_seconds, process_id)
+        fname_abs = os.path.join(self.queue_dir, fname)
+        if os.path.exists(fname_abs):
+            raise AssertionError, "Queue entry file already exists: %s" % fname_abs
+        with open(fname_abs, "w", 0600) as f:
             f.write(event_json_str)
+        return fname
+
+    def dequeue(self, consume_func):
+        # TODO: queue read lock
+        file_names = self._queued_files()
+        if not len(file_names):
+            raise EmptyQueue
+        fname = file_names[0]
+        fname_abs = os.path.join(self.queue_dir, fname)
+        # TODO: handle missing file or other errors
+        json_event_str = open(fname_abs).read()
+        #
+        consumed = consume_func(json_event_str)
+        #
+        if consumed:
+            # TODO: handle/log delete error!
+            os.remove(fname_abs)
+
