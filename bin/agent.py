@@ -159,6 +159,9 @@ def tick(sc):
     except CertificateError as e:
         mainLogger.error("Server certificate validation error while flushing queue: %s" % str(e))
     except IOError as e:
+        mainLogger.error("I/O error while flushing queue: %s" % str(e))
+    except:
+        e = sys.exc_info()[0]
         mainLogger.error("Error while flushing queue: %s" % str(e))
 
     # schedule next tick.
