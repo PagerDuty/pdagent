@@ -16,12 +16,12 @@ class PDQueueTest(unittest.TestCase):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
 
-    def makeQueue(self):
+    def newQueue(self):
         return PDQueue(TEST_QUEUE_DIR)
 
     def test_init_creates_directory(self):
         self.assertFalse(os.path.exists(TEST_QUEUE_DIR))
-        q = PDQueue(TEST_QUEUE_DIR)
+        self.newQueue()
         self.assertTrue(os.path.exists(TEST_QUEUE_DIR))
 
     def test_enqueue_and_dequeue(self):
