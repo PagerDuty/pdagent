@@ -3,8 +3,6 @@
 
 .DS_Store
 
-
-tmp/sd-agent.log
-tmp/sd-agent.pid
-
+queue/
+tmp/
 
