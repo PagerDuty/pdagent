@@ -8,9 +8,7 @@ class PDQueue(object):
     This class implements a simple directory based queue for PagerDuty events
     """
 
-    QUEUE_DIR = "/tmp/pagerduty"  # TODO changeme
-
-    def __init__(self, queue_dir=QUEUE_DIR):
+    def __init__(self, queue_dir):
         self.queue_dir = queue_dir
         self._create_queue_dir()
         self._verify_permissions()
