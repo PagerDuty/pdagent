@@ -253,7 +253,7 @@ if __name__ == '__main__':
     description="PagerDuty Agent daemon process."
     parser = ArgumentParser(description=description)
     parser.add_argument('action', choices=['start','stop','restart','status'])
-    parser.add_argument("--clean", action="store_false", dest="clean",
+    parser.add_argument("--clean", action="store_true", dest="clean",
             help="Remove old pid file")
 
     args = parser.parse_args()
@@ -267,21 +267,35 @@ if __name__ == '__main__':
 
     mainLogger.info('PID: %s', pidFile)
 
-    if args.clean:
-        mainLogger.info('--clean')
-        try:
-            os.remove(pidFile)
-        except OSError:
-            # Did not find pid file
-            pass
-
     # queue to work on.
     pdQueue = PDQueue(queue_dir=agentConfig["queueDirectory"])
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
 
+    # Helper method for some control options
+    def _getDaemonPID():
+        try:
+            pf = file(pidFile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+        except SystemExit:
+            pid = None
+        return pid
+
     # Control options
+    if args.clean:
+        mainLogger.info('--clean')
+        try:
+            if _getDaemonPID():
+                daemon.stop()
+            os.remove(pidFile)
+        except OSError:
+            # Did not find pid file
+            pass
+
     if 'start' == args.action:
         mainLogger.info('Action: start')
         daemon.start()
@@ -301,15 +315,7 @@ if __name__ == '__main__':
     elif 'status' == args.action:
         mainLogger.info('Action: status')
 
-        try:
-            pf = file(pidFile,'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-        except SystemExit:
-            pid = None
-
+        pid = _getDaemonPID()
         if pid:
             print 'sd-agent is running as pid %s.' % pid
         else:
