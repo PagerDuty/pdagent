@@ -13,3 +13,9 @@ The supported events are those listed in the PagerDuty Integration API:
 The PagerDuty Agent is completely open-source which means that you can download
 the source code and customize it for your needs.
 
+
+# Developing
+
+See the file `pydev-setup.txt` for PyDev setup instructions.
+
+
