@@ -21,9 +21,9 @@ class PDQueue(object):
     - TBD: Is enqueue atomic in the face of error?
     """
 
-    def __init__(self, queue_dir, f_lock):
+    def __init__(self, queue_dir, lock_class):
         self.queue_dir = queue_dir
-        self.f_lock = f_lock
+        self.lock_class = lock_class
         #
         self._create_queue_dir()
         self._verify_permissions()
@@ -91,7 +91,8 @@ class PDQueue(object):
 
     def dequeue(self, consume_func):
         #
-        f_release = self.f_lock(self._dequeue_lockfile)
+        lock = self.lock_class(self._dequeue_lockfile)
+        lock.acquire()
         try:
             #
             file_names = self._queued_files()
@@ -112,5 +113,5 @@ class PDQueue(object):
                 # TODO: handle/log delete error!
                 os.remove(fname_abs)
         finally:
-            f_release()
+            lock.release()
 

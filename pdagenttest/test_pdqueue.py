@@ -11,10 +11,10 @@ from pdagent.pdqueue import PDQueue, EmptyQueue
 TEST_QUEUE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_queue")
 
 
-def _f_lock_noop(lf):
-    def f_release():
-        pass
-    return f_release
+class NoOpLock:
+    def __init__(self, lockfile): pass
+    def acquire(self): pass
+    def release(self): pass
 
 
 class PDQueueTest(unittest.TestCase):
@@ -23,8 +23,8 @@ class PDQueueTest(unittest.TestCase):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
 
-    def newQueue(self, f_lock=_f_lock_noop):
-        return PDQueue(TEST_QUEUE_DIR, f_lock)
+    def newQueue(self):
+        return PDQueue(TEST_QUEUE_DIR, NoOpLock)
 
     def test_init_creates_directory(self):
         self.assertFalse(os.path.exists(TEST_QUEUE_DIR))
@@ -81,25 +81,30 @@ class PDQueueTest(unittest.TestCase):
     def test_parallel_dequeque(self):
         # test that a dequeue blocks another dequeue using locking
         #
-        def make_f_lock(name):
-            def f_lock(lf):
-                self.assertEquals(dequeue_lockfile, lf)
-                trace.append(name + "_A1")
-                lock.acquire()
-                trace.append(name + "_A2")
-                def f_release():
-                    trace.append(name + "_R")
-                    lock.release()
-                return f_release
-            return f_lock
-        # setup queue with one item
-        q1 = self.newQueue(make_f_lock("q1"))
-        q2 = self.newQueue(make_f_lock("q2"))
+        q1 = self.newQueue()
+        q2 = self.newQueue()
         q1.enqueue("foo")
         #
         dequeue_lockfile = q1._dequeue_lockfile
         trace = []
         lock = Lock()
+        #
+        def make_lock_class(name):
+            outer_self = self # so that pydev doesn't complain about self naming
+            class LockClass:
+                def __init__(self, lockfile):
+                    outer_self.assertEquals(dequeue_lockfile, lockfile)
+                def acquire(self):
+                    trace.append(name + "_A1")
+                    lock.acquire()
+                    trace.append(name + "_A2")
+                def release(self):
+                    trace.append(name + "_R")
+                    lock.release()
+            return LockClass
+        #
+        q1.lock_class = make_lock_class("q1")
+        q2.lock_class = make_lock_class("q2")
         #
         def dequeue2():
             try:
