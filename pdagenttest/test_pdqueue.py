@@ -12,7 +12,6 @@ TEST_QUEUE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_
 class PDQueueTest(unittest.TestCase):
 
     def setUp(self):
-        # delete leftover from previous test run
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
 
@@ -27,39 +26,27 @@ class PDQueueTest(unittest.TestCase):
     def test_enqueue_and_dequeue(self):
         q = self.newQueue()
         #
-        self.assertEquals(q._listdir(), [])
+        self.assertEquals(q._queued_files(), [])
         #
         f_foo = q.enqueue("foo")
-        self.assertEquals(q._listdir(), [f_foo])
+        self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(q._readfile(f_foo), "foo")
         #
-        #import time; time.sleep(1) # FIXME: name clash!
+        import time; time.sleep(1) # FIXME: name clash!
         f_bar = q.enqueue("bar")
-        self.assertEquals(q._listdir(), [f_foo, f_bar])
+        self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(q._readfile(f_foo), "foo")
         self.assertEquals(q._readfile(f_bar), "bar")
-
-        # - assert f_foo exists & contains "foo"
-        # - assert f_bar contains "bar"
-
-        def consume_foo(s):
-            self.assertEquals("foo", s)
-            return True
+        #
+        def consume_foo(s): self.assertEquals("foo", s); return True
         q.dequeue(consume_foo)
-
-        def consume_bar(s):
-            self.assertEquals("bar", s)
-            return True
+        #
+        def consume_bar(s): self.assertEquals("bar", s); return True
         q.dequeue(consume_bar)
-
-        try:
-            def consume_dummy(s):
-                return True
-            q.dequeue(consume_dummy)
-            self.fail()
-        except EmptyQueue:
-            pass
-        # - assert queue dir is empty
+        #
+        # check queue is empty
+        self.assertEquals(q._queued_files(), [])
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
 
 
     def test_could_not_consume(self):
