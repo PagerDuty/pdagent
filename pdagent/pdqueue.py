@@ -26,26 +26,19 @@ class PDQueue(object):
             and os.access(self.queue_dir, os.W_OK)):
             raise Exception("Can't read/write to directory %s, please check permissions." % self.queue_dir)
 
-    def _listdir(self):
-        return os.listdir(self.queue_dir)
-
     def _readfile(self, fname):
         fname_abs = os.path.join(self.queue_dir, fname)
-        return open(fname_abs).read()
+        f = open(fname_abs)
+        try:
+            return f.read()
+        finally:
+            f.close()
 
-    # Get the list of files from the queue directory
+    # Get the list of queued files from the queue directory
     def _queued_files(self):
-        files = self._listdir()
-        pd_names = re.compile("pd_")
-        pd_file_names = filter(pd_names.match, files)
-
-        # We need to sort the files by the timestamp.
-        # This function extracts the timestamp out of the file name
-        def file_timestamp(file_name):
-            return int(re.search('pd_(\d+)_', file_name).group(1))
-
-        sorted_file_names = sorted(pd_file_names, key=file_timestamp)
-        return pd_file_names
+        fnames = [f for f in os.listdir(self.queue_dir) if f.startswith("pd_")]
+        fnames.sort()
+        return fnames
 
     def _flush_queue(self):
         file_names = self._queued_files()
