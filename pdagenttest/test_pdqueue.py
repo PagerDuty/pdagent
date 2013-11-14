@@ -51,9 +51,20 @@ class PDQueueTest(unittest.TestCase):
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
 
 
-    def test_could_not_consume(self):
-        # The item should stay in the queue if we can't consume it.
-        pass
+    def test_dont_consume(self):
+        # The item should stay in the queue if we don't consume it.
+        q = self.newQueue()
+        q.enqueue("foo")
+        #
+        def dont_consume_foo(s): self.assertEquals("foo", s); return False
+        q.dequeue(dont_consume_foo)
+        q.dequeue(dont_consume_foo)
+        #
+        def consume_foo(s): self.assertEquals("foo", s); return True
+        q.dequeue(consume_foo)
+        #
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
+
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
