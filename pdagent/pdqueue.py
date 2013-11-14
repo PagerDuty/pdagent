@@ -9,7 +9,16 @@ class EmptyQueue(Exception):
 
 class PDQueue(object):
     """
-    This class implements a simple directory based queue for PagerDuty events
+    A directory based queue for PagerDuty events.
+
+    Notes:
+    - Designed for multiple processes concurrently using the queue.
+    - Each entry in the queue is written to a separate file in the queue directory.
+    - Entry file names are generated so that sorting by name results in queue order.
+    - Concurrent dequeues are serialized with an exclusive dequeue lock.
+    - Readers (dequeue) will not block writers (enqueue).
+    - TBD: Concurrent enqueues are serialized with an exclusive enqueue lock.
+    - TBD: Is enqueue atomic in the face of error?
     """
 
     def __init__(self, queue_dir):
