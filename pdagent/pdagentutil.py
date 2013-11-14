@@ -13,6 +13,15 @@ import urllib2
 
 EVENTS_API_BASE = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
+def find_in_sys_path(file_path):
+    import os
+    import sys
+    for directory in sys.path:
+        abs_path = os.path.join(directory, file_path)
+        if os.access(abs_path, os.R_OK):
+            return abs_path
+    return None
+
 def send_event(event_type, service_key, incident_key, description, details):
     print "Sending %s..." % event_type
 

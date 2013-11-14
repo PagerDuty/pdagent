@@ -39,6 +39,7 @@ class PDQueue(object):
         return pd_file_names
 
     def _flush_queue(self):
+        from pdagent.pdagentutil import send_event_json_str
         file_names = self._queued_files()
         # TODO handle related incidents e.g. if there is an ack for which a resolve is also present
         for file_name in file_names:
@@ -58,8 +59,6 @@ class PDQueue(object):
                 fcntl.lockf(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 # We have acquired the lock here; let's flush the queue
                 self._flush_queue()
-            except IOError as e:
-                print "Error while trying to acquire lock on queue: %s" % str(e)
             finally:
                 fcntl.lockf(lock_file.fileno(), fcntl.LOCK_UN)
 

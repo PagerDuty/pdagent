@@ -4,7 +4,8 @@ import socket
 
 _verified_https_possible = False
 
-DEFAULT_CA_CERTS_FILE = "conf/root_certs/ca_certs.pem"
+from pdagent.pdagentutil import find_in_sys_path
+DEFAULT_CA_CERTS_FILE = find_in_sys_path("conf/root_certs/ca_certs.pem")
 
 # TODO test for Python <2.7
 if hasattr(httplib, 'HTTPS'):
