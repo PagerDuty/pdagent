@@ -21,10 +21,14 @@ class PDQueue(object):
     - TBD: Is enqueue atomic in the face of error?
     """
 
-    def __init__(self, queue_dir):
+    def __init__(self, queue_dir, f_lock):
         self.queue_dir = queue_dir
+        self.f_lock = f_lock
+        #
         self._create_queue_dir()
         self._verify_permissions()
+        #
+        self._dequeue_lockfile = os.path.join(self.queue_dir, "dequeue_lock.txt")
 
     def _create_queue_dir(self):
         if not os.access(self.queue_dir, os.F_OK):
@@ -86,22 +90,27 @@ class PDQueue(object):
         return fname
 
     def dequeue(self, consume_func):
-        # TODO: queue read lock
-        file_names = self._queued_files()
-        if not len(file_names):
-            raise EmptyQueue
-        fname = file_names[0]
-        fname_abs = os.path.join(self.queue_dir, fname)
-        # TODO: handle missing file or other errors
-        f = open(fname_abs)
+        #
+        f_release = self.f_lock(self._dequeue_lockfile)
         try:
-            json_event_str = f.read()
+            #
+            file_names = self._queued_files()
+            if not len(file_names):
+                raise EmptyQueue
+            fname = file_names[0]
+            fname_abs = os.path.join(self.queue_dir, fname)
+            # TODO: handle missing file or other errors
+            f = open(fname_abs)
+            try:
+                json_event_str = f.read()
+            finally:
+                f.close()
+            #
+            consumed = consume_func(json_event_str)
+            #
+            if consumed:
+                # TODO: handle/log delete error!
+                os.remove(fname_abs)
         finally:
-            f.close()
-        #
-        consumed = consume_func(json_event_str)
-        #
-        if consumed:
-            # TODO: handle/log delete error!
-            os.remove(fname_abs)
+            f_release()
 
