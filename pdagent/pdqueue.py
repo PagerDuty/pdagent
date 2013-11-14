@@ -93,7 +93,11 @@ class PDQueue(object):
         fname = file_names[0]
         fname_abs = os.path.join(self.queue_dir, fname)
         # TODO: handle missing file or other errors
-        json_event_str = open(fname_abs).read()
+        f = open(fname_abs)
+        try:
+            json_event_str = f.read()
+        finally:
+            f.close()
         #
         consumed = consume_func(json_event_str)
         #
