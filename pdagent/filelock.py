@@ -25,6 +25,7 @@
 # of the authors and should not be interpreted as representing official policies,
 # either expressed or implied, of the FreeBSD Project.
 
+import fcntl
 import os
 import time
 import errno
@@ -34,26 +35,22 @@ class FileLockException(Exception):
 
 class FileLock(object):
     """ A file locking mechanism that has context-manager support so
-        you can use it in a with statement. This should be relatively cross
-        compatible as it doesn't rely on msvcrt or fcntl for the locking.
+        you can use it in a with statement.
     """
 
-    __slots__ = ('fd', 'is_locked', 'lockfile', 'file_name', 'timeout', 'delay')
-
-    def __init__(self, file_name, timeout=10, delay=.05):
+    def __init__(self, lockfile, timeout=10, delay=.05):
         """ Prepare the file locker. Specify the file to lock and optionally
             the maximum timeout and the delay between each attempt to lock.
         """
         self.is_locked = False
-        self.lockfile = os.path.abspath(os.path.expanduser(os.path.expandvars("%s.lock" % file_name)))
-        self.file_name = file_name
+        self.lockfile = lockfile
         self.timeout = timeout
         self.delay = delay
 
 
     def acquire(self):
         """ Acquire the lock, if possible. If the lock is in use, it check again
-            every `wait` seconds. It does this until it either gets the lock or
+            every `delay` seconds. It does this until it either gets the lock or
             exceeds `timeout` number of seconds, in which case it throws
             an exception.
         """
@@ -61,11 +58,13 @@ class FileLock(object):
         pid = os.getpid()
         while True:
             try:
-                self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
-                os.write(self.fd, "%d" % pid)
+                self.f = open(self.lockfile, "w")
+                fcntl.lockf(self.f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                os.write(self.f.fileno(), "%d\n" % pid)
+                self.f.flush()
                 break;
-            except OSError as e:
-                if e.errno != errno.EEXIST:
+            except IOError, e:
+                if e.errno != errno.EWOULDBLOCK:
                     raise
                 if (time.time() - start_time) >= self.timeout:
                     raise FileLockException("Timeout occured.")
@@ -79,8 +78,8 @@ class FileLock(object):
             called at the end.
         """
         if self.is_locked:
-            os.close(self.fd)
             os.unlink(self.lockfile)
+            self.f.close()
             self.is_locked = False
 
 
