@@ -40,9 +40,6 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         #
-        # FIXME: need sleep to avoid name clash in same second
-        import time; time.sleep(1)
-        #
         f_bar = q.enqueue("bar")
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")

@@ -1,3 +1,4 @@
+import errno
 import fcntl
 import os
 import re
@@ -14,11 +15,11 @@ class PDQueue(object):
     Notes:
     - Designed for multiple processes concurrently using the queue.
     - Each entry in the queue is written to a separate file in the queue directory.
-    - Entry file names are generated so that sorting by name results in queue order.
+    - Files are named so that sorting by file name is queue order.
+    - Concurrent enqueues use exclusive file create & retries to avoid using the same file name.
     - Concurrent dequeues are serialized with an exclusive dequeue lock.
-    - Readers (dequeue) will not block writers (enqueue).
-    - TBD: Concurrent enqueues are serialized with an exclusive enqueue lock.
-    - TBD: Is enqueue atomic in the face of error?
+    - A dequeue will hold the exclusive lock until the consume callback is done.
+    - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
     def __init__(self, queue_dir, lock_class):
@@ -49,18 +50,29 @@ class PDQueue(object):
         return os.path.join(self.queue_dir, fname)
 
     def enqueue(self, s):
-        process_id = os.getpid()
-        time_seconds = int(time.time())
-        fname = "pd_%d_%d" % (time_seconds, process_id)
-        fname_abs = self._abspath(fname)
-        if os.path.exists(fname_abs):
-            raise AssertionError, "Queue entry file already exists: %s" % fname_abs
-        f = open(fname_abs, "w")
-        try:
-            f.write(s)
-        finally:
-            f.close()
-        return fname
+        n = 0
+        while True:
+            t_millisecs = int(time.time() * 1000)
+            fname = "pd_%d.txt" % t_millisecs
+            fname_abs = self._abspath(fname)
+            #
+            try:
+                fd = os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+            except OSError, e:
+                if e.errno == errno.EEXIST:
+                    n += 1
+                    if n < 100:
+                        time.sleep(0.001)
+                        continue
+                    else:
+                        raise Exception, \
+                            "Too many retries! (Last attempted name: %s)" % fname_abs
+                else:
+                    raise
+            else:
+                os.write(fd, s)
+                os.close(fd)
+                return fname
 
     def dequeue(self, consume_func):
         #
