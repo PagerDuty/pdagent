@@ -8,7 +8,7 @@ import unittest
 from pdagent.filelock import FileLock, FileLockException
 
 
-TEST_HELPER_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_filelock-helper.py")
+TEST_HELPER_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "filelock-test-helper.py")
 
 TEST_LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_filelock_lock.txt")
 
