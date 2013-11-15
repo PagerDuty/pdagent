@@ -45,11 +45,14 @@ class PDQueue(object):
         fnames.sort()
         return fnames
 
+    def _abspath(self, fname):
+        return os.path.join(self.queue_dir, fname)
+
     def enqueue(self, s):
         process_id = os.getpid()
         time_seconds = int(time.time())
         fname = "pd_%d_%d" % (time_seconds, process_id)
-        fname_abs = os.path.join(self.queue_dir, fname)
+        fname_abs = self._abspath(fname)
         if os.path.exists(fname_abs):
             raise AssertionError, "Queue entry file already exists: %s" % fname_abs
         with open(fname_abs, "w", 0600) as f:
@@ -66,7 +69,7 @@ class PDQueue(object):
             if not len(file_names):
                 raise EmptyQueue
             fname = file_names[0]
-            fname_abs = os.path.join(self.queue_dir, fname)
+            fname_abs = self._abspath(fname)
             # TODO: handle missing file or other errors
             f = open(fname_abs)
             try:
