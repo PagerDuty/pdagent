@@ -45,10 +45,14 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
         #
-        def consume_foo(s): self.assertEquals("foo", s); return True
+        def consume_foo(s):
+            self.assertEquals("foo", s)
+            return True
         q.dequeue(consume_foo)
         #
-        def consume_bar(s): self.assertEquals("bar", s); return True
+        def consume_bar(s):
+            self.assertEquals("bar", s)
+            return True
         q.dequeue(consume_bar)
         #
         # check queue is empty
@@ -61,11 +65,15 @@ class PDQueueTest(unittest.TestCase):
         q = self.newQueue()
         q.enqueue("foo")
         #
-        def dont_consume_foo(s): self.assertEquals("foo", s); return False
+        def dont_consume_foo(s):
+            self.assertEquals("foo", s)
+            return False
         q.dequeue(dont_consume_foo)
         q.dequeue(dont_consume_foo)
         #
-        def consume_foo(s): self.assertEquals("foo", s); return True
+        def consume_foo(s):
+            self.assertEquals("foo", s)
+            return True
         q.dequeue(consume_foo)
         #
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
