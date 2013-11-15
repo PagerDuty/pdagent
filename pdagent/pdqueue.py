@@ -42,7 +42,7 @@ class PDQueue(object):
 
     # Get the list of queued files from the queue directory
     def _queued_files(self):
-        fnames = [f for f in os.listdir(self.queue_dir) if f.startswith("pd_")]
+        fnames = [f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")]
         fnames.sort()
         return fnames
 
@@ -50,10 +50,23 @@ class PDQueue(object):
         return os.path.join(self.queue_dir, fname)
 
     def enqueue(self, s):
+        # write to an exclusive temp file
+        tmp_fname, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry("tmp_%d.txt")
+        os.write(tmp_fd, s)
+        # get an exclusive queue entry file
+        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry("pdq_%d.txt")
+        # since we're exclusive on both files, we can safely rename the tmp file
+        os.close(tmp_fd)
+        os.rename(tmp_fname_abs, pdq_fname_abs)
+        os.close(pdq_fd)
+        #
+        return pdq_fname
+
+    def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
         while True:
             t_millisecs = int(time.time() * 1000)
-            fname = "pd_%d.txt" % t_millisecs
+            fname = fname_fmt % t_millisecs
             fname_abs = self._abspath(fname)
             #
             try:
@@ -70,9 +83,7 @@ class PDQueue(object):
                 else:
                     raise
             else:
-                os.write(fd, s)
-                os.close(fd)
-                return fname
+                return fname, fname_abs, fd
 
     def dequeue(self, consume_func):
         #
@@ -99,4 +110,6 @@ class PDQueue(object):
                 os.remove(fname_abs)
         finally:
             lock.release()
+
+    # TODO: / FIXME: need to clean up old abandonded tmp_*.txt
 
