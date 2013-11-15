@@ -55,8 +55,11 @@ class PDQueue(object):
         fname_abs = self._abspath(fname)
         if os.path.exists(fname_abs):
             raise AssertionError, "Queue entry file already exists: %s" % fname_abs
-        with open(fname_abs, "w", 0600) as f:
+        f = open(fname_abs, "w")
+        try:
             f.write(s)
+        finally:
+            f.close()
         return fname
 
     def dequeue(self, consume_func):
