@@ -51,7 +51,8 @@ sys.path.append(proj_dir)
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import PDQueue
+from pdagent.pdqueue import PDQueue, EmptyQueue
+from pdagent.filelock import FileLock
 from backports.ssl_match_hostname import CertificateError
 
 # Config handling
@@ -151,18 +152,27 @@ for section in config.sections():
         rawConfig[section][option] = config.get(section, option)
 
 
+def send_event(json_event_str):
+    from pdagent.pdagentutil import send_event_json_str
+    incident_key, status_code = send_event_json_str(json_event_str)
+    # clean up the file only if we are successful, or if the failure was server-side.
+    if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
+        return True
+
 def tick(sc):
     # flush the event queue.
     mainLogger.info("Flushing event queue")
     try:
-        pdQueue.flush()
+        pdQueue.dequeue(send_event)
+    except EmptyQueue:
+        mainLogger.info("Nothing to do - queue is empty!")
     except CertificateError as e:
-        mainLogger.error("Server certificate validation error while flushing queue: %s" % str(e))
+        mainLogger.error("Server certificate validation error while flushing queue:", exc_info=True)
     except IOError as e:
-        mainLogger.error("I/O error while flushing queue: %s" % str(e))
+        mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
         e = sys.exc_info()[0]
-        mainLogger.error("Error while flushing queue: %s" % str(e))
+        mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # schedule next tick.
     sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
@@ -271,7 +281,10 @@ if __name__ == '__main__':
     mainLogger.info('PID: %s', pidFile)
 
     # queue to work on.
-    pdQueue = PDQueue(queue_dir=agentConfig["queueDirectory"])
+    pdQueue = PDQueue(
+            queue_dir=agentConfig["queueDirectory"],
+            lock_class=FileLock
+            )
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
