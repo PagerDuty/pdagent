@@ -30,7 +30,7 @@ import os
 import time
 import errno
 
-class FileLockException(Exception):
+class LockTimeoutException(Exception):
     pass
 
 class FileLock(object):
@@ -67,7 +67,7 @@ class FileLock(object):
                 if e.errno != errno.EWOULDBLOCK:
                     raise
                 if (time.time() - start_time) >= self.timeout:
-                    raise FileLockException("Timeout occured.")
+                    raise LockTimeoutException("Timeout trying to lock '%s'" % self.lockfile)
                 time.sleep(self.delay)
         self.is_locked = True
 

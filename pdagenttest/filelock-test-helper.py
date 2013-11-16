@@ -4,7 +4,7 @@ import signal
 import sys
 import time
 
-from pdagent.filelock import FileLock, FileLockException
+from pdagent.filelock import FileLock, LockTimeoutException
 from pdagenttest.test_filelock import TEST_LOCK_FILE
 
 lock = FileLock(TEST_LOCK_FILE, timeout=1)
@@ -22,9 +22,15 @@ def test_simple_lock():
 def test_lock_timeout():
     try:
         lock.acquire()
-    except FileLockException:
+    except LockTimeoutException:
         return 30
     return 31
+
+def test_lock_timeout_other_way_around():
+    lock.acquire()
+    time.sleep(4)  # assumes the main test is using a timeout of 1 seconds
+    lock.release()
+    return 35
 
 def test_exit_without_release():
     lock.acquire()

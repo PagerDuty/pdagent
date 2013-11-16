@@ -1,11 +1,11 @@
 
 import inspect
 import os
-import shutil
+from threading import Thread
 import time
 import unittest
 
-from pdagent.filelock import FileLock, FileLockException
+from pdagent.filelock import FileLock, LockTimeoutException
 
 
 TEST_HELPER_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "filelock-test-helper.py")
@@ -52,6 +52,39 @@ class FileLockTest(unittest.TestCase):
         open(TEST_LOCK_FILE, "w").write("-1\n")
         self.assertEqual(run_helper("test_simple_lock"), (20, 0))
         self.assertFalse(os.path.exists(TEST_LOCK_FILE))
+
+    def test_lock_timeout(self):
+        self.lock.acquire()
+        self.assertEqual(run_helper(), (30, 0))
+        self.lock.release()
+
+    def test_lock_timeout_other_way_around(self):
+        trace = []
+        self.lock.timeout = 1
+        #
+        def f():
+            try:
+                trace.append("A")
+                time.sleep(2) # Pause to allow helper acquire the lock
+                trace.append("B")
+                self.lock.acquire()
+                trace.append("C")
+                self.lock.release()
+                trace.append("D")
+            except LockTimeoutException:
+                trace.append("T")
+            except:
+                trace.append("E")
+        #
+        t = Thread(target=f)
+        t.start()
+        time.sleep(1)
+        self.assertEqual(trace, ["A"])
+        #
+        self.assertEqual(run_helper(), (35, 0))
+        #
+        t.join()
+        self.assertEqual(trace, ["A", "B", "T"])
 
     def test_exit_without_release(self):
         self.assertEqual(run_helper(), (40, 0))
