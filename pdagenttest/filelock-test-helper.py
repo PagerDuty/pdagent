@@ -19,6 +19,12 @@ def test_simple_lock():
     lock.release()
     return 20
 
+def test_lock_wait():
+    lock.acquire()
+    time.sleep(2)
+    lock.release()
+    return 25
+
 def test_lock_timeout():
     try:
         lock.acquire()
@@ -28,7 +34,7 @@ def test_lock_timeout():
 
 def test_lock_timeout_other_way_around():
     lock.acquire()
-    time.sleep(4)  # assumes the main test is using a timeout of 1 seconds
+    time.sleep(3)  # assumes the main test is using a timeout of 1 seconds
     lock.release()
     return 35
 

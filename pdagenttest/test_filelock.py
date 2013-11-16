@@ -1,7 +1,6 @@
 
 import inspect
 import os
-from threading import Thread
 import time
 import unittest
 
@@ -31,6 +30,17 @@ class FileLockTest(unittest.TestCase):
         # Ensure that some other process is not holding the lock
         self.lock.acquire()
         self.lock.release()
+        self.thread = None
+
+    def tearDown(self):
+        if self.thread:
+            self.thread.join()
+            self.thread = None
+
+    def runInThread(self, f):
+        from threading import Thread
+        self.thread = Thread(target=f)
+        self.thread.start()
 
     def test_spawn_ok(self):
         # this test just to check if we're spawning the helper correctly
@@ -53,6 +63,36 @@ class FileLockTest(unittest.TestCase):
         self.assertEqual(run_helper("test_simple_lock"), (20, 0))
         self.assertFalse(os.path.exists(TEST_LOCK_FILE))
 
+    def test_lock_wait(self):
+        trace = []
+        #
+        def f():
+            try:
+                trace.append("A")
+                time.sleep(1)  # Pause to allow helper acquire the lock
+                trace.append("B")
+                self.lock.acquire()
+                trace.append("C")
+                time.sleep(2)
+                trace.append("D")
+                self.lock.release()
+                trace.append("E")
+            except LockTimeoutException:
+                trace.append("T")
+            except:
+                trace.append("X")
+        #
+        self.runInThread(f)
+        time.sleep(0.1)  # Allow thread to run
+        self.assertEqual(trace, ["A"])
+        #
+        self.assertEqual(run_helper(), (25, 0))
+        #
+        self.assertEqual(trace, ["A", "B"])
+        #
+        time.sleep(2.1) # Allow thread to finish
+        self.assertEqual(trace, ["A", "B", "C", "D", "E"])
+
     def test_lock_timeout(self):
         self.lock.acquire()
         self.assertEqual(run_helper(), (30, 0))
@@ -65,7 +105,7 @@ class FileLockTest(unittest.TestCase):
         def f():
             try:
                 trace.append("A")
-                time.sleep(2) # Pause to allow helper acquire the lock
+                time.sleep(1)  # Pause to allow helper acquire the lock
                 trace.append("B")
                 self.lock.acquire()
                 trace.append("C")
@@ -74,16 +114,14 @@ class FileLockTest(unittest.TestCase):
             except LockTimeoutException:
                 trace.append("T")
             except:
-                trace.append("E")
+                trace.append("X")
         #
-        t = Thread(target=f)
-        t.start()
-        time.sleep(1)
+        self.runInThread(f)
+        time.sleep(0.1)  # Allow thread to run
         self.assertEqual(trace, ["A"])
         #
         self.assertEqual(run_helper(), (35, 0))
         #
-        t.join()
         self.assertEqual(trace, ["A", "B", "T"])
 
     def test_exit_without_release(self):
