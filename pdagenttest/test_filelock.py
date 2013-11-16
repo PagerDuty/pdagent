@@ -90,7 +90,7 @@ class FileLockTest(unittest.TestCase):
         #
         self.assertEqual(trace, ["A", "B"])
         #
-        time.sleep(2.1) # Allow thread to finish
+        time.sleep(2.1)  # Allow thread to finish
         self.assertEqual(trace, ["A", "B", "C", "D", "E"])
 
     def test_lock_timeout(self):
@@ -125,11 +125,14 @@ class FileLockTest(unittest.TestCase):
         self.assertEqual(trace, ["A", "B", "T"])
 
     def test_exit_without_release(self):
+        # python graceful exit should call __del__ & result in release & delete of lock file
         self.assertEqual(run_helper(), (40, 0))
+        self.assertFalse(os.path.exists(TEST_LOCK_FILE))
         self.lock.acquire()
         self.lock.release()
 
     def test_kill_releases_lock(self):
+        # python being force killed will release the lock but leave the file
         self.assertEqual(run_helper(), (0, 9))
         self.assertTrue(os.path.exists(TEST_LOCK_FILE))
         self.lock.acquire()
