@@ -1,8 +1,7 @@
 import errno
-import fcntl
 import os
-import re
 import time
+
 
 class EmptyQueue(Exception):
     pass
@@ -51,7 +50,7 @@ class PDQueue(object):
 
     def enqueue(self, s):
         # write to an exclusive temp file
-        tmp_fname, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry("tmp_%d.txt")
+        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry("tmp_%d.txt")
         os.write(tmp_fd, s)
         # get an exclusive queue entry file
         pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry("pdq_%d.txt")
