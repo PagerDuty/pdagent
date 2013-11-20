@@ -63,7 +63,7 @@ if hasattr(httplib, 'HTTPS'):
                 new_kwargs = {
                     "ca_certs": self.ca_certs
                 }
-                new_kwargs.update(kwargs) # allows overriding ca_certs
+                new_kwargs.update(kwargs)  # allows overriding ca_certs
                 return VerifyingHTTPSConnection(host, **new_kwargs)
 
 
@@ -74,7 +74,7 @@ def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
     if _verified_https_possible:
         # TODO cache the opener?
-        opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs = ca_certs))
+        opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
         return opener.open(url, **kwargs)
     else:
         return urllib2.urlopen(url, **kwargs)
