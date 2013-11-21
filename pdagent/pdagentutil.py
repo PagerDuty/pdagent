@@ -11,7 +11,9 @@
 import json
 import urllib2
 
-EVENTS_API_BASE = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+EVENTS_API_BASE = \
+    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+
 
 def find_in_sys_path(file_path):
     import os
@@ -22,14 +24,18 @@ def find_in_sys_path(file_path):
             return abs_path
     return None
 
+
 def send_event(event_type, service_key, incident_key, description, details):
     print "Sending %s..." % event_type
 
-    j = _build_event_json_str(event_type, service_key, incident_key, description, details)
+    j = _build_event_json_str(
+        event_type, service_key, incident_key, description, details
+        )
     send_event_json_str(j)
 
+
 def send_event_json_str(event_str):
-    from pdagent import httpswithverify 
+    from pdagent import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(event_str)
@@ -48,14 +54,20 @@ def send_event_json_str(event_str):
         print "Error! Reason:", str(response)
     return (incident_key, http_code)
 
+
 def queue_event(event_type, service_key, incident_key, description, details):
     from pdqueue import PDQueue
     print "Queuing %s..." % event_type
 
-    event = _build_event_json_str(event_type, service_key, incident_key, description, details)
+    event = _build_event_json_str(
+        event_type, service_key, incident_key, description, details
+        )
     PDQueue().enqueue(event)
 
-def _build_event_json_str(event_type, service_key, incident_key, description, details):
+
+def _build_event_json_str(
+    event_type, service_key, incident_key, description, details
+    ):
     d = {
         "service_key": service_key,
         "event_type": event_type,

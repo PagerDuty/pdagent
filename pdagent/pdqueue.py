@@ -13,11 +13,14 @@ class PDQueue(object):
 
     Notes:
     - Designed for multiple processes concurrently using the queue.
-    - Each entry in the queue is written to a separate file in the queue directory.
+    - Each entry in the queue is written to a separate file in the
+        queue directory.
     - Files are named so that sorting by file name is queue order.
-    - Concurrent enqueues use exclusive file create & retries to avoid using the same file name.
+    - Concurrent enqueues use exclusive file create & retries to avoid
+        using the same file name.
     - Concurrent dequeues are serialized with an exclusive dequeue lock.
-    - A dequeue will hold the exclusive lock until the consume callback is done.
+    - A dequeue will hold the exclusive lock until the consume callback
+        is done.
     - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
@@ -28,7 +31,9 @@ class PDQueue(object):
         self._create_queue_dir()
         self._verify_permissions()
         #
-        self._dequeue_lockfile = os.path.join(self.queue_dir, "dequeue_lock.txt")
+        self._dequeue_lockfile = os.path.join(
+            self.queue_dir, "dequeue_lock.txt"
+            )
 
     def _create_queue_dir(self):
         if not os.access(self.queue_dir, os.F_OK):
@@ -37,11 +42,16 @@ class PDQueue(object):
     def _verify_permissions(self):
         if not (os.access(self.queue_dir, os.R_OK)
             and os.access(self.queue_dir, os.W_OK)):
-            raise Exception("Can't read/write to directory %s, please check permissions." % self.queue_dir)
+            raise Exception(
+                "Can't read/write to directory %s, please check permissions."
+                % self.queue_dir
+                )
 
     # Get the list of queued files from the queue directory
     def _queued_files(self):
-        fnames = [f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")]
+        fnames = [
+            f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")
+            ]
         fnames.sort()
         return fnames
 
@@ -50,11 +60,16 @@ class PDQueue(object):
 
     def enqueue(self, s):
         # write to an exclusive temp file
-        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry("tmp_%d.txt")
+        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
+            "tmp_%d.txt"
+            )
         os.write(tmp_fd, s)
         # get an exclusive queue entry file
-        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry("pdq_%d.txt")
-        # since we're exclusive on both files, we can safely rename the tmp file
+        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
+            "pdq_%d.txt"
+            )
+        # since we're exclusive on both files, we can safely rename
+        # the tmp file
         os.close(tmp_fd)
         os.rename(tmp_fname_abs, pdq_fname_abs)
         os.close(pdq_fd)
@@ -77,8 +92,10 @@ class PDQueue(object):
                         time.sleep(0.001)
                         continue
                     else:
-                        raise Exception, \
-                            "Too many retries! (Last attempted name: %s)" % fname_abs
+                        raise Exception(
+                            "Too many retries! (Last attempted name: %s)"
+                            % fname_abs
+                            )
                 else:
                     raise
             else:
@@ -111,4 +128,3 @@ class PDQueue(object):
             lock.release()
 
     # TODO: / FIXME: need to clean up old abandonded tmp_*.txt
-
