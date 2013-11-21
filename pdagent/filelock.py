@@ -34,6 +34,7 @@ import errno
 class LockTimeoutException(Exception):
     pass
 
+
 class FileLock(object):
     """ A file locking mechanism that has context-manager support so
         you can use it in a with statement.
@@ -48,12 +49,11 @@ class FileLock(object):
         self.timeout = timeout
         self.delay = delay
 
-
     def acquire(self):
-        """ Acquire the lock, if possible. If the lock is in use, it check again
-            every `delay` seconds. It does this until it either gets the lock or
-            exceeds `timeout` number of seconds, in which case it throws
-            an exception.
+        """ Acquire the lock, if possible. If the lock is in use, it check
+            again every `delay` seconds. It does this until it either gets the
+            lock or exceeds `timeout` number of seconds, in which case it
+            throws an exception.
         """
         start_time = time.time()
         pid = os.getpid()
@@ -63,15 +63,16 @@ class FileLock(object):
                 fcntl.lockf(self.f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 os.write(self.f.fileno(), "%d\n" % pid)
                 self.f.flush()
-                break;
+                break
             except IOError, e:
                 if e.errno != errno.EWOULDBLOCK:
                     raise
                 if (time.time() - start_time) >= self.timeout:
-                    raise LockTimeoutException("Timeout trying to lock '%s'" % self.lockfile)
+                    raise LockTimeoutException(
+                        "Timeout trying to lock '%s'" % self.lockfile
+                        )
                 time.sleep(self.delay)
         self.is_locked = True
-
 
     def release(self):
         """ Get rid of the lock by deleting the lockfile.
@@ -83,7 +84,6 @@ class FileLock(object):
             self.f.close()
             self.is_locked = False
 
-
     def __enter__(self):
         """ Activated when used in the with statement.
             Should automatically acquire a lock to be used in the with block.
@@ -92,14 +92,12 @@ class FileLock(object):
             self.acquire()
         return self
 
-
     def __exit__(self, exc_type, exc_value, traceback):
         """ Activated at the end of the with statement.
             It automatically releases the lock if it isn't locked.
         """
         if self.is_locked:
             self.release()
-
 
     def __del__(self):
         """ Make sure that the FileLock instance doesn't leave a lockfile
