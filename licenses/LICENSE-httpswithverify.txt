@@ -1,0 +1,2 @@
+See http://docs.python.org/2/license.html
+
