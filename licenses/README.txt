@@ -11,4 +11,5 @@ ca_certs.pem                    011a86ed18fe    http://mxr.mozilla.org/mozilla-c
                                                 (PEM-encoded certificate bundle was generated from above source)
 daemon                          43f94cb         https://github.com/serverdensity/sd-agent
 FileLock                        2123d796c1      https://github.com/raphendyr/FileLock
+httpswithverify                 N/A             http://www.python.org/
 

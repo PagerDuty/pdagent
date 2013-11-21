@@ -1,3 +1,8 @@
+#
+# Verified HTTPS connection - based on httplib & urllib2.
+# See http://docs.python.org/2/license.html for license.
+#
+
 import httplib
 import urllib2
 import socket
