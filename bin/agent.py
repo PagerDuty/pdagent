@@ -158,6 +158,7 @@ def send_event(json_event_str):
     # clean up the file only if we are successful, or if the failure was server-side.
     if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
         return True
+    return False
 
 def tick(sc):
     # flush the event queue.
