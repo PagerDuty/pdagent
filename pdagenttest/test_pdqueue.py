@@ -87,7 +87,49 @@ class PDQueueTest(unittest.TestCase):
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
-        pass
+        q = self.newQueue()
+        f_foo = q.enqueue("foo")
+
+        trace = []
+
+        class LockClass:
+            def __init__(self, lockfile):
+                trace.append("Li")
+
+            def acquire(self):
+                trace.append("La")
+
+            def release(self):
+                trace.append("Lr")
+        q.lock_class = LockClass
+
+        def dequeue():
+            try:
+                def consume(s):
+                    trace.append("C1")
+                    time.sleep(0.2)
+                    trace.append("C2")
+                    return True
+                q.dequeue(consume)
+            except EmptyQueue:
+                trace.append("q_EQ")
+
+        thread_dequeue = Thread(target=dequeue)
+        thread_dequeue.start()
+        time.sleep(0.1)  # give the thread time to acquire the lock & sleep
+
+        self.assertEquals(trace, ["Li", "La", "C1"])
+        self.assertEquals(q._queued_files(), [f_foo])
+
+        f_bar = q.enqueue("bar")
+
+        self.assertEquals(trace, ["Li", "La", "C1"])
+        self.assertEquals(q._queued_files(), [f_foo, f_bar])
+
+        time.sleep(0.2)
+
+        self.assertEquals(trace, ["Li", "La", "C1", "C2", "Lr"])
+        self.assertEquals(q._queued_files(), [f_bar])
 
     def test_parallel_dequeque(self):
         # test that a dequeue blocks another dequeue using locking
