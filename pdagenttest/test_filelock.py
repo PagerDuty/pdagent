@@ -7,14 +7,17 @@ import unittest
 from pdagent.filelock import FileLock, LockTimeoutException
 
 
-TEST_HELPER_PY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "filelock-test-helper.py")
+_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
-TEST_LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_filelock_lock.txt")
+TEST_HELPER_PY = os.path.join(_TEST_DIR, "filelock-test-helper.py")
+
+TEST_LOCK_FILE = os.path.join(_TEST_DIR, "test_filelock_lock.txt")
 
 
 def run_helper(test_name=None):
     if not test_name:
-        test_name = inspect.stack()[1][3]  # default to the same name as the calling test method
+        # default to the same name as the calling test method
+        test_name = inspect.stack()[1][3]
     e = os.system("python %s %s" % (TEST_HELPER_PY, test_name))
     exit_code, signal = e / 256, e % 256
     return exit_code, signal
@@ -25,7 +28,7 @@ class FileLockTest(unittest.TestCase):
     def setUp(self):
         if os.path.exists(TEST_LOCK_FILE):
             os.unlink(TEST_LOCK_FILE)
-        #
+
         self.lock = FileLock(TEST_LOCK_FILE)
         # Ensure that some other process is not holding the lock
         self.lock.acquire()
@@ -65,7 +68,7 @@ class FileLockTest(unittest.TestCase):
 
     def test_lock_wait(self):
         trace = []
-        #
+
         def f():
             try:
                 trace.append("A")
@@ -81,15 +84,15 @@ class FileLockTest(unittest.TestCase):
                 trace.append("T")
             except:
                 trace.append("X")
-        #
+
         self.runInThread(f)
         time.sleep(0.1)  # Allow thread to run
         self.assertEqual(trace, ["A"])
-        #
+
         self.assertEqual(run_helper(), (25, 0))
-        #
+
         self.assertEqual(trace, ["A", "B"])
-        #
+
         time.sleep(2.1)  # Allow thread to finish
         self.assertEqual(trace, ["A", "B", "C", "D", "E"])
 
@@ -101,7 +104,7 @@ class FileLockTest(unittest.TestCase):
     def test_lock_timeout_other_way_around(self):
         trace = []
         self.lock.timeout = 1
-        #
+
         def f():
             try:
                 trace.append("A")
@@ -115,17 +118,18 @@ class FileLockTest(unittest.TestCase):
                 trace.append("T")
             except:
                 trace.append("X")
-        #
+
         self.runInThread(f)
         time.sleep(0.1)  # Allow thread to run
         self.assertEqual(trace, ["A"])
-        #
+
         self.assertEqual(run_helper(), (35, 0))
-        #
+
         self.assertEqual(trace, ["A", "B", "T"])
 
     def test_exit_without_release(self):
-        # python graceful exit should call __del__ & result in release & delete of lock file
+        # python graceful exit should call __del__ & result in
+        # release & delete of lock file
         self.assertEqual(run_helper(), (40, 0))
         self.assertFalse(os.path.exists(TEST_LOCK_FILE))
         self.lock.acquire()

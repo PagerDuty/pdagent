@@ -51,14 +51,14 @@ def test_kill_releases_lock():
 if __name__ == "__main__":
     args = sys.argv
     if len(args) != 2: sys.exit(2)  # wrong number of args
-    #
+
     _test_func_name = args[1]
     if not _test_func_name.startswith("test_"): sys.exit(5)  # bad test name
-    #
+
     main_module = sys.modules["__main__"]
     _test_func = getattr(main_module, _test_func_name, None)
     if not _test_func: sys.exit(6)  # no such test
-    #
+
     exit_code = _test_func()
     if exit_code is None: sys.exit(7)  # missing exit code
     if exit_code != 0 and exit_code < 10: sys.exit(8)  # reserved exit code

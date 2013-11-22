@@ -27,10 +27,10 @@ class PDQueue(object):
     def __init__(self, queue_dir, lock_class):
         self.queue_dir = queue_dir
         self.lock_class = lock_class
-        #
+
         self._create_queue_dir()
         self._verify_permissions()
-        #
+
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue_lock.txt"
             )
@@ -73,7 +73,7 @@ class PDQueue(object):
         os.close(tmp_fd)
         os.rename(tmp_fname_abs, pdq_fname_abs)
         os.close(pdq_fd)
-        #
+
         return pdq_fname
 
     def _open_creat_excl_with_retry(self, fname_fmt):
@@ -82,7 +82,7 @@ class PDQueue(object):
             t_millisecs = int(time.time() * 1000)
             fname = fname_fmt % t_millisecs
             fname_abs = self._abspath(fname)
-            #
+
             try:
                 fd = os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
             except OSError, e:
@@ -102,11 +102,11 @@ class PDQueue(object):
                 return fname, fname_abs, fd
 
     def dequeue(self, consume_func):
-        #
+
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
         try:
-            #
+
             file_names = self._queued_files()
             if not len(file_names):
                 raise EmptyQueue
@@ -118,9 +118,9 @@ class PDQueue(object):
                 s = f.read()
             finally:
                 f.close()
-            #
+
             consumed = consume_func(s)
-            #
+
             if consumed:
                 # TODO: handle/log delete error!
                 os.remove(fname_abs)
