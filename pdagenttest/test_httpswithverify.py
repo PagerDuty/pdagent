@@ -25,7 +25,7 @@ class PDVerifiedHttpsTest(unittest.TestCase):
 
     def test_invalid_cert(self):
         # we should get a CertificateError here because this url uses a
-        # certificate issued to pagerduty.com
+        # certificate issued to cloudfront.net
         self.assertRaises(
             CertificateError, urlopen, 'https://www.cloudoverflow.com/')
 
