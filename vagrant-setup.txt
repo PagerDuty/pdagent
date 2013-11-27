@@ -46,5 +46,6 @@ You can manage the VMs using the Vagrant commands: `up`, `halt`, `reload`,
 
 You can ssh into a VM by using `vagrant ssh <machine-name>`. For example:
 
+    ~/w/agent$ vagrant ssh agent-precise32
 
 
