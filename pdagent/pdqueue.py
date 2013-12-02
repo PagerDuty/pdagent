@@ -70,7 +70,9 @@ class PDQueue(object):
             )
         # since we're exclusive on both files, we can safely rename
         # the tmp file
+        os.fsync(tmp_fd)  # this seems to be the most we can do for durability
         os.close(tmp_fd)
+        # would love to fsync the rename but we're not writing a DB :)
         os.rename(tmp_fname_abs, pdq_fname_abs)
         os.close(pdq_fd)
 
