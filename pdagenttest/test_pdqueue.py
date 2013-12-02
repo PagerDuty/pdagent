@@ -34,6 +34,21 @@ class PDQueueTest(unittest.TestCase):
     def newQueue(self):
         return PDQueue(TEST_QUEUE_DIR, NoOpLock)
 
+    def test__open_creat_excl_with_retry(self):
+        from pdagent.pdqueue import _open_creat_excl
+        q = self.newQueue()
+        fname_abs = q._abspath("_open_creat_excl_with_retry.txt")
+        fd1 = _open_creat_excl(fname_abs)
+        self.assertNotEquals(fd1, None)
+        fd2 = None
+        try:
+            fd2 = _open_creat_excl(fname_abs)
+            self.assertEquals(fd2, None)
+        finally:
+            os.close(fd1)
+            if fd2:
+                os.close(fd2)
+
     def test_init_creates_directory(self):
         self.assertFalse(os.path.exists(TEST_QUEUE_DIR))
         self.newQueue()

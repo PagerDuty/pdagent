@@ -84,22 +84,17 @@ class PDQueue(object):
             t_millisecs = int(time.time() * 1000)
             fname = fname_fmt % t_millisecs
             fname_abs = self._abspath(fname)
-
-            try:
-                fd = os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-            except OSError, e:
-                if e.errno == errno.EEXIST:
-                    n += 1
-                    if n < 100:
-                        time.sleep(0.001)
-                        continue
-                    else:
-                        raise Exception(
-                            "Too many retries! (Last attempted name: %s)"
-                            % fname_abs
-                            )
+            fd = _open_creat_excl(fname_abs)
+            if fd is None:
+                n += 1
+                if n < 100:
+                    time.sleep(0.001)
+                    continue
                 else:
-                    raise
+                    raise Exception(
+                        "Too many retries! (Last attempted name: %s)"
+                        % fname_abs
+                        )
             else:
                 return fname, fname_abs, fd
 
@@ -130,3 +125,13 @@ class PDQueue(object):
             lock.release()
 
     # TODO: / FIXME: need to clean up old abandonded tmp_*.txt
+
+
+def _open_creat_excl(fname_abs):
+    try:
+        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return None
+        else:
+            raise
