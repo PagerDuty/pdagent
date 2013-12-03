@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from backports.ssl_match_hostname import CertificateError
+from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.httpswithverify import urlopen
 from urllib2 import HTTPError, URLError
 from ssl import SSLError
