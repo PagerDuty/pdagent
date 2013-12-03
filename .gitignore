@@ -8,3 +8,7 @@ tmp/
 
 .vagrant/
 
+build-deb/
+pdagent_0.1_all.deb
+python-pdagent.public
+
