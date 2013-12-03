@@ -1,3 +1,8 @@
+#
+# Verified HTTPS connection - based on httplib & urllib2.
+# See http://docs.python.org/2/license.html for license.
+#
+
 import httplib
 import urllib2
 import socket
@@ -16,7 +21,8 @@ if hasattr(httplib, 'HTTPS'):
         pass
     else:
         class VerifyingHTTPSConnection(httplib.HTTPSConnection):
-            "This class allows communication via SSL after verifying the server's certificate."
+            """This class allows communication via SSL after verifying the
+            server's certificate."""
             # this class is a modified version of httplib.HTTPSConnection
 
             def __init__(self, host, **kwargs):
@@ -24,17 +30,21 @@ if hasattr(httplib, 'HTTPS'):
                 httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
             def connect(self):
-                "Connects to a host on a given (SSL) port, using a certificate-verifying socket wrapper."
+                """Connects to a host on a given (SSL) port, using a
+                certificate-verifying socket wrapper."""
 
-                from backports.ssl_match_hostname import match_hostname, CertificateError
+                from backports.ssl_match_hostname import match_hostname, \
+                    CertificateError
 
-                sock = socket.create_connection((self.host, self.port),
-                                                self.timeout, self.source_address)
+                sock = socket.create_connection(
+                    (self.host, self.port), self.timeout, self.source_address
+                    )
                 if self._tunnel_host:
                     self.sock = sock
                     self._tunnel()
 
-                # require server certificate to be provided, and pass along the ca_certs file.
+                # require server certificate to be provided, and pass along
+                # the ca_certs file.
                 self.sock = ssl.wrap_socket(sock,
                                             keyfile=self.key_file,
                                             certfile=self.cert_file,
@@ -47,9 +57,9 @@ if hasattr(httplib, 'HTTPS'):
                     self.sock.close()
                     raise
 
-
         class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
-            "This handler uses HTTPS connections that verify the server's SSL certificate."
+            """This handler uses HTTPS connections that verify the server's
+            SSL certificate."""
             # this class is a modified version of urllib2.HTTPSHandler
 
             def __init__(self, **kwargs):
@@ -63,9 +73,8 @@ if hasattr(httplib, 'HTTPS'):
                 new_kwargs = {
                     "ca_certs": self.ca_certs
                 }
-                new_kwargs.update(kwargs) # allows overriding ca_certs
+                new_kwargs.update(kwargs)  # allows overriding ca_certs
                 return VerifyingHTTPSConnection(host, **new_kwargs)
-
 
         _verified_https_possible = True
 
@@ -74,7 +83,7 @@ def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
     if _verified_https_possible:
         # TODO cache the opener?
-        opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs = ca_certs))
+        opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
         return opener.open(url, **kwargs)
     else:
         return urllib2.urlopen(url, **kwargs)
