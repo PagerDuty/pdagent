@@ -14,8 +14,11 @@ The PagerDuty Agent is completely open-source which means that you can download
 the source code and customize it for your needs.
 
 
-# Developing
+## Developing
 
 See the file `pydev-setup.txt` for PyDev setup instructions.
+
+See the file `vagrant-setup.txt` for configuring Vagrant and running test VMs.
+
 
 
