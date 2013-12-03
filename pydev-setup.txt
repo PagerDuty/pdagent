@@ -30,8 +30,15 @@ installed older versions of Eclipse & PyDev as follows:
     - In the section: Pydev -> Interpreter - Python
         - Use *Auto Config* to get the default Python interpreter
 
+    - In the section: Pydev -> Editor -> Code Style -> Code Formatter
+        - Check *Right trim lines?*
+
     - In the section: Pydev -> Editor -> Typing
         - Uncheck *After '(' indent to its level ...*
+
+    - In the section: Pydev -> Editor -> Code Analysis
+        - Go to tab pep8.py
+        - Change Pep8 from "Don't run" to "warning"
 
     - Optional: In the section: Pydev -> Editor
         - Under *Appearance color options*, choose *Comments*

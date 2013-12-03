@@ -1,19 +1,39 @@
-import fcntl
+import errno
 import os
-import re
 import time
+
+
+class EmptyQueue(Exception):
+    pass
+
 
 class PDQueue(object):
     """
-    This class implements a simple directory based queue for PagerDuty events
+    A directory based queue for PagerDuty events.
+
+    Notes:
+    - Designed for multiple processes concurrently using the queue.
+    - Each entry in the queue is written to a separate file in the
+        queue directory.
+    - Files are named so that sorting by file name is queue order.
+    - Concurrent enqueues use exclusive file create & retries to avoid
+        using the same file name.
+    - Concurrent dequeues are serialized with an exclusive dequeue lock.
+    - A dequeue will hold the exclusive lock until the consume callback
+        is done.
+    - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
-    QUEUE_DIR = "/tmp/pagerduty"  # TODO changeme
-
-    def __init__(self, queue_dir=QUEUE_DIR):
+    def __init__(self, queue_dir, lock_class):
         self.queue_dir = queue_dir
+        self.lock_class = lock_class
+
         self._create_queue_dir()
         self._verify_permissions()
+
+        self._dequeue_lockfile = os.path.join(
+            self.queue_dir, "dequeue_lock.txt"
+            )
 
     def _create_queue_dir(self):
         if not os.access(self.queue_dir, os.F_OK):
@@ -22,49 +42,96 @@ class PDQueue(object):
     def _verify_permissions(self):
         if not (os.access(self.queue_dir, os.R_OK)
             and os.access(self.queue_dir, os.W_OK)):
-            raise Exception("Can't read/write to directory %s, please check permissions." % self.queue_dir)
+            raise Exception(
+                "Can't read/write to directory %s, please check permissions."
+                % self.queue_dir
+                )
 
-    # Get the list of files from the queue directory
+    # Get the list of queued files from the queue directory
     def _queued_files(self):
-        files = os.listdir(self.queue_dir)
-        pd_names = re.compile("pd_")
-        pd_file_names = filter(pd_names.match, files)
+        fnames = [
+            f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")
+            ]
+        fnames.sort()
+        return fnames
 
-        # We need to sort the files by the timestamp.
-        # This function extracts the timestamp out of the file name
-        def file_timestamp(file_name):
-            return int(re.search('pd_(\d+)_', file_name).group(1))
+    def _abspath(self, fname):
+        return os.path.join(self.queue_dir, fname)
 
-        sorted_file_names = sorted(pd_file_names, key=file_timestamp)
-        return pd_file_names
+    def enqueue(self, s):
+        # write to an exclusive temp file
+        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
+            "tmp_%d.txt"
+            )
+        os.write(tmp_fd, s)
+        # get an exclusive queue entry file
+        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
+            "pdq_%d.txt"
+            )
+        # since we're exclusive on both files, we can safely rename
+        # the tmp file
+        os.fsync(tmp_fd)  # this seems to be the most we can do for durability
+        os.close(tmp_fd)
+        # would love to fsync the rename but we're not writing a DB :)
+        os.rename(tmp_fname_abs, pdq_fname_abs)
+        os.close(pdq_fd)
 
-    def _flush_queue(self):
-        from pdagent.pdagentutil import send_event_json_str
-        file_names = self._queued_files()
-        # TODO handle related incidents e.g. if there is an ack for which a resolve is also present
-        for file_name in file_names:
-            file_path = ("%s/%s" % (self.queue_dir, file_name))
-            json_event_str = None
-            with open(file_path, "r") as event_file:
-                json_event_str = event_file.read()
-            incident_key, status_code = send_event_json_str(json_event_str)
+        return pdq_fname
 
-            # clean up the file only if we are successful, or if the failure was server-side.
-            if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
-                os.remove(file_path)
+    def _open_creat_excl_with_retry(self, fname_fmt):
+        n = 0
+        while True:
+            t_millisecs = int(time.time() * 1000)
+            fname = fname_fmt % t_millisecs
+            fname_abs = self._abspath(fname)
+            fd = _open_creat_excl(fname_abs)
+            if fd is None:
+                n += 1
+                if n < 100:
+                    time.sleep(0.001)
+                    continue
+                else:
+                    raise Exception(
+                        "Too many retries! (Last attempted name: %s)"
+                        % fname_abs
+                        )
+            else:
+                return fname, fname_abs, fd
 
-    def flush(self):
-        with open("%s/lockfile" % self.queue_dir, "w") as lock_file:
+    def dequeue(self, consume_func):
+
+        lock = self.lock_class(self._dequeue_lockfile)
+        lock.acquire()
+        try:
+
+            file_names = self._queued_files()
+            if not len(file_names):
+                raise EmptyQueue
+            fname = file_names[0]
+            fname_abs = self._abspath(fname)
+            # TODO: handle missing file or other errors
+            f = open(fname_abs)
             try:
-                fcntl.lockf(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                # We have acquired the lock here; let's flush the queue
-                self._flush_queue()
+                s = f.read()
             finally:
-                fcntl.lockf(lock_file.fileno(), fcntl.LOCK_UN)
+                f.close()
 
-    def enqueue(self, event_json_str):
-        process_id = os.getpid()
-        time_seconds = int(time.time())
-        file_name = "%s/pd_%d_%d" % (self.queue_dir, time_seconds, process_id)
-        with open(file_name, "w", 0600) as f:
-            f.write(event_json_str)
+            consumed = consume_func(s)
+
+            if consumed:
+                # TODO: handle/log delete error!
+                os.remove(fname_abs)
+        finally:
+            lock.release()
+
+    # TODO: / FIXME: need to clean up old abandonded tmp_*.txt
+
+
+def _open_creat_excl(fname_abs):
+    try:
+        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return None
+        else:
+            raise
