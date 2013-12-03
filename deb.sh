@@ -1,4 +1,38 @@
 
+# HOWTO:
+#
+# Dev Setup:
+#
+#   gem install fpm
+#
+#
+# Building the .deb:
+#
+#   rm pdagent_0.1_all.deb
+#   sh deb.sh
+#
+# Pushing the .deb into the vagrant VM:
+#
+#   # check the ssh proxy port - vm must be running
+#   vagrant ssh-config agent-lucid32
+#
+#   # scp into the vagrant vm - vm must be running
+#   # watch out for ssh key changes when VMs come & go
+#   # use correct localport instead of 2222
+#   scp -P 2222 pdagent_0.1_all.deb vagrant@localhost:~
+#
+# Testing the .deb:
+#
+#   vagrant ssh agent-lucid32
+#   sudo dpkg -i pdagent_0.1_all.deb
+#   which agent.py
+#   which pd-send.py
+#   python -c "import pdagent; print pdagent.__file__"
+#   sudo apt-get --yes remove pdagent
+#
+
+
+
 set -e
 
 rm -fr build-deb
