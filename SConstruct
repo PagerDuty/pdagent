@@ -5,11 +5,6 @@
 import subprocess
 
 
-def build(target, source, env):
-    """Proxy-target: build"""
-    pass
-
-
 def cleanup(target, source, env):
     """Removes generated artifacts"""
     # TODO clean up.
@@ -83,8 +78,7 @@ integrationTestTask = env.Command( \
     None, \
     Action(runIntegrationTests, "\n--- Running integration tests"))
 
-buildTask = env.Command('build', None, Action(build, "\n--- Building"))
-Depends(buildTask, unitTestTask)
+buildTask = env.Alias("build", ["test"])
 
 packageTask = env.Command( \
     'package', \
@@ -96,9 +90,7 @@ distTask = env.Command( \
     'dist', \
     None, \
     Action(createDist, "\n--- Creating distributables"))
-Depends(distTask, unitTestTask)
-Depends(distTask, packageTask)
-Depends(distTask, integrationTestTask)
+Depends(distTask, [unitTestTask, packageTask, integrationTestTask])
 
 cleanTask = env.Command('clean', None, Action(cleanup, "\n--- Cleaning up"))
 
