@@ -18,10 +18,7 @@ def runtestdir(subdir):
             errs += 1
     print >> sys.stderr, "SUMMARY: %s -> %s total / %s error (%s)" \
         % (subdir, total, errs, sys.executable)
-    if errs > 0:
-        return 1
-    else:
-        return 0
+    return errs
 
 
 if __name__ == "__main__":

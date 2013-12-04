@@ -28,10 +28,7 @@ def createPackage(target, source, env):
     retCode = 0
     retCode += _createDebPackage()
     retCode += _createRpmPackage()
-    if retCode:
-        return 1
-    else:
-        return 0
+    return retCode
 
 
 def runIntegrationTests(target, source, env):
