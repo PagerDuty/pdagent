@@ -18,13 +18,19 @@ def runtestdir(subdir):
             errs += 1
     print >> sys.stderr, "SUMMARY: %s -> %s total / %s error (%s)" \
         % (subdir, total, errs, sys.executable)
+    if errs > 0:
+        return 1
+    else:
+        return 0
 
 
 if __name__ == "__main__":
-    #
     project_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(project_dir)
-    os.environ["PYTHONPATH"] = project_dir # XXX: trashes current PYTHONPATH
-    #
-    runtestdir("pdagenttest")
+    if 'PYTHONPATH' not in os.environ:
+        os.environ['PYTHONPATH'] = project_dir
+    else:
+        os.environ['PYTHONPATH'] += os.pathsep + project_dir
+
+    exit(runtestdir("pdagenttest"))
 
