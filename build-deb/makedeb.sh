@@ -16,7 +16,7 @@
 #   vagrant ssh agent-lucid32
 #
 #   # project directory should be mounted in the VM at /vagrant
-#   sudo dpkg -i /vagrant/pdagent_0.1_all.deb
+#   sudo dpkg -i /vagrant/build-deb/pdagent_0.1_all.deb
 #   which agent.py
 #   which pd-send.py
 #   python -c "import pdagent; print pdagent.__file__"
@@ -51,7 +51,6 @@ find data/usr/share/pyshared -type f -name "*.py" | cut -c 5- >> data/usr/share/
 echo ---- python-pdagent.public:
 cat data/usr/share/python-support/python-pdagent.public
 echo ----
-exit 1
 
 
 fpm -s dir -t deb \
@@ -60,7 +59,7 @@ fpm -s dir -t deb \
     -a all \
     -d python \
     -d python-support \
-    -C build-deb \
+    -C data \
     --post-install deb-postinst \
     usr
 
