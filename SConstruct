@@ -94,15 +94,23 @@ def _getFilePathsRecursive(source_paths, filename_matcher):
 
 
 Help("""
-Usage: scons command [command...]
+Usage: scons [command [command...]]
 where supported commands are:
 all                 Runs all commands.
 build               Runs unit tests and builds agent components.
+                    This is the default command if none is specified.
 clean               Removes generated artifacts.
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
 test                Runs unit tests.
+                    By default, runs all tests in `pdagenttest` recursively.
+                    (Test files should be named in the format `test_*.py`.)
+                    Specific unit tests can be run by providing them as
+                    arguments to this option, multiple times if required.
+                    Both test files and test directories are supported.
+                    e.g.
+                    scons test=pdagenttest/test_foo.py test=pdagenttest/queue
 test-integration    Runs integration tests.
 """)
 
