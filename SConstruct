@@ -35,7 +35,7 @@ def runIntegrationTests(target, source, env):
 def runUnitTests(target, source, env):
     """Run unit tests."""
 
-    retCode = subprocess.call(['python', 'run-tests.py'])
+    retCode = subprocess.call(["python", "run-tests.py"])
     if retCode:
         print "Unit tests failed!"
     return retCode
@@ -67,32 +67,32 @@ test-integration    Runs integration tests.
 """)
 
 env = Environment()
-env.Alias('all', ['.'])
+env.Alias("all", ["."])
 
-unitTestTask = env.Command('test', \
+unitTestTask = env.Command("test", \
     None,
     Action(runUnitTests, "\n--- Running unit tests"))
 
 integrationTestTask = env.Command( \
-    'test-integration', \
+    "test-integration", \
     None, \
     Action(runIntegrationTests, "\n--- Running integration tests"))
 
 buildTask = env.Alias("build", ["test"])
 
 packageTask = env.Command( \
-    'package', \
+    "package", \
     None, \
     Action(createPackage, "\n--- Creating install packages"))
 Depends(packageTask, unitTestTask)
 
 distTask = env.Command( \
-    'dist', \
+    "dist", \
     None, \
     Action(createDist, "\n--- Creating distributables"))
 Depends(distTask, [unitTestTask, packageTask, integrationTestTask])
 
-cleanTask = env.Command('clean', None, Action(cleanup, "\n--- Cleaning up"))
+cleanTask = env.Command("clean", None, Action(cleanup, "\n--- Cleaning up"))
 
 # task to run if no command specified.
 Default(buildTask)
