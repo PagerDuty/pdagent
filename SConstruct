@@ -95,6 +95,16 @@ def _getFilePathsRecursive(source_paths, filename_matcher):
     return list(files)
 
 
+def _get_arg_values(key, default_value=None):
+  values=[]
+  for k, v in ARGLIST:
+      if k == key:
+        values.append(v)
+  if not values and default_value:
+      values = default_value
+  return values
+
+
 Help("""
 Usage: scons command [command...]
 where supported commands are:
@@ -108,18 +118,13 @@ test                Runs unit tests.
 test-integration    Runs integration tests.
 """)
 
+
 env = Environment()
 env.Alias("all", ["."])
+  
 
-# obtain specified test paths or set defaults.
-unit_test_paths=[]
-for key, value in ARGLIST:
-    if key == "test":
-      unit_test_paths.append(value)
-if not unit_test_paths:
-  unit_test_paths.append("pdagenttest")
 unitTestTask = env.Command("test", \
-    unit_test_paths,
+    _get_arg_values("test", ["pdagenttest"]),
     Action(runUnitTests, "\n--- Running unit tests"))
 
 integrationTestTask = env.Command( \
