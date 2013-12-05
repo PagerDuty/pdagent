@@ -21,7 +21,6 @@ def createDist(target, source, env):
 
 def createPackage(target, source, env):
     """Create installable packages for supported operating systems."""
-
     retCode = 0
     retCode += _createDebPackage()
     retCode += _createRpmPackage()
@@ -36,10 +35,9 @@ def runIntegrationTests(target, source, env):
 
 def runUnitTests(target, source, env):
     """Run unit tests."""
-
     source_paths = []
     for s in source:
-      source_paths.append(s.path)
+        source_paths.append(s.path)
     test_files = _getFilePathsRecursive( \
         source_paths, \
         lambda f: f.startswith("test_") and f.endswith(".py"))
@@ -73,25 +71,25 @@ def _createRpmPackage():
 
 
 def _getFilePathsRecursive(source_paths, filename_matcher):
-    dirs_traversed=set()
-    files=set()
+    dirs_traversed = set()
+    files = set()
 
     def _addFiles(dir_path):
-      dirs_traversed.add(dir_path)
-      for dirname, subdirnames, filenames in os.walk(dir_path):
-          for subdir in subdirnames:
-              dirs_traversed.add(os.path.join(dirname, subdir))
-          for filename in filenames:
-              if filename_matcher(filename):
-                  files.add(os.path.join(dirname, filename))
+        dirs_traversed.add(dir_path)
+        for dirname, subdirnames, filenames in os.walk(dir_path):
+            for subdir in subdirnames:
+                dirs_traversed.add(os.path.join(dirname, subdir))
+            for filename in filenames:
+                if filename_matcher(filename):
+                    files.add(os.path.join(dirname, filename))
 
     for src in source_paths:
-      if os.path.isdir(src):
-        if not src in dirs_traversed:
-          _addFiles(src)
-      else:
-        if filename_matcher(os.path.basename(src)):
-          files.add(src)
+        if os.path.isdir(src):
+            if not src in dirs_traversed:
+                _addFiles(src)
+        else:
+            if filename_matcher(os.path.basename(src)):
+                files.add(src)
     return list(files)
 
 
@@ -112,12 +110,12 @@ env = Environment()
 env.Alias("all", ["."])
 
 # obtain specified test paths or set defaults.
-unit_test_paths=[]
+unit_test_paths = []
 for key, value in ARGLIST:
     if key == "test":
-      unit_test_paths.append(value)
+        unit_test_paths.append(value)
 if not unit_test_paths:
-  unit_test_paths.append("pdagenttest")
+    unit_test_paths.append("pdagenttest")
 unitTestTask = env.Command("test", \
     unit_test_paths,
     Action(runUnitTests, "\n--- Running unit tests"))
