@@ -38,8 +38,8 @@ def runUnitTests(target, source, env):
     source_paths = []
     for s in source:
         source_paths.append(s.path)
-    test_files = _getFilePathsRecursive( \
-        source_paths, \
+    test_files = _getFilePathsRecursive(
+        source_paths,
         lambda f: f.startswith("test_") and f.endswith(".py"))
     test_files.sort()
 
@@ -129,26 +129,26 @@ env = Environment()
 env.Alias("all", ["."])
   
 
-unitTestTask = env.Command("test", \
+unitTestTask = env.Command("test",
     _get_arg_values("test", ["pdagenttest"]),
     Action(runUnitTests, "\n--- Running unit tests"))
 
-integrationTestTask = env.Command( \
-    "test-integration", \
-    None, \
+integrationTestTask = env.Command(
+    "test-integration",
+    None,
     Action(runIntegrationTests, "\n--- Running integration tests"))
 
 buildTask = env.Alias("build", ["test"])
 
-packageTask = env.Command( \
-    "package", \
-    None, \
+packageTask = env.Command(
+    "package",
+    None,
     Action(createPackage, "\n--- Creating install packages"))
 Requires(packageTask, unitTestTask)
 
-distTask = env.Command( \
-    "dist", \
-    None, \
+distTask = env.Command(
+    "dist",
+    None,
     Action(createDist, "\n--- Creating distributables"))
 Requires(distTask, [unitTestTask, packageTask, integrationTestTask])
 
