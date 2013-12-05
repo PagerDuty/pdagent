@@ -84,13 +84,13 @@ packageTask = env.Command( \
     "package", \
     None, \
     Action(createPackage, "\n--- Creating install packages"))
-Depends(packageTask, unitTestTask)
+Requires(packageTask, unitTestTask)
 
 distTask = env.Command( \
     "dist", \
     None, \
     Action(createDist, "\n--- Creating distributables"))
-Depends(distTask, [unitTestTask, packageTask, integrationTestTask])
+Requires(distTask, [unitTestTask, packageTask, integrationTestTask])
 
 cleanTask = env.Command("clean", None, Action(cleanup, "\n--- Cleaning up"))
 
