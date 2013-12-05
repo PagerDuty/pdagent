@@ -35,9 +35,7 @@ def runIntegrationTests(target, source, env):
 
 def runUnitTests(target, source, env):
     """Run unit tests."""
-    source_paths = []
-    for s in source:
-        source_paths.append(s.path)
+    source_paths = [s.path for s in source]
     test_files = _getFilePathsRecursive(
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".py"))
@@ -49,12 +47,11 @@ def runUnitTests(target, source, env):
     test_env["PYTHONPATH"] = \
         test_env.get("PYTHONPATH", "") + os.pathsep + Dir(".").abspath
     for test_file in test_files:
-        print >> sys.stderr, "FILE:", test_file
+        print "FILE: %s" % test_file
         exit_code = subprocess.call([sys.executable, test_file], env=test_env)
         total += 1
         errs += (exit_code != 0)
-    print >> sys.stderr, "SUMMARY: %s total / %s error (%s)" \
-        % (total, errs, sys.executable)
+    print "SUMMARY: %s total / %s error (%s)" % (total, errs, sys.executable)
     return errs
 
 
