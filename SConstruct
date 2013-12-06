@@ -58,6 +58,13 @@ def runUnitTests(target, source, env):
     return errs
 
 
+def startVirtualBoxes(target, source, env):
+    virts = env.get("virts", [])
+    start_cmd = ["vagrant", "up"]
+    start_cmd.extend(virts)
+    return subprocess.call(start_cmd)
+
+
 def _createDebPackage():
     # TODO create the package.
     print "\nCreating .deb package..."
@@ -93,14 +100,11 @@ def _getFilePathsRecursive(source_paths, filename_matcher):
     return list(files)
 
 
-def _get_arg_values(key, default_value=None):
-  values=[]
-  for k, v in ARGLIST:
-      if k == key:
-        values.append(v)
-  if not values and default_value:
-      values = default_value
-  return values
+def _get_arg_values(key, default=None):
+    values = [v for k, v in ARGLIST if k == key]
+    if not values and default:
+        values = default
+    return values
 
 
 Help("""
@@ -127,16 +131,26 @@ test-integration    Runs integration tests.
 
 env = Environment()
 env.Alias("all", ["."])
-  
 
-unitTestTask = env.Command("test",
+
+unitTestTask = env.Command(
+    "test",
     _get_arg_values("test", ["pdagenttest"]),
     Action(runUnitTests, "\n--- Running unit tests"))
 
+# TODO add a remote unit test task for running on vagrant images?
+
+startVirtsTask = env.Command(
+    "start-virt",
+    None,
+    Action(startVirtualBoxes, "\n--- Starting virtual boxes"),
+    virts=_get_arg_values("start-virt"))
+
 integrationTestTask = env.Command(
     "test-integration",
-    None,
+    _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
     Action(runIntegrationTests, "\n--- Running integration tests"))
+Requires(integrationTestTask, startVirtsTask)
 
 buildTask = env.Alias("build", ["test"])
 
