@@ -45,7 +45,7 @@ def runUnitTests(target, source, env):
     errs = 0
     test_env = os.environ.copy()
     test_env["PYTHONPATH"] = \
-        test_env.get("PYTHONPATH", "") + os.pathsep + Dir(".").abspath
+        test_env.get("PYTHONPATH", "") + os.pathsep + env.Dir(".").abspath
     for test_file in test_files:
         print "FILE: %s" % test_file
         exit_code = subprocess.call([sys.executable, test_file], env=test_env)
@@ -104,7 +104,11 @@ def _get_arg_values(key, default=None):
     return values
 
 
-Help("""
+env = Environment()
+env.Alias("all", ["."])
+
+
+env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
 all                 Runs all commands.
@@ -126,44 +130,43 @@ test-integration    Runs integration tests.
 """)
 
 
-env = Environment()
-env.Alias("all", ["."])
-
-
 unitTestTask = env.Command(
     "test",
     _get_arg_values("test", ["pdagenttest"]),
-    Action(runUnitTests, "\n--- Running unit tests"))
+    env.Action(runUnitTests, "\n--- Running unit tests"))
 
 # TODO add a remote unit test task for running on vagrant images?
 
 startVirtsTask = env.Command(
     "start-virt",
     None,
-    Action(startVirtualBoxes, "\n--- Starting virtual boxes"),
+    env.Action(startVirtualBoxes, "\n--- Starting virtual boxes"),
     virts=_get_arg_values("start-virt"))
 
 integrationTestTask = env.Command(
     "test-integration",
     _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
-    Action(runIntegrationTests, "\n--- Running integration tests"))
-Requires(integrationTestTask, startVirtsTask)
+    env.Action(runIntegrationTests, "\n--- Running integration tests"))
+env.Requires(integrationTestTask, startVirtsTask)
 
 buildTask = env.Alias("build", ["test"])
 
 packageTask = env.Command(
     "package",
     None,
-    Action(createPackage, "\n--- Creating install packages"))
-Requires(packageTask, unitTestTask)
+    env.Action(createPackage, "\n--- Creating install packages"))
+env.Requires(packageTask, unitTestTask)
 
 distTask = env.Command(
     "dist",
     None,
-    Action(createDist, "\n--- Creating distributables"))
-Requires(distTask, [unitTestTask, packageTask, integrationTestTask])
+    env.Action(createDist, "\n--- Creating distributables"))
+env.Requires(distTask, [unitTestTask, packageTask, integrationTestTask])
 
-cleanTask = env.Command("clean", None, Action(cleanup, "\n--- Cleaning up"))
+cleanTask = env.Command(
+    "clean",
+    None,
+    env.Action(cleanup, "\n--- Cleaning up"))
 
 # task to run if no command specified.
-Default(buildTask)
+env.Default(buildTask)
