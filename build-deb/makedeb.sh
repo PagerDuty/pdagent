@@ -38,6 +38,12 @@ echo var...
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/outqueue
 
+echo etc...
+mkdir -p data/etc/pd-agent/
+cp ../conf/config.cfg data/etc/pd-agent/
+#mkdir -p data/etc/init.d
+#cp TODO/pd-agent data/etc/init.d/
+
 echo pdagent...
 mkdir -p data/usr/share/pyshared
 (cd .. && find pdagent -type d -exec mkdir build-deb/data/usr/share/pyshared/{} \;)
@@ -63,7 +69,7 @@ fpm -s dir -t deb \
     --depends python-support \
     --post-install deb-postinst \
     -C data \
-    usr
+    etc usr var
 
 #    --prefix /usr \
 #    --deb-user pdagent
