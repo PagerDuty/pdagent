@@ -47,16 +47,23 @@ echo var...
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/outqueue
 
+echo etc...
+mkdir -p data/etc/pd-agent/
+cp ../conf/config.cfg data/etc/pd-agent/
+#mkdir -p data/etc/init.d
+#cp TODO/pd-agent data/etc/init.d/
+
 echo pdagent...
 mkdir -p data/usr/lib/python2.6/site-packages
 (cd .. && find pdagent -type d -exec mkdir build-deb/data/usr/lib/python2.6/site-packages/{} \;)
 (cd .. && find pdagent -type f -name "*.py" -exec cp {} build-deb/data/usr/lib/python2.6/site-packages/{} \;)
 
+echo FPM!
 fpm -s dir -t rpm \
     --name "pdagent" \
     --version "0.1" \
     --architecture all \
     --depends python \
     -C data \
-    usr
+    etc usr var
 

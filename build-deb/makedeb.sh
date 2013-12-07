@@ -60,7 +60,7 @@ echo ---- python-pdagent.public:
 cat data/usr/share/python-support/python-pdagent.public
 echo ----
 
-
+echo FPM!
 fpm -s dir -t deb \
     --name "pdagent" \
     --version "0.1" \
