@@ -51,7 +51,7 @@ mkdir -p data/usr/share/pyshared
 
 echo python-support...
 mkdir -p data/usr/share/python-support
-echo pyversions=2.4- > data/usr/share/python-support/python-pdagent.public
+echo pyversions=2.6- > data/usr/share/python-support/python-pdagent.public
 echo >> data/usr/share/python-support/python-pdagent.public
 find data/usr/share/pyshared -type f -name "*.py" \
     | cut -c 5- >> data/usr/share/python-support/python-pdagent.public
