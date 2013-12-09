@@ -17,7 +17,6 @@
 #   rm -fr agent
 #   cp -r /vagrant agent
 #   cd agent/build-deb/
-#   rm pdagent-0.1-1.noarch.rpm
 #   sh makerpm.sh
 #
 # Testing the .rpm:
@@ -64,6 +63,7 @@ fpm -s dir -t rpm \
     --version "0.1" \
     --architecture all \
     --depends python \
+    --post-install rpm-postinst \
     -C data \
     etc usr var
 
