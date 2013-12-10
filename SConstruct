@@ -109,6 +109,24 @@ def _get_arg_values(key, default=None):
         values = default
     return values
 
+
+def _get_virt_names():
+    return [v.split()[0] for v in \
+        subprocess \
+        .check_output(["vagrant", "status"]) \
+        .splitlines() \
+        if v.find("running") >= 0]
+
+
+def _run_on_virts(remote_command):
+    exit_code = 0
+    for virt in _get_virt_names():
+        command = ["vagrant", "ssh", virt, "-c", remote_command]
+        print "Running on %s..." % virt
+        exit_code += subprocess.call(command)
+    return exit_code
+
+
 env = Environment()
 env.Alias("all", ["."])
 
