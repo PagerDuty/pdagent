@@ -38,6 +38,7 @@ def run_unit_tests(target, source, env):
     test_paths = _get_file_paths_recursive(
             source_paths,
             lambda f: f.startswith("test_") and f.endswith(".py"))
+    test_paths.sort()
     remote_test_command = ["python", remote_test_runner]
     remote_test_command.extend(\
         [os.path.join(remote_project_root, t) for t in test_paths])
@@ -47,23 +48,13 @@ def run_unit_tests(target, source, env):
 def run_unit_tests_local(target, source, env):
     """Run unit tests on current machine."""
     source_paths = [s.path for s in source]
-    test_files = _get_file_paths_recursive(
+    test_paths = _get_file_paths_recursive(
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".py"))
-    test_files.sort()
-
-    total = 0
-    errs = 0
-    test_env = os.environ.copy()
-    test_env["PYTHONPATH"] = \
-        test_env.get("PYTHONPATH", "") + os.pathsep + env.Dir(".").abspath
-    for test_file in test_files:
-        print "FILE: %s" % test_file
-        exit_code = subprocess.call([sys.executable, test_file], env=test_env)
-        total += 1
-        errs += (exit_code != 0)
-    print "SUMMARY: %s total / %s error (%s)" % (total, errs, sys.executable)
-    return errs
+    test_paths.sort()
+    test_command = ["python", "run-tests.py"]
+    test_command.extend(test_paths)
+    return subprocess.call(test_command)
 
 
 def start_virtual_boxes(target, source, env):
