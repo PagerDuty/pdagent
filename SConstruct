@@ -151,18 +151,18 @@ unitTestTask = env.Command(
         "\n--- Running unit tests on virtual boxes"))
 env.Requires(unitTestTask, startVirtsTask)
 
-integrationTestTask = env.Command(
-    "test-integration",
-    _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
-    env.Action(runIntegrationTests,
-        "\n--- Running integration tests on virtual boxes"))
-env.Requires(integrationTestTask, startVirtsTask)
-
 packageTask = env.Command(
     "package",
     None,
     env.Action(createPackage, "\n--- Creating install packages"))
 env.Requires(packageTask, unitTestTask)
+
+integrationTestTask = env.Command(
+    "test-integration",
+    _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
+    env.Action(runIntegrationTests,
+        "\n--- Running integration tests on virtual boxes"))
+env.Requires(integrationTestTask, [packageTask, startVirtsTask])
 
 distTask = env.Command(
     "dist",
