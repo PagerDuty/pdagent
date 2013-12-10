@@ -15,7 +15,7 @@ def cleanup(target, source, env):
 
 def createDist(target, source, env):
     """Create distributable for agent."""
-    # TODO create.
+    # TODO copy packages, documentation?
     pass
 
 
@@ -25,12 +25,6 @@ def createPackages(target, source, env):
     retCode += _createDebPackage()
     retCode += _createRpmPackage()
     return retCode
-
-
-def installPackages(target, source, env):
-    """Install packages on supported operating systems."""
-    # TODO install the right packages.
-    pass
 
 
 def runIntegrationTests(target, source, env):
@@ -218,19 +212,12 @@ createPackagesTask = env.Command(
     env.Action(createPackages, "\n--- Creating install packages"))
 env.Requires(createPackagesTask, unitTestTask)
 
-installPackagesTask = env.Command(
-    "install-package",
-    None,
-    env.Action(installPackages, "\n--- Installing packages on virtual boxes"))
-env.Requires(installPackagesTask, [createPackagesTask, startVirtsTask])
-
 integrationTestTask = env.Command(
     "test-integration",
     _get_arg_values("test-integration", ["pdagenttestinteg"]),
     env.Action(runIntegrationTests,
         "\n--- Running integration tests on virtual boxes"))
-env.Requires(integrationTestTask,
-    [createPackagesTask, startVirtsTask, installPackagesTask])
+env.Requires(integrationTestTask, [createPackagesTask, startVirtsTask])
 
 distTask = env.Command(
     "dist",
