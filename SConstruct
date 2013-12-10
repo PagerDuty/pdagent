@@ -34,10 +34,14 @@ def runIntegrationTests(target, source, env):
 def runUnitTests(target, source, env):
     """Run unit tests on running virts."""
     source_paths = [s.path for s in source]
-    test_runner_file = _generate_remote_test_runner_file(
-        source_paths,
-        lambda f: f.startswith("test_") and f.endswith(".py"))
-    return _run_on_virts("%s %s" % (sys.executable, test_runner_file))
+    remote_test_runner = os.path.join(remote_project_root, "run-tests.py")
+    test_paths = _getFilePathsRecursive(
+            source_paths,
+            lambda f: f.startswith("test_") and f.endswith(".py"))
+    remote_test_command = ["python", remote_test_runner]
+    remote_test_command.extend(\
+        [os.path.join(remote_project_root, t) for t in test_paths])
+    return _run_on_virts(" ".join(remote_test_command))
 
 
 def runUnitTestsLocal(target, source, env):
@@ -90,8 +94,8 @@ def _generate_remote_test_runner_file(
     test_runner_file = os.path.join(tmp_dir, "run_tests")
 
     test_files = _getFilePathsRecursive(source_paths, test_filename_matcher)
-    # these are under the /vagrant directory (TODO windows) on virtual boxes
-    test_run_paths = [os.path.join(os.sep, "vagrant", t) for t in test_files]
+    # these are under the remote project root dir on virtual boxes
+    test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
     run_commands = ["e=0"]
     for test in test_run_paths:
@@ -108,7 +112,7 @@ def _generate_remote_test_runner_file(
     out.flush()
     out.close()
 
-    return os.path.join(os.sep, "vagrant", test_runner_file)
+    return os.path.join(remote_project_root, test_runner_file)
 
 
 def _getFilePathsRecursive(source_paths, filename_matcher):
@@ -146,7 +150,7 @@ def _get_virt_names():
         subprocess \
         .check_output(["vagrant", "status"]) \
         .splitlines() \
-        if v.find("running") >= 0]
+        if v.find(" running (") >= 0]
 
 
 def _run_on_virts(remote_command):
@@ -184,6 +188,7 @@ test-integration    Runs integration tests.
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
+remote_project_root = os.sep + "vagrant"  # TODO windows
 
 unitTestLocalTask = env.Command(
     "test-local",
