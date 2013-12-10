@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ "$1" = "remove" ]; then
+    #rm /usr/bin/pd-agent/*.pyc
+    if which update-python-modules >/dev/null 2>&1; then
+        update-python-modules -c python-pdagent.public
+    fi
+    update-rc.d -f pd-agent remove
+fi

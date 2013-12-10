@@ -41,8 +41,8 @@ mkdir -p data/var/lib/pdagent/outqueue
 echo etc...
 mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
-#mkdir -p data/etc/init.d
-#cp TODO/pd-agent data/etc/init.d/
+mkdir -p data/etc/init.d
+cp ../bin/agent.py data/etc/init.d/pd-agent
 
 echo pdagent...
 mkdir -p data/usr/share/pyshared
@@ -68,6 +68,7 @@ fpm -s dir -t deb \
     --depends python \
     --depends python-support \
     --post-install deb-postinst \
+    --pre-uninstall deb-prerm \
     -C data \
     etc usr var
 
