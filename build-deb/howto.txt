@@ -1,0 +1,59 @@
+
+# Linux Build Instructions
+
+These instructions assume you're running this on a Mac with Vagrant installed,
+and that the project directory ends up mounted in the VM at `/vagrant`. (this
+should happen automatically)
+
+## Debian
+
+Dev Setup: (one-time)
+
+    gem install fpm
+
+Building the .deb:
+
+    rm pdagent_0.1_all.deb
+    sh make.sh deb
+
+Install & test the .deb:
+
+    vagrant ssh agent-lucid32
+ 
+    sudo dpkg -i /vagrant/build-deb/pdagent_0.1_all.deb
+
+    which agent.py
+    which pd-send.py
+    python -c "import pdagent; print pdagent.__file__"
+
+    sudo apt-get --yes remove pdagent
+
+
+## Redhat/CentOS
+
+Dev Setup: (one-time)
+
+    vagrant ssh agent-centos64
+    sudo yum install rpm-build
+    sudo yum install ruby-devel
+    sudo gem install fpm
+
+Building the .rpm:
+
+    vagrant ssh agent-centos64
+
+    rm -fr agent
+    cp -r /vagrant agent
+    cd agent/build-deb/
+    sh make.sh rpm
+
+Install & test the .rpm:
+
+    sudo rpm -i /vagrant/build-deb/pdagent-0.1-1.noarch.rpm
+
+    which agent.py
+    which pd-send.py
+    python -c "import pdagent; print pdagent.__file__"
+
+    sudo rpm -e pdagent
+ 
