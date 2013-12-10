@@ -19,12 +19,18 @@ def createDist(target, source, env):
     pass
 
 
-def createPackage(target, source, env):
+def createPackages(target, source, env):
     """Create installable packages for supported operating systems."""
     retCode = 0
     retCode += _createDebPackage()
     retCode += _createRpmPackage()
     return retCode
+
+
+def installPackages(target, source, env):
+    """Install packages on supported operating systems."""
+    # TODO install the right packages.
+    pass
 
 
 def runIntegrationTests(target, source, env):
@@ -169,24 +175,31 @@ unitTestTask = env.Command(
         "\n--- Running unit tests on virtual boxes"))
 env.Requires(unitTestTask, startVirtsTask)
 
-packageTask = env.Command(
+createPackagesTask = env.Command(
     "package",
     None,
-    env.Action(createPackage, "\n--- Creating install packages"))
-env.Requires(packageTask, unitTestTask)
+    env.Action(createPackages, "\n--- Creating install packages"))
+env.Requires(createPackagesTask, unitTestTask)
+
+installPackagesTask = env.Command(
+    "install-package",
+    None,
+    env.Action(installPackages, "\n--- Installing packages on virtual boxes"))
+env.Requires(installPackagesTask, [createPackagesTask, startVirtsTask])
 
 integrationTestTask = env.Command(
     "test-integration",
     _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
     env.Action(runIntegrationTests,
         "\n--- Running integration tests on virtual boxes"))
-env.Requires(integrationTestTask, [packageTask, startVirtsTask])
+env.Requires(integrationTestTask,
+    [createPackagesTask, startVirtsTask, installPackagesTask])
 
 distTask = env.Command(
     "dist",
     None,
     env.Action(createDist, "\n--- Creating distributables"))
-env.Requires(distTask, [unitTestTask, packageTask, integrationTestTask])
+env.Requires(distTask, [unitTestTask, createPackagesTask, integrationTestTask])
 
 cleanTask = env.Command(
     "clean",
@@ -194,4 +207,4 @@ cleanTask = env.Command(
     env.Action(cleanup, "\n--- Cleaning up"))
 
 # task to run if no command is specified.
-env.Default(packageTask)
+env.Default(createPackagesTask)
