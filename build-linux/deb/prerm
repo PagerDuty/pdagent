@@ -4,11 +4,12 @@ set -e
 
 if [ "$1" = "remove" ]; then
     # Stop daemon
-    if which invoke-rc.d >/dev/null 2>&1; then
-        invoke-rc.d datadog-agent stop || true
-    else
-        /etc/init.d/datadog-agent stop || true
-    fi
+    #FIXME: daemon is broken
+    #if which invoke-rc.d >/dev/null 2>&1; then
+    #    invoke-rc.d pd-agent stop || true
+    #else
+    #    /etc/init.d/pd-agent stop || true
+    #fi
 
     # Unregister daemon
     update-rc.d -f pd-agent remove

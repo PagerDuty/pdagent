@@ -5,6 +5,7 @@ set -e
 case "$*" in
     0)
         # Stop daemon
+        # FIXME: daemon is broken
         #/etc/init.d/pd-agent stop
 
         # Unregister daemon

@@ -12,11 +12,12 @@ if [ "$1" = "configure" ]; then
     update-rc.d -f pd-agent defaults
 
     # Restart daemon
-    if which invoke-rc.d >/dev/null 2>&1; then
-        invoke-rc.d pd-agent restart
-    else
-        /etc/init.d/pd-agent restart
-    fi
+    #FIXME: daemon is broken
+    #if which invoke-rc.d >/dev/null 2>&1; then
+    #    invoke-rc.d pd-agent restart
+    #else
+    #    /etc/init.d/pd-agent restart
+    #fi
 fi
 
 exit 0
