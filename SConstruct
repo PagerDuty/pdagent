@@ -7,12 +7,6 @@ import subprocess
 import sys
 
 
-def cleanup(target, source, env):
-    """Removes generated artifacts"""
-    # TODO clean up.
-    pass
-
-
 def createDist(target, source, env):
     """Create distributable for agent."""
     # TODO copy packages, documentation?
@@ -92,11 +86,11 @@ def _generate_remote_test_runner_file(
     test_filename_matcher,
     executable=sys.executable):
 
-    test_dir = os.path.join("target", "tmp")
-    env.Execute(Mkdir(test_dir))
-    test_runner_file = os.path.join(test_dir, "run_tests")
+    env.Execute(Mkdir(tmp_dir))
+    test_runner_file = os.path.join(tmp_dir, "run_tests")
 
     test_files = _getFilePathsRecursive(source_paths, test_filename_matcher)
+    # these are under the /vagrant directory (TODO windows) on virtual boxes
     test_run_paths = [os.path.join(os.sep, "vagrant", t) for t in test_files]
 
     run_commands = ["e=0"]
@@ -165,14 +159,13 @@ def _run_on_virts(remote_command):
 
 
 env = Environment()
-env.Alias("all", ["."])
 
 # TODO update help when commands are finalized.
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
 all                 Runs all commands.
-clean               Removes generated artifacts.
+--clean             Removes generated artifacts.
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
@@ -187,6 +180,10 @@ test                Runs unit tests.
                     scons test=pdagenttest/test_foo.py test=pdagenttest/queue
 test-integration    Runs integration tests.
 """)
+
+target_dir = "target"
+tmp_dir = os.path.join(target_dir, "tmp")
+dist_dir = "dist"
 
 unitTestLocalTask = env.Command(
     "test-local",
@@ -223,12 +220,19 @@ distTask = env.Command(
     "dist",
     None,
     env.Action(createDist, "\n--- Creating distributables"))
-env.Requires(distTask, [unitTestTask, createPackagesTask, integrationTestTask])
+env.Requires(distTask, [createPackagesTask, integrationTestTask])
 
-cleanTask = env.Command(
-    "clean",
-    None,
-    env.Action(cleanup, "\n--- Cleaning up"))
+# specify directories to be cleaned up for various targets
+env.Clean(["test", "test-integration"], tmp_dir)
+env.Clean(["package"], target_dir)
+env.Clean(["dist"], dist_dir)
+
+env.Alias("all", ["."])
 
 # task to run if no command is specified.
-env.Default(createPackagesTask)
+if env.GetOption("clean"):
+    # workaround to get 'clean' to clean everything, and
+    # not just the output of the usual default target.
+    env.Default(".")
+else:
+    env.Default(createPackagesTask)
