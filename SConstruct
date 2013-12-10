@@ -112,12 +112,11 @@ env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
 all                 Runs all commands.
-build               Runs unit tests and builds agent components.
-                    This is the default command if none is specified.
 clean               Removes generated artifacts.
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
+                    This is the default command if none is specified.
 test                Runs unit tests.
                     By default, runs all tests in `pdagenttest` recursively.
                     (Test files should be named in the format `test_*.py`.)
@@ -149,8 +148,6 @@ integrationTestTask = env.Command(
     env.Action(runIntegrationTests, "\n--- Running integration tests"))
 env.Requires(integrationTestTask, startVirtsTask)
 
-buildTask = env.Alias("build", ["test"])
-
 packageTask = env.Command(
     "package",
     None,
@@ -169,4 +166,4 @@ cleanTask = env.Command(
     env.Action(cleanup, "\n--- Cleaning up"))
 
 # task to run if no command specified.
-env.Default(buildTask)
+env.Default(packageTask)
