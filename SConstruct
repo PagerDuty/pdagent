@@ -35,14 +35,21 @@ def installPackages(target, source, env):
 
 def runIntegrationTests(target, source, env):
     """Run integration tests on running virts."""
-    # TODO run tests.
-    pass
+    source_paths = [s.path for s in source]
+    test_runner_file = _generate_remote_test_runner_file(
+        source_paths,
+        lambda f: f.startswith("test_") and f.endswith(".sh"),
+        executable="sh")
+    return _run_on_virts("sh %s" % test_runner_file)
 
 
 def runUnitTests(target, source, env):
     """Run unit tests on running virts."""
-    # TODO run tests.
-    pass
+    source_paths = [s.path for s in source]
+    test_runner_file = _generate_remote_test_runner_file(
+        source_paths,
+        lambda f: f.startswith("test_") and f.endswith(".py"))
+    return _run_on_virts("%s %s" % (sys.executable, test_runner_file))
 
 
 def runUnitTestsLocal(target, source, env):
@@ -84,6 +91,36 @@ def _createRpmPackage():
     # TODO create the package.
     print "\nCreating .rpm package..."
     return 0
+
+
+def _generate_remote_test_runner_file(
+    source_paths,
+    test_filename_matcher,
+    executable=sys.executable):
+
+    test_dir = os.path.join("target", "tmp")
+    env.Execute(Mkdir(test_dir))
+    test_runner_file = os.path.join(test_dir, "run_tests")
+
+    test_files = _getFilePathsRecursive(source_paths, test_filename_matcher)
+    test_run_paths = [os.path.join(os.sep, "vagrant", t) for t in test_files]
+
+    run_commands = ["e=0"]
+    for test in test_run_paths:
+        run_commands.append(" ".join([executable, test]))
+        run_commands.append("e=$(( $e + $? ))")
+    run_commands.append("exit $e")
+
+    #TODO this doesn't work -- 'Textfile' is not recognized.
+#     env.Textfile(
+#         target=test_runner_file,
+#         source=run_commands)
+    out = open(test_runner_file, "w")
+    out.write(os.linesep.join(run_commands))
+    out.flush()
+    out.close()
+
+    return os.path.join(os.sep, "vagrant", test_runner_file)
 
 
 def _getFilePathsRecursive(source_paths, filename_matcher):
@@ -189,7 +226,7 @@ env.Requires(installPackagesTask, [createPackagesTask, startVirtsTask])
 
 integrationTestTask = env.Command(
     "test-integration",
-    _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
+    _get_arg_values("test-integration", ["pdagenttestinteg"]),
     env.Action(runIntegrationTests,
         "\n--- Running integration tests on virtual boxes"))
 env.Requires(integrationTestTask,
