@@ -43,8 +43,8 @@ fi
 
 echo = python modules...
 mkdir -p $_PY_SITE_PACKAGES
-(cd .. && find pdagent -type d -exec mkdir build-deb/$_PY_SITE_PACKAGES/{} \;)
-(cd .. && find pdagent -type f -name "*.py" -exec cp {} build-deb/$_PY_SITE_PACKAGES/{} \;)
+(cd .. && find pdagent -type d -exec mkdir build-linux/$_PY_SITE_PACKAGES/{} \;)
+(cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 
 if [[ "$1" == "deb" ]]; then
     echo = deb python-support...

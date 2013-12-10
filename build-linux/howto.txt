@@ -20,7 +20,7 @@ Install & test the .deb:
 
     vagrant ssh agent-lucid32
  
-    sudo dpkg -i /vagrant/build-deb/pdagent_0.1_all.deb
+    sudo dpkg -i /vagrant/build-linux/pdagent_0.1_all.deb
 
     which agent.py
     which pd-send.py
@@ -44,12 +44,12 @@ Building the .rpm:
 
     rm -fr agent
     cp -r /vagrant agent
-    cd agent/build-deb/
+    cd agent/build-linux/
     sh make.sh rpm
 
 Install & test the .rpm:
 
-    sudo rpm -i /vagrant/build-deb/pdagent-0.1-1.noarch.rpm
+    sudo rpm -i /vagrant/build-linux/pdagent-0.1-1.noarch.rpm
 
     which agent.py
     which pd-send.py
