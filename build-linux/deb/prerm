@@ -13,9 +13,6 @@ if [ "$1" = "remove" ]; then
     # Unregister daemon
     update-rc.d -f pd-agent remove
 
-    # Clean up bin .pyc
-    rm /usr/bin/pd-*.pyc
-
     # Clean up module .pyc
     if which update-python-modules >/dev/null 2>&1; then
         update-python-modules -c python-pdagent.public

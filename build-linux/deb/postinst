@@ -8,9 +8,6 @@ if [ "$1" = "configure" ]; then
         update-python-modules python-pdagent.public
     fi
 
-    # Compile bin .py to .pyc
-    python -m compileall -f /usr/bin/pd-*.py
-
     # Register daemon
     update-rc.d -f pd-agent defaults
 
