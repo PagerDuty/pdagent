@@ -28,13 +28,19 @@ def createPackage(target, source, env):
 
 
 def runIntegrationTests(target, source, env):
-    """Run integration tests."""
+    """Run integration tests on running virts."""
     # TODO run tests.
     pass
 
 
 def runUnitTests(target, source, env):
-    """Run unit tests."""
+    """Run unit tests on running virts."""
+    # TODO run tests.
+    pass
+
+
+def runUnitTestsLocal(target, source, env):
+    """Run unit tests on current machine."""
     source_paths = [s.path for s in source]
     test_files = _getFilePathsRecursive(
         source_paths,
@@ -103,11 +109,10 @@ def _get_arg_values(key, default=None):
         values = default
     return values
 
-
 env = Environment()
 env.Alias("all", ["."])
 
-
+# TODO update help when commands are finalized.
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
@@ -128,13 +133,10 @@ test                Runs unit tests.
 test-integration    Runs integration tests.
 """)
 
-
-unitTestTask = env.Command(
-    "test",
-    _get_arg_values("test", ["pdagenttest"]),
-    env.Action(runUnitTests, "\n--- Running unit tests"))
-
-# TODO add a remote unit test task for running on vagrant images?
+unitTestLocalTask = env.Command(
+    "test-local",
+    _get_arg_values("test-local", ["pdagenttest"]),
+    env.Action(runUnitTestsLocal, "\n--- Running unit tests locally"))
 
 startVirtsTask = env.Command(
     "start-virt",
@@ -142,10 +144,18 @@ startVirtsTask = env.Command(
     env.Action(startVirtualBoxes, "\n--- Starting virtual boxes"),
     virts=_get_arg_values("start-virt"))
 
+unitTestTask = env.Command(
+    "test",
+    _get_arg_values("test", ["pdagenttest"]),
+    env.Action(runUnitTests,
+        "\n--- Running unit tests on virtual boxes"))
+env.Requires(unitTestTask, startVirtsTask)
+
 integrationTestTask = env.Command(
     "test-integration",
     _get_arg_values("test-integration", ["pdagenttest"]),  # TODO CHANGEME
-    env.Action(runIntegrationTests, "\n--- Running integration tests"))
+    env.Action(runIntegrationTests,
+        "\n--- Running integration tests on virtual boxes"))
 env.Requires(integrationTestTask, startVirtsTask)
 
 packageTask = env.Command(
@@ -165,5 +175,5 @@ cleanTask = env.Command(
     None,
     env.Action(cleanup, "\n--- Cleaning up"))
 
-# task to run if no command specified.
+# task to run if no command is specified.
 env.Default(packageTask)
