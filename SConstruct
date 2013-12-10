@@ -7,21 +7,21 @@ import subprocess
 import sys
 
 
-def createDist(target, source, env):
+def create_dist(target, source, env):
     """Create distributable for agent."""
     # TODO copy packages, documentation?
     pass
 
 
-def createPackages(target, source, env):
+def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
-    retCode = 0
-    retCode += _createDebPackage()
-    retCode += _createRpmPackage()
-    return retCode
+    ret_code = 0
+    ret_code += _create_deb_package()
+    ret_code += _create_rpm_package()
+    return ret_code
 
 
-def runIntegrationTests(target, source, env):
+def run_integration_tests(target, source, env):
     """Run integration tests on running virts."""
     source_paths = [s.path for s in source]
     test_runner_file = _generate_remote_test_runner_file(
@@ -31,11 +31,11 @@ def runIntegrationTests(target, source, env):
     return _run_on_virts("sh %s" % test_runner_file)
 
 
-def runUnitTests(target, source, env):
+def run_unit_tests(target, source, env):
     """Run unit tests on running virts."""
     source_paths = [s.path for s in source]
     remote_test_runner = os.path.join(remote_project_root, "run-tests.py")
-    test_paths = _getFilePathsRecursive(
+    test_paths = _get_file_paths_recursive(
             source_paths,
             lambda f: f.startswith("test_") and f.endswith(".py"))
     remote_test_command = ["python", remote_test_runner]
@@ -44,10 +44,10 @@ def runUnitTests(target, source, env):
     return _run_on_virts(" ".join(remote_test_command))
 
 
-def runUnitTestsLocal(target, source, env):
+def run_unit_tests_local(target, source, env):
     """Run unit tests on current machine."""
     source_paths = [s.path for s in source]
-    test_files = _getFilePathsRecursive(
+    test_files = _get_file_paths_recursive(
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".py"))
     test_files.sort()
@@ -66,20 +66,20 @@ def runUnitTestsLocal(target, source, env):
     return errs
 
 
-def startVirtualBoxes(target, source, env):
+def start_virtual_boxes(target, source, env):
     virts = env.get("virts", [])
     start_cmd = ["vagrant", "up"]
     start_cmd.extend(virts)
     return subprocess.call(start_cmd)
 
 
-def _createDebPackage():
+def _create_deb_package():
     # TODO create the package.
     print "\nCreating .deb package..."
     return 0
 
 
-def _createRpmPackage():
+def _create_rpm_package():
     # TODO create the package.
     print "\nCreating .rpm package..."
     return 0
@@ -93,7 +93,7 @@ def _generate_remote_test_runner_file(
     env.Execute(Mkdir(tmp_dir))
     test_runner_file = os.path.join(tmp_dir, "run_tests")
 
-    test_files = _getFilePathsRecursive(source_paths, test_filename_matcher)
+    test_files = _get_file_paths_recursive(source_paths, test_filename_matcher)
     # these are under the remote project root dir on virtual boxes
     test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
@@ -115,11 +115,11 @@ def _generate_remote_test_runner_file(
     return os.path.join(remote_project_root, test_runner_file)
 
 
-def _getFilePathsRecursive(source_paths, filename_matcher):
+def _get_file_paths_recursive(source_paths, filename_matcher):
     dirs_traversed = set()
     files = set()
 
-    def _addFiles(dir_path):
+    def _add_files(dir_path):
         dirs_traversed.add(dir_path)
         for dirname, subdirnames, filenames in os.walk(dir_path):
             for subdir in subdirnames:
@@ -131,7 +131,7 @@ def _getFilePathsRecursive(source_paths, filename_matcher):
     for src in source_paths:
         if os.path.isdir(src):
             if not src in dirs_traversed:
-                _addFiles(src)
+                _add_files(src)
         else:
             if filename_matcher(os.path.basename(src)):
                 files.add(src)
@@ -190,47 +190,47 @@ tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
 remote_project_root = os.sep + "vagrant"  # TODO windows
 
-unitTestLocalTask = env.Command(
+unit_test_local_task = env.Command(
     "test-local",
     _get_arg_values("test-local", ["pdagenttest"]),
-    env.Action(runUnitTestsLocal, "\n--- Running unit tests locally"))
+    env.Action(run_unit_tests_local, "\n--- Running unit tests locally"))
 
-startVirtsTask = env.Command(
+start_virts_task = env.Command(
     "start-virt",
     None,
-    env.Action(startVirtualBoxes, "\n--- Starting virtual boxes"),
+    env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
     virts=_get_arg_values("start-virt"))
 
-unitTestTask = env.Command(
+unit_test_task = env.Command(
     "test",
     _get_arg_values("test", ["pdagenttest"]),
-    env.Action(runUnitTests,
+    env.Action(run_unit_tests,
         "\n--- Running unit tests on virtual boxes"))
-env.Requires(unitTestTask, startVirtsTask)
+env.Requires(unit_test_task, start_virts_task)
 
-createPackagesTask = env.Command(
+create_packages_task = env.Command(
     "package",
     None,
-    env.Action(createPackages, "\n--- Creating install packages"))
-env.Requires(createPackagesTask, unitTestTask)
+    env.Action(create_packages, "\n--- Creating install packages"))
+env.Requires(create_packages_task, unit_test_task)
 
-integrationTestTask = env.Command(
+integration_test_task = env.Command(
     "test-integration",
     _get_arg_values("test-integration", ["pdagenttestinteg"]),
-    env.Action(runIntegrationTests,
+    env.Action(run_integration_tests,
         "\n--- Running integration tests on virtual boxes"))
-env.Requires(integrationTestTask, [createPackagesTask, startVirtsTask])
+env.Requires(integration_test_task, [create_packages_task, start_virts_task])
 
-distTask = env.Command(
+dist_task = env.Command(
     "dist",
     None,
-    env.Action(createDist, "\n--- Creating distributables"))
-env.Requires(distTask, [createPackagesTask, integrationTestTask])
+    env.Action(create_dist, "\n--- Creating distributables"))
+env.Requires(dist_task, [create_packages_task, integration_test_task])
 
 # specify directories to be cleaned up for various targets
-env.Clean(["test", "test-integration"], tmp_dir)
-env.Clean(["package"], target_dir)
-env.Clean(["dist"], dist_dir)
+env.Clean([unit_test_task, integration_test_task], tmp_dir)
+env.Clean([create_packages_task], target_dir)
+env.Clean([dist_task], dist_dir)
 
 env.Alias("all", ["."])
 
@@ -240,4 +240,4 @@ if env.GetOption("clean"):
     # not just the output of the usual default target.
     env.Default(".")
 else:
-    env.Default(createPackagesTask)
+    env.Default(create_packages_task)
