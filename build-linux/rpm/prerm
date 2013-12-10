@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+case "$*" in
+    0)
+        # Stop daemon
+        #/etc/init.d/pd-agent stop
+
+        # Unregister daemon
+        chkconfig --del pd-agent
+
+        # Clean up module .pyc
+        find /usr/lib/python2.6/site-packages/pdagent/ \
+            -name "*.pyc" -exec rm {} \;
+        ;;
+    1)
+        ;;
+    *)
+        ;;
+esac
+
+exit 0
+

@@ -62,9 +62,6 @@ echo = FPM!
 _FPM_DEPENDS="--depends python"
 if [[ "$1" == "deb" ]]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
-    _PRE_UNINST="--pre-uninstall $1/prerm"
-else
-    _PRE_UNINST=""
 fi
 fpm -s dir \
     -t $1 \
@@ -73,7 +70,7 @@ fpm -s dir \
     --architecture all \
     $_FPM_DEPENDS \
     --post-install $1/postinst \
-    $_PRE_UNINST \
+    --pre-uninstall $1/prerm \
     -C data \
     etc usr var
 
