@@ -22,6 +22,7 @@ Install & test the .deb:
  
     sudo dpkg -i /vagrant/build-linux/pdagent_0.1_all.deb
 
+    service pd-agent status
     which agent.py
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
