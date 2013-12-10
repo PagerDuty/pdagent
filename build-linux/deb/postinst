@@ -2,14 +2,24 @@
 
 set -e
 
-# Compile module .py to .pyc
-if which update-python-modules >/dev/null 2>&1; then
-	update-python-modules python-pdagent.public
+if [ "$1" = "configure" ]; then
+    # Compile module .py to .pyc
+    if which update-python-modules >/dev/null 2>&1; then
+        update-python-modules python-pdagent.public
+    fi
+
+    # Compile bin .py to .pyc
+    python -m compileall -f /usr/bin/pd-*.py
+
+    # Register daemon
+    update-rc.d -f pd-agent defaults
+
+    # Restart daemon
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d pd-agent restart
+    else
+        /etc/init.d/pd-agent restart
+    fi
 fi
 
-# Compile bin .py to .pyc
-python -m compileall -f /usr/bin/pd-*.py
-
-# Register daemon
-update-rc.d -f pd-agent defaults
-
+exit 0

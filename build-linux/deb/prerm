@@ -1,6 +1,15 @@
 #!/bin/sh
 
+set -e
+
 if [ "$1" = "remove" ]; then
+    # Stop daemon
+    if which invoke-rc.d >/dev/null 2>&1; then
+        invoke-rc.d datadog-agent stop || true
+    else
+        /etc/init.d/datadog-agent stop || true
+    fi
+
     # Unregister daemon
     update-rc.d -f pd-agent remove
 
@@ -12,3 +21,5 @@ if [ "$1" = "remove" ]; then
         update-python-modules -c python-pdagent.public
     fi
 fi
+
+exit 0
