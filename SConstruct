@@ -155,7 +155,6 @@ def _run_on_virts(remote_command):
 
 env = Environment()
 
-# TODO update help when commands are finalized.
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
@@ -165,15 +164,30 @@ dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
                     This is the default command if none is specified.
-test                Runs unit tests.
+start-virt          Starts configured virtual machines, installing them
+                    first if required.
+                    Specific virtual machines can be started by providing
+                    them as arguments, multiple times if required.
+                    e.g.
+                    scons start-virt start-virt=agent-lucid32
+test-local          Runs unit tests on the local machine.
+                    Please see 'test' command for more details.
+test                Runs unit tests on all running virtual machines.
                     By default, runs all tests in `pdagenttest` recursively.
                     (Test files should be named in the format `test_*.py`.)
                     Specific unit tests can be run by providing them as
                     arguments to this option, multiple times if required.
                     Both test files and test directories are supported.
                     e.g.
-                    scons test=pdagenttest/test_foo.py test=pdagenttest/queue
-test-integration    Runs integration tests.
+                    scons test test=pdagenttest/test_foo.py
+test-integration    Runs integration tests on all running virtual machines.
+                    By default, runs all tests in `pdagenttestinteg`
+                    recursively. (Test files should be named in the format
+                    `test_*.sh`.)
+                    Like the 'test' command, specific tests can be run by
+                    providing them as arguments to this option, multiple
+                    times if required. Both test files and test directories
+                    are supported.
 """)
 
 target_dir = "target"
