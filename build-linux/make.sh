@@ -74,8 +74,6 @@ fpm -s dir \
     -C data \
     etc usr var
 
-#    --prefix /usr \
-#    --deb-user pdagent
 # --config-files /etc/redis/redis.conf -v 2.6.10 ./src/redis-server=/usr/bin redis.conf=/etc/redis
 
 exit 0
