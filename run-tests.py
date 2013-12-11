@@ -22,4 +22,4 @@ if __name__ == "__main__":
     project_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(project_dir)
 
-    exit(runtests(sys.argv[1:]))
+    sys.exit(runtests(sys.argv[1:]))
