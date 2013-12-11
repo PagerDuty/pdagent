@@ -17,9 +17,13 @@ esac
 
 echo = BUILD TYPE: $1
 
-echo = cleaning build directory
-rm -fr data
-mkdir data
+# ensure we're in the build directory
+cd $(dirname "$0")
+
+echo = cleaning build directories
+rm -fr data target
+mkdir data target
+
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
@@ -53,9 +57,6 @@ if [[ "$1" == "deb" ]]; then
     echo pyversions=2.6- > $_PD_PUBLIC
     echo >> $_PD_PUBLIC
     find $_PY_SITE_PACKAGES -type f -name "*.py" | cut -c 5- >> $_PD_PUBLIC
-    #echo ---- python-pdagent.public:
-    #cat $_PD_PUBLIC
-    #echo ----
 fi
 
 echo = FPM!
@@ -63,17 +64,20 @@ _FPM_DEPENDS="--depends python"
 if [[ "$1" == "deb" ]]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
+
+cd target
 fpm -s dir \
     -t $1 \
     --name "pdagent" \
     --version "0.1" \
     --architecture all \
     $_FPM_DEPENDS \
-    --post-install $1/postinst \
-    --pre-uninstall $1/prerm \
-    -C data \
+    --post-install ../$1/postinst \
+    --pre-uninstall ../$1/prerm \
+    -C ../data \
     etc usr var
 
+# TODO:
 # --config-files /etc/redis/redis.conf -v 2.6.10 ./src/redis-server=/usr/bin redis.conf=/etc/redis
 
 exit 0

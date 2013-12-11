@@ -3,7 +3,7 @@
 set -e
 
 # Compile module .py to .pyc
-python -m compileall -f /usr/lib/python2.6/site-packages/pdagent/
+python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
 
 # Register daemon
 chkconfig --add pd-agent

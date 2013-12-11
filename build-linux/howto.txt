@@ -13,21 +13,24 @@ Dev Setup: (one-time)
 
 Building the .deb:
 
-    rm pdagent_0.1_all.deb
+    cd agent/build-linux/
     sh make.sh deb
 
 Install & test the .deb:
 
-    vagrant ssh agent-lucid32
+    vagrant ssh agent-lucid32 # or agent-precise32
  
-    sudo dpkg -i /vagrant/build-linux/pdagent_0.1_all.deb
+    sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
 
     service pd-agent status
-    which agent.py
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 
+Uninstall & test cleanup:
+
     sudo apt-get --yes remove pdagent
+
+    # rerun the test commands to ensure files are gone
 
 
 ## Redhat/CentOS
@@ -43,6 +46,7 @@ Building the .rpm:
 
     vagrant ssh agent-centos64
 
+    cd
     rm -fr agent
     cp -r /vagrant agent
     cd agent/build-linux/
@@ -50,11 +54,15 @@ Building the .rpm:
 
 Install & test the .rpm:
 
-    sudo rpm -i /vagrant/build-linux/pdagent-0.1-1.noarch.rpm
+    sudo rpm -i target/pdagent-0.1-1.noarch.rpm
 
-    which agent.py
+    /etc/rc.d/pd-agent status
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 
+Uninstall & test cleanup:
+
     sudo rpm -e pdagent
- 
+
+    # rerun the test commands to ensure files are gone
+

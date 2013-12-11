@@ -10,5 +10,5 @@ tmp/
 .vagrant/
 
 build-linux/data/
-build-linux/pdagent_0.1_all.deb
+build-linux/target/
 
