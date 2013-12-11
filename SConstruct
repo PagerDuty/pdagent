@@ -207,7 +207,7 @@ test-integration    Runs integration tests on all running virtual machines.
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details.
 test-vm             Runs unit tests on the specified virtual machine,
-                    starting them if required.
+                    starting it if required.
                     Virtual machines are specified by providing them as
                     arguments, multiple times if required.
                     e.g.
