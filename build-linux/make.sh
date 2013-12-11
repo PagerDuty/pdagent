@@ -6,9 +6,7 @@ set -e  # fail on errors
 
 # params
 case "$1" in
-  deb)
-        ;;
-  rpm)
+  deb|rpm)
         ;;
   *)
         echo "Usage: $0 {deb|rpm}"
