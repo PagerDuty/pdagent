@@ -32,7 +32,7 @@ def run_integration_tests(target, source, env):
 
 
 def run_unit_tests(target, source, env):
-    """Run unit tests on running virts."""
+    """Run unit tests on specific / all running virts."""
     source_paths = [s.path for s in source]
     remote_test_runner = os.path.join(remote_project_root, "run-tests.py")
     test_paths = _get_file_paths_recursive(
@@ -42,7 +42,7 @@ def run_unit_tests(target, source, env):
     remote_test_command = ["python", remote_test_runner]
     remote_test_command.extend(\
         [os.path.join(remote_project_root, t) for t in test_paths])
-    return _run_on_virts(" ".join(remote_test_command))
+    return _run_on_virts(" ".join(remote_test_command), env.get("virts", []))
 
 
 def run_unit_tests_local(target, source, env):
@@ -55,6 +55,20 @@ def run_unit_tests_local(target, source, env):
     test_command = [sys.executable, "run-tests.py"]
     test_command.extend(test_paths)
     return subprocess.call(test_command)
+
+
+def run_unit_tests_specific_vms(target, source, env):
+    virts = env.get("virts", [])
+    if not virts:
+        print "No virtual machines specified!"
+        return 1
+    # cannot declare start-vm and run-tests as task dependencies because they
+    # require different option-keys on the command-line to specify the VMs etc.
+    start_vm_exit_code = start_virtual_boxes(target, source, env)
+    if start_vm_exit_code == 0:
+        return run_unit_tests(target, source, env)
+    else:
+        return start_vm_exit_code
 
 
 def start_virtual_boxes(target, source, env):
@@ -144,9 +158,11 @@ def _get_virt_names():
         if v.find(" running (") >= 0]
 
 
-def _run_on_virts(remote_command):
+def _run_on_virts(remote_command, virts=[]):
     exit_code = 0
-    for virt in _get_virt_names():
+    if not virts:
+        virts = _get_virt_names()
+    for virt in virts:
         command = ["vagrant", "ssh", virt, "-c", remote_command]
         print "Running on %s..." % virt
         exit_code += subprocess.call(command)
@@ -172,8 +188,6 @@ start-virt          Starts configured virtual machines, installing them
                     them as arguments, multiple times if required.
                     e.g.
                     scons start-virt start-virt=agent-lucid32
-test-local          Runs unit tests on the local machine.
-                    Please see 'test' command for more details.
 test                Runs unit tests on all running virtual machines.
                     By default, runs all tests in `pdagenttest` recursively.
                     (Test files should be named in the format `test_*.py`.)
@@ -190,6 +204,14 @@ test-integration    Runs integration tests on all running virtual machines.
                     providing them as arguments to this option, multiple
                     times if required. Both test files and test directories
                     are supported.
+test-local          Runs unit tests on the local machine.
+                    Please see 'test' command for more details.
+test-vm             Runs unit tests on the specified virtual machine,
+                    starting them if required.
+                    Virtual machines are specified by providing them as
+                    arguments, multiple times if required.
+                    e.g.
+                    scons test-vm test-vm=agent-lucid32
 """)
 
 target_dir = "target"
@@ -214,6 +236,13 @@ unit_test_task = env.Command(
     env.Action(run_unit_tests,
         "\n--- Running unit tests on virtual boxes"))
 env.Requires(unit_test_task, start_virts_task)
+
+unit_test_specific_vms_task = env.Command(
+    "test-vm",
+    ["pdagenttest"],
+    env.Action(run_unit_tests_specific_vms,
+        "\n--- Running unit tests on specified virtual boxes"),
+    virts=_get_arg_values("test-vm"))
 
 create_packages_task = env.Command(
     "package",
