@@ -210,8 +210,10 @@ test-vm             Runs unit tests on the specified virtual machine,
                     starting it if required.
                     Virtual machines are specified by providing them as
                     arguments, multiple times if required.
+                    Specific unit tests to run can be specified as `test`
+                    arguments if required.
                     e.g.
-                    scons test-vm test-vm=agent-lucid32
+                    scons test-vm test-vm=agent-lucid32 test=test_foo.py
 """)
 
 target_dir = "target"
@@ -239,7 +241,7 @@ env.Requires(unit_test_task, start_virts_task)
 
 unit_test_specific_vms_task = env.Command(
     "test-vm",
-    ["pdagenttest"],
+    _get_arg_values("test", ["pdagenttest"]),
     env.Action(run_unit_tests_specific_vms,
         "\n--- Running unit tests on specified virtual boxes"),
     virts=_get_arg_values("test-vm"))
