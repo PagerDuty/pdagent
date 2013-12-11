@@ -159,11 +159,13 @@ env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
 all                 Runs all commands.
+build               Runs unit tests on virtual machines, creates packages
+                    and then runs integration tests on virtual machines.
+                    This is the default command if none is specified.
 --clean             Removes generated artifacts.
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
-                    This is the default command if none is specified.
 start-virt          Starts configured virtual machines, installing them
                     first if required.
                     Specific virtual machines can be started by providing
@@ -224,7 +226,7 @@ integration_test_task = env.Command(
     _get_arg_values("test-integration", ["pdagenttestinteg"]),
     env.Action(run_integration_tests,
         "\n--- Running integration tests on virtual boxes"))
-env.Requires(integration_test_task, [create_packages_task, start_virts_task])
+env.Requires(integration_test_task, [start_virts_task])
 
 dist_task = env.Command(
     "dist",
@@ -237,6 +239,8 @@ env.Clean([unit_test_task, integration_test_task], tmp_dir)
 env.Clean([create_packages_task], target_dir)
 env.Clean([dist_task], dist_dir)
 
+build_task = env.Alias("build",\
+    [unit_test_task, create_packages_task, integration_test_task])
 env.Alias("all", ["."])
 
 # task to run if no command is specified.
@@ -245,4 +249,4 @@ if env.GetOption("clean"):
     # not just the output of the usual default target.
     env.Default(".")
 else:
-    env.Default(create_packages_task)
+    env.Default(build_task)
