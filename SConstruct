@@ -52,7 +52,7 @@ def run_unit_tests_local(target, source, env):
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".py"))
     test_paths.sort()
-    test_command = ["python", "run-tests.py"]
+    test_command = [sys.executable, "run-tests.py"]
     test_command.extend(test_paths)
     return subprocess.call(test_command)
 
