@@ -162,7 +162,7 @@ all                 Runs all commands.
 build               Runs unit tests on virtual machines, creates packages
                     and then runs integration tests on virtual machines.
                     This is the default command if none is specified.
---clean             Removes generated artifacts.
+--clean|-c          Removes generated artifacts.
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
