@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ]; then
+    # Stop daemon
+    #FIXME: daemon is broken
+    #if which invoke-rc.d >/dev/null 2>&1; then
+    #    invoke-rc.d pd-agent stop || true
+    #else
+    #    /etc/init.d/pd-agent stop || true
+    #fi
+
+    # Unregister daemon
+    update-rc.d -f pd-agent remove
+
+    # Clean up module .pyc
+    if which update-python-modules >/dev/null 2>&1; then
+        update-python-modules -c python-pdagent.public
+    fi
+fi
+
+exit 0

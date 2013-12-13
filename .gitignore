@@ -9,3 +9,6 @@ tmp/
 
 .vagrant/
 
+build-linux/data/
+build-linux/target/
+

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ]; then
+    # Compile module .py to .pyc
+    if which update-python-modules >/dev/null 2>&1; then
+        update-python-modules python-pdagent.public
+    fi
+
+    # Register daemon
+    update-rc.d -f pd-agent defaults
+
+    # Restart daemon
+    #FIXME: daemon is broken
+    #if which invoke-rc.d >/dev/null 2>&1; then
+    #    invoke-rc.d pd-agent restart
+    #else
+    #    /etc/init.d/pd-agent restart
+    #fi
+fi
+
+exit 0
