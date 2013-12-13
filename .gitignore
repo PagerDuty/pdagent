@@ -4,7 +4,9 @@
 .DS_Store
 .sconsign.dblite
 
+dist/
 queue/
+target/
 tmp/
 
 .vagrant/

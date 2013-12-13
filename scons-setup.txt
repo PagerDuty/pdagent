@@ -3,6 +3,10 @@
 
 SCons 2.3.x setup notes for OS X 10.8 (Mountain Lion).
 
+Note that some test-related commands in this build file run on virtual
+machines, and assume that Vagrant has been installed on this machine.
+(See the included setup instructions for Vagrant.)
+
 
 ## Installation
 
