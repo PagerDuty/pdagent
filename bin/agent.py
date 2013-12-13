@@ -61,9 +61,10 @@ agentConfig = loadConfig(conf_file, default_dirs)
 
 def send_event(json_event_str):
     from pdagent.pdagentutil import send_event_json_str
-    incident_key, status_code = send_event_json_str(json_event_str)
-    # clean up the file only if we are successful, or if the failure was server-side.
-    if not (status_code >= 500 and status_code < 600):  # success, or non-server-side problem
+    _, status_code = send_event_json_str(json_event_str)
+    # clean up the file only if we are successful, or if the failure
+    # was server-side. FIXME: this logic is broken!
+    if not (status_code >= 500 and status_code < 600):
         return True
     return False
 
@@ -75,12 +76,14 @@ def tick(sc):
         pdQueue.dequeue(send_event)
     except EmptyQueue:
         mainLogger.info("Nothing to do - queue is empty!")
-    except CertificateError as e:
-        mainLogger.error("Server certificate validation error while flushing queue:", exc_info=True)
-    except IOError as e:
+    except CertificateError:
+        mainLogger.error(
+            "Server certificate validation error while flushing queue:",
+            exc_info=True
+            )
+    except IOError:
         mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
-        e = sys.exc_info()[0]
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # schedule next tick.
@@ -94,7 +97,7 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
             try:
                 os.mkdir(directory)
             except OSError:
-                pass  # handled in the check for valid existence immediately below
+                pass  # handled in the check immediately below
         if os.access(directory, os.W_OK) == False:
             problemDirectories.append(directory)
 
@@ -124,7 +127,8 @@ class agent(Daemon):
 
         elif sys.platform.find('freebsd') != -1:
             version = platform.uname()[2]
-            systemStats['fbsdV'] = ('freebsd', version, '')  # no codename for FreeBSD
+            # no codename for FreeBSD
+            systemStats['fbsdV'] = ('freebsd', version, '')
 
         mainLogger.info('System: ' + str(systemStats))
 

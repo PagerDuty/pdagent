@@ -55,8 +55,12 @@ def loadConfig(conf_file, default_dirs):
         sys.exit(1)
 
     # Check to make sure pd_url format is correct
-    if re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)', cfg['event_api_url']) == None:
-        print 'Your event_api_url is incorrect. It needs to be in the form https://example.pagerduty.com'
+    if re.match(
+        'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
+        cfg['event_api_url']
+        ) == None:
+        print 'Your event_api_url is incorrect. It needs to be in the form' \
+            ' https://example.pagerduty.com'
         print 'Agent will now quit'
         sys.exit(1)
 
