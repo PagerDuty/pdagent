@@ -91,13 +91,13 @@ def tick(sc):
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # schedule next tick.
-    sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
+    sc.enter(agentConfig['check_freq'], 1, tick, (sc,))
 
 
-def _ensureWritableDirectories(*directories):
+def _ensureWritableDirectories(make_missing_dir, *directories):
     problemDirectories = []
     for directory in set(directories):
-        if not os.path.exists(directory):
+        if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
             except OSError:
@@ -138,9 +138,9 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('checkFreq: %s', agentConfig['checkFreq'])
+        mainLogger.info('check_freq: %s', agentConfig['check_freq'])
         s = sched.scheduler(time.time, time.sleep)
-        tick(s)  # start immediately (case 28315)
+        tick(s)  # start immediately
         s.run()
 
 # Control of daemon
@@ -152,6 +152,7 @@ if __name__ == '__main__':
     outqueue_dir = agentConfig["outqueue_dir"]
 
     problemDirectories = _ensureWritableDirectories(
+        (dev_proj_dir is not None),  # don't create directories in production
         pidfile_dir, log_dir, data_dir, outqueue_dir
         )
     if problemDirectories:
@@ -255,9 +256,9 @@ if __name__ == '__main__':
 
         pid = _getDaemonPID()
         if pid:
-            print 'sd-agent is running as pid %s.' % pid
+            print 'pd-agent is running as pid %s.' % pid
         else:
-            print 'sd-agent is not running.'
+            print 'pd-agent is not running.'
 
     else:
         print 'Unknown command'

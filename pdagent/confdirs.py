@@ -16,7 +16,7 @@ def _linux_production_dirs():
     d["pidfile_dir"] = "/var/run"
     d["log_dir"] = "/var/log/pdagent"
     d["data_dir"] = "/var/lib/pdagent"
-    return "/etc", d
+    return "/etc/pd-agent", d
 
 
 def _dev_project_dirs(dev_proj_dir):

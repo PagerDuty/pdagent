@@ -21,6 +21,7 @@ def loadConfig(conf_file, default_dirs):
     # General config
     cfg = dict(default_dirs)
     cfg['log_level'] = logging.INFO
+    cfg['check_freq'] = 60
 
     # Config handling
     try:
