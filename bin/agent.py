@@ -54,16 +54,9 @@ from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
 
+
 # Config handling
 agentConfig = loadConfig(conf_file, default_dirs)
-
-"""
-for section in config.sections():
-    rawConfig[section] = {}
-
-    for option in config.options(section):
-        rawConfig[section][option] = config.get(section, option)
-"""
 
 
 def send_event(json_event_str):
