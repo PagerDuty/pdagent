@@ -25,15 +25,7 @@ def find_in_sys_path(file_path):
     return None
 
 
-def send_event(event_type, service_key, incident_key, description, details):
-    print "Sending %s..." % event_type
-
-    j = _build_event_json_str(
-        event_type, service_key, incident_key, description, details
-        )
-    send_event_json_str(j)
-
-
+# TODO move this to agent daemon
 def send_event_json_str(event_str):
     from pdagent import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
@@ -57,7 +49,6 @@ def send_event_json_str(event_str):
 
 def queue_event(event_type, service_key, incident_key, description, details):
     from pdqueue import PDQueue
-    print "Queuing %s..." % event_type
 
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details

@@ -43,6 +43,7 @@ def main():
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
     queue_event(args.event_type, args.service_key, args.incident_key, args.description, details)
+    print "Event proessed."
 
 if __name__ == "__main__":
     import sys
