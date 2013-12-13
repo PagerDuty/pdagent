@@ -32,7 +32,7 @@ class PDQueue(object):
         self._verify_permissions()
 
         self._dequeue_lockfile = os.path.join(
-            self.queue_dir, "dequeue_lock.txt"
+            self.queue_dir, "dequeue.lock"
             )
 
     def _create_queue_dir(self):
@@ -47,7 +47,7 @@ class PDQueue(object):
                 % self.queue_dir
                 )
 
-    # Get the list of queued files from the queue directory
+    # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self):
         fnames = [
             f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")
