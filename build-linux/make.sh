@@ -30,7 +30,6 @@ cp ../bin/*.py data/usr/bin
 echo = /var/...
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/outqueue
-chmod 1777 data/var/lib/pdagent/outqueue
 
 echo = /etc/...
 mkdir -p data/etc/pd-agent/
