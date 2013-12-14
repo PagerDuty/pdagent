@@ -49,11 +49,15 @@ def send_event_json_str(event_str):
 
 def queue_event(event_type, service_key, incident_key, description, details):
     from pdqueue import PDQueue
+    from filelock import FileLock
 
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue().enqueue(event)
+    PDQueue(
+        queue_dir="queue",  # TODO get from configuration
+        lock_class=FileLock
+    ).enqueue(event)
 
 
 def _build_event_json_str(
