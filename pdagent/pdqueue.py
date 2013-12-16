@@ -1,6 +1,7 @@
 import errno
 import os
 import time
+from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_CONSUME_ERROR
 
 
 class EmptyQueue(Exception):
@@ -116,11 +117,23 @@ class PDQueue(object):
             finally:
                 f.close()
 
-            consumed = consume_func(s)
+            consume_code = consume_func(s)
 
-            if consumed:
-                # TODO: handle/log delete error!
-                os.remove(fname_abs)
+            if consume_code is EVENT_CONSUMED:
+                try:
+                    os.remove(fname_abs)
+                except IOError as e:
+                    # TODO use a logger
+                    print "Could not delete consumed event file %s: %s" % \
+                        (fname, e)
+            elif consume_code is EVENT_CONSUME_ERROR:
+                try:
+                    errname_abs = self._abspath(fname.replace("pdq_", "err_"))
+                    os.rename(fname_abs, errname_abs)
+                except IOError as e:
+                    # TODO use a logger
+                    print "Could not rename problematic event file %s: %s" % \
+                        (fname, e)
         finally:
             lock.release()
 

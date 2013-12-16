@@ -57,7 +57,9 @@ from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
-from pdagent.constants import EVENTS_API_BASE
+from pdagent.constants import \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_CONSUME_ERROR, \
+    EVENTS_API_BASE
 
 # Config handling
 try:
@@ -172,10 +174,18 @@ def send_event(json_event_str):
         print "Success! incident_key =", incident_key
     else:
         print "Error! Reason:", str(response)
-    # clean up the file only if we are successful, or if the failure was server-side.
-    if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
-        return True
-    return False
+
+    if status_code < 300:
+        return EVENT_CONSUMED
+    elif status_code is 403:
+        # we are getting throttled! we'll retry later.
+        return EVENT_NOT_CONSUMED
+    elif status_code >= 400 and status_code < 500:
+        return EVENT_CONSUME_ERROR
+    else:
+        # anything 3xx and >= 5xx
+        return EVENT_NOT_CONSUMED
+
 
 def tick(sc):
     # flush the event queue.
@@ -189,7 +199,6 @@ def tick(sc):
     except IOError as e:
         mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
-        e = sys.exc_info()[0]
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # schedule next tick.
