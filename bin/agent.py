@@ -16,6 +16,9 @@ agentConfig = {}
 agentConfig['logging'] = logging.INFO
 agentConfig['checkFreq'] = 60
 
+EVENTS_API_BASE = \
+    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+
 agentConfig['version'] = '0.1'
 
 rawConfig = {}
@@ -41,7 +44,9 @@ import time
 
 # After the version check as this isn't available on older Python versions
 # and will error before the message is shown
+import json
 import subprocess
+import urllib2
 
 # Calculate project directory
 proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -53,7 +58,7 @@ sys.path.append(proj_dir)
 from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
-from backports.ssl_match_hostname import CertificateError
+from pdagent.backports.ssl_match_hostname import CertificateError
 
 # Config handling
 try:
@@ -153,8 +158,21 @@ for section in config.sections():
 
 
 def send_event(json_event_str):
-    from pdagent.pdagentutil import send_event_json_str
-    incident_key, status_code = send_event_json_str(json_event_str)
+    from pdagent import httpswithverify
+    request = urllib2.Request(EVENTS_API_BASE)
+    request.add_header("Content-type", "application/json")
+    request.add_data(json_event_str)
+
+    response = httpswithverify.urlopen(request)
+    status_code = response.getcode()
+    result = json.loads(response.read())
+
+    incident_key = None
+    if result["status"] == "success":
+        incident_key = result["incident_key"]
+        print "Success! incident_key =", incident_key
+    else:
+        print "Error! Reason:", str(response)
     # clean up the file only if we are successful, or if the failure was server-side.
     if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
         return True
