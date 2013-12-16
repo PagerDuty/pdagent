@@ -202,12 +202,13 @@ def tick(sc):
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
-    if int(time.time()) - lastCleanupTime >= agentConfig['cleanupFreqSec']:
+    secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
+    if secondsSinceCleanup >= agentConfig['cleanupFreqSec']:
         try:
             pdQueue.cleanup()
         except:
             mainLogger.error("Error while cleaning up queue:", exc_info=True)
-        lastCleanupTime = int(time.time())
+        agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
     sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
@@ -229,6 +230,8 @@ def _ensureWritableDirectories(*directories):
 
 # Override the generic daemon class to run our checks
 class agent(Daemon):
+
+    lastCleanupTimeSec = 0
 
     def run(self):
         mainLogger.debug('Collecting basic system stats')
@@ -321,7 +324,6 @@ if __name__ == '__main__':
             queue_dir=agentConfig["queueDirectory"],
             lock_class=FileLock
             )
-    lastCleanupTime = 0
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
