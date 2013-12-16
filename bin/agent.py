@@ -16,8 +16,6 @@ agentConfig = {}
 agentConfig['logging'] = logging.INFO
 agentConfig['checkFreq'] = 60
 
-EVENTS_API_BASE = \
-    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
 agentConfig['version'] = '0.1'
 
@@ -59,6 +57,7 @@ from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.constants import EVENTS_API_BASE
 
 # Config handling
 try:
