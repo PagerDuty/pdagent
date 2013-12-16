@@ -14,8 +14,8 @@ import logging.handlers
 # General config
 agentConfig = {}
 agentConfig['logging'] = logging.INFO
-agentConfig['checkFreq'] = 60
-
+agentConfig['checkFreqSec'] = 60
+agentConfig['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
 
 agentConfig['version'] = '0.1'
 
@@ -201,8 +201,17 @@ def tick(sc):
     except:
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
+    # clean up if required.
+    if int(time.time()) - lastCleanupTime >= agentConfig['cleanupFreqSec']:
+        try:
+            pdQueue.cleanup()
+        except:
+            mainLogger.error("Error while cleaning up queue:", exc_info=True)
+        lastCleanupTime = int(time.time())
+
     # schedule next tick.
-    sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
+    sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
+
 
 def _ensureWritableDirectories(*directories):
     problemDirectories = []
@@ -248,7 +257,7 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('checkFreq: %s', agentConfig['checkFreq'])
+        mainLogger.info('checkFreqSec: %s', agentConfig['checkFreqSec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s) # start immediately (case 28315)
         s.run()
@@ -312,6 +321,7 @@ if __name__ == '__main__':
             queue_dir=agentConfig["queueDirectory"],
             lock_class=FileLock
             )
+    lastCleanupTime = 0
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
