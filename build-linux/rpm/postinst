@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+# Compile module .py to .pyc
+python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
+
+# Register daemon
+chkconfig --add pd-agent
+
+# Restart daemon
+#FIXME: daemon is broken
+#/etc/init.d/pd-agent restart
+

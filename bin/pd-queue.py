@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # Python script to queue an incident event for delayed send to PagerDuty.
 #

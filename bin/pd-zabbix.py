@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # Python script to send incidents from Zabbix to PagerDuty.
 #
