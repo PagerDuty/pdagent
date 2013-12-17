@@ -256,7 +256,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(expected_unremoved, actual_unremoved)
 
         # create an invalid file too, just to complicate things.
-        invalid = "pdq_invalid.txt"
+        invalid = "tmp_invalid.txt"
         os.close(os.open(os.path.join(q.queue_dir, invalid), os.O_CREAT))
 
         q.cleanup(100)
