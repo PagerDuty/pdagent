@@ -5,6 +5,8 @@ from threading import Lock, Thread
 import time
 import unittest
 
+from pdagent.constants import \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY
 from pdagent.pdqueue import PDQueue, EmptyQueue
 
 
@@ -70,17 +72,17 @@ class PDQueueTest(unittest.TestCase):
 
         def consume_foo(s):
             self.assertEquals("foo", s)
-            return True
+            return EVENT_CONSUMED
         q.dequeue(consume_foo)
 
         def consume_bar(s):
             self.assertEquals("bar", s)
-            return True
+            return EVENT_CONSUMED
         q.dequeue(consume_bar)
 
         # check queue is empty
         self.assertEquals(q._queued_files(), [])
-        self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
 
     def test_dont_consume(self):
         # The item should stay in the queue if we don't consume it.
@@ -89,16 +91,30 @@ class PDQueueTest(unittest.TestCase):
 
         def dont_consume_foo(s):
             self.assertEquals("foo", s)
-            return False
+            return EVENT_NOT_CONSUMED
         q.dequeue(dont_consume_foo)
         q.dequeue(dont_consume_foo)
 
         def consume_foo(s):
             self.assertEquals("foo", s)
-            return True
+            return EVENT_CONSUMED
         q.dequeue(consume_foo)
 
-        self.assertRaises(EmptyQueue, q.dequeue, lambda s: True)
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
+
+    def test_consume_error(self):
+        # The item should get tagged as error, and not be available for
+        # further consumption, if consumption causes error.
+        q = self.newQueue()
+        q.enqueue("foo")
+
+        def erroneous_consume_foo(s):
+            self.assertEquals("foo", s)
+            return EVENT_BAD_ENTRY
+        q.dequeue(erroneous_consume_foo)
+
+        self.assertEquals(len(q._queued_files("err_")), 1)
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
@@ -124,7 +140,7 @@ class PDQueueTest(unittest.TestCase):
                     trace.append("C1")
                     time.sleep(0.2)
                     trace.append("C2")
-                    return True
+                    return EVENT_CONSUMED
                 q.dequeue(consume)
             except EmptyQueue:
                 trace.append("q_EQ")
@@ -198,7 +214,7 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(trace, ["q1_A1", "q1_A2", "q2_A1"])
             # consume the item
             trace.append("q1_C:" + s)
-            return True
+            return EVENT_CONSUMED
 
         q1.dequeue(consume1)
         # give the thread time to acquire the just released
@@ -211,6 +227,44 @@ class PDQueueTest(unittest.TestCase):
             "q2_A2", "q2_R",
             "q2_EQ",
              ])
+
+    def test_cleanup(self):
+        # simulate enqueues done a while ago.
+        q = self.newQueue()
+
+        def enqueue_before(sec, prefix="pdq"):
+            enqueue_time_ms = (int(time.time()) - sec) * 1000
+            fname = "%s_%d.txt" % (prefix, enqueue_time_ms)
+            fpath = os.path.join(q.queue_dir, fname)
+            os.close(os.open(fpath, os.O_CREAT))
+            return fname
+
+        # we'll first remove things enqueued >1500s ago, and then <1500s ago.
+        q1 = enqueue_before(2000)
+        t1 = enqueue_before(2100, prefix="tmp")
+        e1 = enqueue_before(2200, prefix="err")
+        q2 = enqueue_before(1000)
+        t2 = enqueue_before(1100, prefix="tmp")
+        e2 = enqueue_before(1200, prefix="err")
+
+        q.cleanup(1500)
+        # old err+tmp files are removed; old queue entries are not.
+        expected_unremoved = [q1, q2, t2, e2]
+        actual_unremoved = q._queued_files()
+        actual_unremoved.extend(q._queued_files("tmp"))
+        actual_unremoved.extend(q._queued_files("err"))
+        self.assertEquals(expected_unremoved, actual_unremoved)
+
+        # create an invalid file too, just to complicate things.
+        invalid = "tmp_invalid.txt"
+        os.close(os.open(os.path.join(q.queue_dir, invalid), os.O_CREAT))
+
+        q.cleanup(100)
+        expected_unremoved = [q1, q2, invalid]
+        actual_unremoved = q._queued_files()
+        actual_unremoved.extend(q._queued_files("tmp"))
+        actual_unremoved.extend(q._queued_files("err"))
+        self.assertEquals(expected_unremoved, actual_unremoved)
 
 
 if __name__ == '__main__':

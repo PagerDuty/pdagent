@@ -1,6 +1,7 @@
 import errno
 import os
 import time
+from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
 
 
 class EmptyQueue(Exception):
@@ -32,7 +33,7 @@ class PDQueue(object):
         self._verify_permissions()
 
         self._dequeue_lockfile = os.path.join(
-            self.queue_dir, "dequeue_lock.txt"
+            self.queue_dir, "dequeue.lock"
             )
 
     def _create_queue_dir(self):
@@ -47,10 +48,10 @@ class PDQueue(object):
                 % self.queue_dir
                 )
 
-    # Get the list of queued files from the queue directory
-    def _queued_files(self):
+    # Get the list of queued files from the queue directory in enqueue order
+    def _queued_files(self, file_prefix="pdq_"):
         fnames = [
-            f for f in os.listdir(self.queue_dir) if f.startswith("pdq_")
+            f for f in os.listdir(self.queue_dir) if f.startswith(file_prefix)
             ]
         fnames.sort()
         return fnames
@@ -99,11 +100,9 @@ class PDQueue(object):
                 return fname, fname_abs, fd
 
     def dequeue(self, consume_func):
-
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
         try:
-
             file_names = self._queued_files()
             if not len(file_names):
                 raise EmptyQueue
@@ -116,15 +115,44 @@ class PDQueue(object):
             finally:
                 f.close()
 
-            consumed = consume_func(s)
+            consume_code = consume_func(s)
 
-            if consumed:
-                # TODO: handle/log delete error!
+            if consume_code is EVENT_CONSUMED:
+                # TODO a failure here could lead to duplicate event sends...
                 os.remove(fname_abs)
+            elif consume_code is EVENT_BAD_ENTRY:
+                errname_abs = self._abspath(fname.replace("pdq_", "err_"))
+                os.rename(fname_abs, errname_abs)
         finally:
             lock.release()
 
-    # TODO: / FIXME: need to clean up old abandonded tmp_*.txt
+    def cleanup(self, delete_before_sec=86400):
+        delete_before_time = (int(time.time()) - delete_before_sec) * 1000
+
+        def _cleanup_files(fname_prefix):
+            fnames = self._queued_files(fname_prefix)
+            for fname in fnames:
+                enqueue_time = None
+                try:
+                    enqueue_time = int(fname.split('.')[0].split('_')[1])
+                except:
+                    # invalid file-name; we'll not include it in cleanup.
+                    # TODO use a logger.
+                    print "Cleanup: ignoring invalid file name %s" % fname
+                    fnames.remove(fname)
+                else:
+                    if enqueue_time >= delete_before_time:
+                        fnames.remove(fname)
+            for fname in fnames:
+                try:
+                    os.remove(self._abspath(fname))
+                except IOError as e:
+                    # TODO use a logger or throw up.
+                    print "Could not clean up file %s: %s" % (fname, e)
+
+        # clean up bad / temp files created before delete-before-time.
+        _cleanup_files("err_")
+        _cleanup_files("tmp_")
 
 
 def _open_creat_excl(fname_abs):

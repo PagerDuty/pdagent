@@ -24,7 +24,8 @@ import logging.handlers
 # General config
 agentConfig = {}
 agentConfig['logging'] = logging.INFO
-agentConfig['checkFreq'] = 60
+agentConfig['checkFreqSec'] = 60
+agentConfig['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
 
 agentConfig['version'] = '0.1'
 
@@ -51,7 +52,9 @@ import time
 
 # After the version check as this isn't available on older Python versions
 # and will error before the message is shown
+import json
 import subprocess
+import urllib2
 
 # Calculate project directory
 proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -64,6 +67,9 @@ from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.constants import \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
+    EVENTS_API_BASE
 
 # Config handling
 try:
@@ -163,12 +169,33 @@ for section in config.sections():
 
 
 def send_event(json_event_str):
-    from pdagent.pdagentutil import send_event_json_str
-    incident_key, status_code = send_event_json_str(json_event_str)
-    # clean up the file only if we are successful, or if the failure was server-side.
-    if not (status_code >= 500 and status_code < 600): # success, or non-server-side problem
-        return True
-    return False
+    from pdagent import httpswithverify
+    request = urllib2.Request(EVENTS_API_BASE)
+    request.add_header("Content-type", "application/json")
+    request.add_data(json_event_str)
+
+    response = httpswithverify.urlopen(request)
+    status_code = response.getcode()
+    result = json.loads(response.read())
+
+    incident_key = None
+    if result["status"] == "success":
+        incident_key = result["incident_key"]
+        print "Success! incident_key =", incident_key
+    else:
+        print "Error! Reason:", str(response)
+
+    if status_code < 300:
+        return EVENT_CONSUMED
+    elif status_code is 403:
+        # we are getting throttled! we'll retry later.
+        return EVENT_NOT_CONSUMED
+    elif status_code >= 400 and status_code < 500:
+        return EVENT_BAD_ENTRY
+    else:
+        # anything 3xx and >= 5xx
+        return EVENT_NOT_CONSUMED
+
 
 def tick(sc):
     # flush the event queue.
@@ -182,11 +209,20 @@ def tick(sc):
     except IOError as e:
         mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
-        e = sys.exc_info()[0]
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
+    # clean up if required.
+    secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
+    if secondsSinceCleanup >= agentConfig['cleanupFreqSec']:
+        try:
+            pdQueue.cleanup()
+        except:
+            mainLogger.error("Error while cleaning up queue:", exc_info=True)
+        agent.lastCleanupTimeSec = int(time.time())
+
     # schedule next tick.
-    sc.enter(agentConfig['checkFreq'], 1, tick, (sc,))
+    sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
+
 
 def _ensureWritableDirectories(*directories):
     problemDirectories = []
@@ -204,6 +240,8 @@ def _ensureWritableDirectories(*directories):
 
 # Override the generic daemon class to run our checks
 class agent(Daemon):
+
+    lastCleanupTimeSec = 0
 
     def run(self):
         mainLogger.debug('Collecting basic system stats')
@@ -232,7 +270,7 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('checkFreq: %s', agentConfig['checkFreq'])
+        mainLogger.info('checkFreqSec: %s', agentConfig['checkFreqSec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s) # start immediately (case 28315)
         s.run()

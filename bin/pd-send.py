@@ -1,12 +1,12 @@
 #!/usr/bin/python
 #
-# Python script to send an incident event to PagerDuty.
+# Python script to queue an incident event for delayed send to PagerDuty.
 #
 # Copyright (c) 2013, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
 #
 
-def build_send_arg_parser(description):
+def build_queue_arg_parser(description):
     from pdagent.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
     parser.add_argument("-k", "--service-key", dest="service_key", required=True,
@@ -29,9 +29,9 @@ def parse_fields(fields):
     return dict(f.split("=", 2) for f in fields)
 
 def main():
-    from pdagent.pdagentutil import send_event
-    description="Send a trigger, acknowledge or resolve event to PagerDuty."
-    parser = build_send_arg_parser(description)
+    from pdagent.pdagentutil import queue_event
+    description="Queue up a trigger, acknowledge or resolve event to PagerDuty."
+    parser = build_queue_arg_parser(description)
     args = parser.parse_args()
     details = parse_fields(args.fields)
 
@@ -42,7 +42,8 @@ def main():
         if not args.incident_key:
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
-    send_event(args.event_type, args.service_key, args.incident_key, args.description, details)
+    queue_event(args.event_type, args.service_key, args.incident_key, args.description, details)
+    print "Event processed."
 
 if __name__ == "__main__":
     import sys
