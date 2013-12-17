@@ -1,7 +1,7 @@
 # PDQueue event consumption function return codes.
 EVENT_CONSUMED = 0
 EVENT_NOT_CONSUMED = 1
-EVENT_CONSUME_ERROR = 2
+EVENT_BAD_ENTRY = 2
 
 # PD event integration API.
 EVENTS_API_BASE = \

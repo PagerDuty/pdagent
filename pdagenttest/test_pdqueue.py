@@ -6,7 +6,7 @@ import time
 import unittest
 
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_CONSUME_ERROR
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY
 from pdagent.pdqueue import PDQueue, EmptyQueue
 
 
@@ -110,7 +110,7 @@ class PDQueueTest(unittest.TestCase):
 
         def erroneous_consume_foo(s):
             self.assertEquals("foo", s)
-            return EVENT_CONSUME_ERROR
+            return EVENT_BAD_ENTRY
         q.dequeue(erroneous_consume_foo)
 
         self.assertEquals(len(q._queued_files("err_")), 1)

@@ -58,7 +58,7 @@ from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_CONSUME_ERROR, \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
     EVENTS_API_BASE
 
 # Config handling
@@ -181,7 +181,7 @@ def send_event(json_event_str):
         # we are getting throttled! we'll retry later.
         return EVENT_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
-        return EVENT_CONSUME_ERROR
+        return EVENT_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
         return EVENT_NOT_CONSUMED

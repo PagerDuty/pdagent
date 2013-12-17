@@ -1,7 +1,7 @@
 import errno
 import os
 import time
-from constants import EVENT_CONSUMED, EVENT_CONSUME_ERROR
+from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
 
 
 class EmptyQueue(Exception):
@@ -125,7 +125,7 @@ class PDQueue(object):
                     # TODO use a logger
                     print "Could not delete consumed event file %s: %s" % \
                         (fname, e)
-            elif consume_code is EVENT_CONSUME_ERROR:
+            elif consume_code is EVENT_BAD_ENTRY:
                 try:
                     errname_abs = self._abspath(fname.replace("pdq_", "err_"))
                     os.rename(fname_abs, errname_abs)
