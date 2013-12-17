@@ -26,6 +26,8 @@ import os
 import sched
 import sys
 import time
+import json
+import urllib2
 
 
 # Check Python version.
@@ -53,6 +55,9 @@ from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.constants import \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_CONSUME_ERROR, \
+    EVENTS_API_BASE
 
 
 # Config handling
@@ -60,13 +65,32 @@ agentConfig = loadConfig(conf_file, default_dirs)
 
 
 def send_event(json_event_str):
-    from pdagent.pdagentutil import send_event_json_str
-    _, status_code = send_event_json_str(json_event_str)
-    # clean up the file only if we are successful, or if the failure
-    # was server-side. FIXME: this logic is broken!
-    if not (status_code >= 500 and status_code < 600):
-        return True
-    return False
+    from pdagent import httpswithverify
+    request = urllib2.Request(EVENTS_API_BASE)
+    request.add_header("Content-type", "application/json")
+    request.add_data(json_event_str)
+
+    response = httpswithverify.urlopen(request)
+    status_code = response.getcode()
+    result = json.loads(response.read())
+
+    incident_key = None
+    if result["status"] == "success":
+        incident_key = result["incident_key"]
+        print "Success! incident_key =", incident_key
+    else:
+        print "Error! Reason:", str(response)
+
+    if status_code < 300:
+        return EVENT_CONSUMED
+    elif status_code is 403:
+        # we are getting throttled! we'll retry later.
+        return EVENT_NOT_CONSUMED
+    elif status_code >= 400 and status_code < 500:
+        return EVENT_CONSUME_ERROR
+    else:
+        # anything 3xx and >= 5xx
+        return EVENT_NOT_CONSUMED
 
 
 def tick(sc):
@@ -86,8 +110,17 @@ def tick(sc):
     except:
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
+    # clean up if required.
+    secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
+    if secondsSinceCleanup >= agentConfig['cleanupFreqSec']:
+        try:
+            pdQueue.cleanup()
+        except:
+            mainLogger.error("Error while cleaning up queue:", exc_info=True)
+        agent.lastCleanupTimeSec = int(time.time())
+
     # schedule next tick.
-    sc.enter(agentConfig['check_freq'], 1, tick, (sc,))
+    sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -106,6 +139,8 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
 
 # Override the generic daemon class to run our checks
 class agent(Daemon):
+
+    lastCleanupTimeSec = 0
 
     def run(self):
         mainLogger.debug('Collecting basic system stats')
@@ -135,7 +170,7 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('check_freq: %s', agentConfig['check_freq'])
+        mainLogger.info('checkFreqSec: %s', agentConfig['checkFreqSec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()

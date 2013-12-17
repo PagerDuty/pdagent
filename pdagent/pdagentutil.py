@@ -9,10 +9,6 @@
 #
 
 import json
-import urllib2
-
-EVENTS_API_BASE = \
-    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
 
 def find_in_sys_path(file_path):
@@ -25,44 +21,17 @@ def find_in_sys_path(file_path):
     return None
 
 
-def send_event(event_type, service_key, incident_key, description, details):
-    print "Sending %s..." % event_type
-
-    j = _build_event_json_str(
-        event_type, service_key, incident_key, description, details
-        )
-    send_event_json_str(j)
-
-
-def send_event_json_str(event_str):
-    from pdagent import httpswithverify
-    request = urllib2.Request(EVENTS_API_BASE)
-    request.add_header("Content-type", "application/json")
-    request.add_data(event_str)
-
-    response = httpswithverify.urlopen(request)
-    http_code = response.getcode()
-    result = json.loads(response.read())
-
-    print "HTTP status code:", http_code
-    print "Response data:", repr(result)
-    incident_key = None
-    if result["status"] == "success":
-        incident_key = result["incident_key"]
-        print "Success! incident_key =", incident_key
-    else:
-        print "Error! Reason:", str(response)
-    return (incident_key, http_code)
-
-
 def queue_event(event_type, service_key, incident_key, description, details):
     from pdqueue import PDQueue
-    print "Queuing %s..." % event_type
+    from filelock import FileLock
 
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue().enqueue(event)
+    PDQueue(
+        queue_dir="queue",  # TODO get from configuration
+        lock_class=FileLock
+    ).enqueue(event)
 
 
 def _build_event_json_str(

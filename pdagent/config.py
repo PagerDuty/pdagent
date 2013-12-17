@@ -21,7 +21,8 @@ def loadConfig(conf_file, default_dirs):
     # General config
     cfg = dict(default_dirs)
     cfg['log_level'] = logging.INFO
-    cfg['check_freq'] = 60
+    cfg['checkFreqSec'] = 60
+    cfg['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
 
     # Config handling
     try:
