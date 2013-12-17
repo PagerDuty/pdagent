@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 '''
     PagerDuty
     www.pagerduty.com
@@ -7,6 +7,16 @@
 
     See LICENSE.TXT for licensing details.
 '''
+
+### BEGIN INIT INFO
+# Provides:          pd-agent
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start PagerDuty Agent at boot time
+# Description:       Enable PagerDuty Agent daemon process.
+### END INIT INFO
 
 import logging
 import logging.handlers
