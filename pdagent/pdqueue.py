@@ -1,7 +1,7 @@
 import errno
 import os
 import time
-from constants import EVENT_CONSUMED, EVENT_CONSUME_ERROR
+from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
 
 
 class EmptyQueue(Exception):
@@ -118,21 +118,11 @@ class PDQueue(object):
             consume_code = consume_func(s)
 
             if consume_code is EVENT_CONSUMED:
-                try:
-                    os.remove(fname_abs)
-                except IOError as e:
-                    # TODO this could lead to duplicate event sends...
-                    # TODO use a logger
-                    print "Could not delete consumed event file %s: %s" % \
-                        (fname, e)
-            elif consume_code is EVENT_CONSUME_ERROR:
-                try:
-                    errname_abs = self._abspath(fname.replace("pdq_", "err_"))
-                    os.rename(fname_abs, errname_abs)
-                except IOError as e:
-                    # TODO use a logger
-                    print "Could not rename problematic event file %s: %s" % \
-                        (fname, e)
+                # TODO a failure here could lead to duplicate event sends...
+                os.remove(fname_abs)
+            elif consume_code is EVENT_BAD_ENTRY:
+                errname_abs = self._abspath(fname.replace("pdq_", "err_"))
+                os.rename(fname_abs, errname_abs)
         finally:
             lock.release()
 
@@ -142,15 +132,17 @@ class PDQueue(object):
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
             for fname in fnames:
+                enqueue_time = None
                 try:
                     enqueue_time = int(fname.split('.')[0].split('_')[1])
-                    if enqueue_time >= delete_before_time:
-                        fnames.remove(fname)
                 except:
-                    # invalid file-name; we'll ignore it.
+                    # invalid file-name; we'll not include it in cleanup.
                     # TODO use a logger.
                     print "Cleanup: ignoring invalid file name %s" % fname
                     fnames.remove(fname)
+                else:
+                    if enqueue_time >= delete_before_time:
+                        fnames.remove(fname)
             for fname in fnames:
                 try:
                     os.remove(self._abspath(fname))
