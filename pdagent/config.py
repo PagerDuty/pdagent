@@ -12,12 +12,20 @@ _valid_log_levels = \
 
 
 _dev_layout = False
-_mainConfig = None
 _default_dirs = None
+_main_config = None
+
+
+def isDevLayout():
+    return _dev_layout
+
+
+def getConfDirs():
+    return _default_dirs
 
 
 def getMainConfig():
-    return _mainConfig
+    return _main_config
 
 
 def getOutqueueDirectory():
@@ -25,7 +33,9 @@ def getOutqueueDirectory():
 
 
 def _loadConfig(conf_file, default_dirs):
-    assert not _mainConfig, "Cannot load config twice!"
+    global _default_dirs, _main_config
+    assert not _main_config, "Cannot load config twice!"
+    _default_dirs = default_dirs
 
     if not os.access(conf_file, os.R_OK):
         print 'Unable to read the config file at ' + conf_file
@@ -83,9 +93,7 @@ def _loadConfig(conf_file, default_dirs):
         print 'Agent will now quit'
         sys.exit(1)
 
-    global _default_dirs, _mainConfig
-    _default_dirs = default_dirs
-    _mainConfig = cfg
+    _main_config = cfg
 
 
 def _load():
