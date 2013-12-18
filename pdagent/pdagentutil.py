@@ -31,7 +31,10 @@ def queue_event(
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue(queue_dir=outqueue_dir, lock_class=FileLock).enqueue(event)
+    PDQueue(
+        queue_dir=outqueue_dir,
+        lock_class=FileLock
+    ).enqueue(event)
 
 
 def _build_event_json_str(
