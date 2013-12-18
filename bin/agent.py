@@ -37,20 +37,17 @@ if int(sys.version_info[1]) <= 3:
     sys.exit(1)
 
 
-# Figure out if we're in dev or prod layout
-main_dir = os.path.dirname(os.path.realpath(__file__))
-dev_proj_dir = None
 try:
-    import pdagent.confdirs
+    import pdagent.config
 except ImportError:
-    dev_proj_dir = os.path.dirname(main_dir)
-    sys.path.append(dev_proj_dir)
-    import pdagent.confdirs
-conf_file, default_dirs = pdagent.confdirs.getconfdirs(main_dir, dev_proj_dir)
+    # Fix up for dev layout
+    import sys
+    from os.path import realpath, dirname
+    sys.path.append(dirname(dirname(realpath(__file__))))
+    import pdagent.config
 
 
 # Custom modules
-from pdagent.config import loadConfig
 from pdagent.daemon import Daemon
 from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
@@ -61,7 +58,7 @@ from pdagent.constants import \
 
 
 # Config handling
-agentConfig = loadConfig(conf_file, default_dirs)
+agentConfig = pdagent.config.getMainConfig()
 
 
 def send_event(json_event_str):
@@ -178,13 +175,14 @@ class agent(Daemon):
 # Control of daemon
 if __name__ == '__main__':
 
-    pidfile_dir = agentConfig['pidfile_dir']
-    log_dir = agentConfig['log_dir']
-    data_dir = agentConfig['data_dir']
-    outqueue_dir = agentConfig["outqueue_dir"]
+    conf_dirs = pdagent.config.getConfDirs()
+    pidfile_dir = conf_dirs['pidfile_dir']
+    log_dir = conf_dirs['log_dir']
+    data_dir = conf_dirs['data_dir']
+    outqueue_dir = conf_dirs["outqueue_dir"]
 
     problemDirectories = _ensureWritableDirectories(
-        (dev_proj_dir is not None),  # don't create directories in production
+        pdagent.config.isDevLayout(),  # don't create directories in production
         pidfile_dir, log_dir, data_dir, outqueue_dir
         )
     if problemDirectories:

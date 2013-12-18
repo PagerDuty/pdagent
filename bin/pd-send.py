@@ -30,7 +30,7 @@ def parse_fields(fields):
 
 def main():
     from pdagent.pdagentutil import queue_event
-    description="Queue up a trigger, acknowledge or resolve event to PagerDuty."
+    description = "Queue up a trigger, acknowledge or resolve event to PagerDuty."
     parser = build_queue_arg_parser(description)
     args = parser.parse_args()
     details = parse_fields(args.fields)
@@ -42,13 +42,20 @@ def main():
         if not args.incident_key:
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
-    queue_event(args.event_type, args.service_key, args.incident_key, args.description, details)
+    queue_event(
+        pdagent.config.getOutqueueDirectory(),
+        args.event_type, args.service_key, args.incident_key, args.description, details
+        )
     print "Event processed."
 
-if __name__ == "__main__":
-    import sys
-    from os.path import abspath, dirname, join
-    proj_dir = dirname(dirname(abspath(__file__)))
-    sys.path.append(proj_dir)
-    main()
 
+if __name__ == "__main__":
+    try:
+        import pdagent.config
+    except ImportError:
+        # Fix up for dev layout
+        import sys
+        from os.path import realpath, dirname
+        sys.path.append(dirname(dirname(realpath(__file__))))
+        import pdagent.config
+    main()
