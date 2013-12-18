@@ -11,15 +11,29 @@ _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
 
 
-def loadConfig(conf_file, default_dirs):
+_dev_layout = False
+_mainConfig = None
+_default_dirs = None
+
+
+def getMainConfig():
+    return _mainConfig
+
+
+def getOutqueueDirectory():
+    return os.path.join(_default_dirs["data_dir"], "outqueue")
+
+
+def _loadConfig(conf_file, default_dirs):
+    assert not _mainConfig, "Cannot load config twice!"
 
     if not os.access(conf_file, os.R_OK):
         print 'Unable to read the config file at ' + conf_file
         print 'Agent will now quit'
         sys.exit(1)
 
-    # General config
-    cfg = dict(default_dirs)
+    # Config defaults
+    cfg = {}
     cfg['log_level'] = logging.INFO
     cfg['checkFreqSec'] = 60
     cfg['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
@@ -69,4 +83,24 @@ def loadConfig(conf_file, default_dirs):
         print 'Agent will now quit'
         sys.exit(1)
 
-    return cfg
+    global _default_dirs, _mainConfig
+    _default_dirs = default_dirs
+    _mainConfig = cfg
+
+
+def _load():
+    # (Re)figure out if we're in dev or prod layout
+    # Main script logic must match this!!!
+    main_module = sys.modules["__main__"]
+    main_dir = os.path.dirname(os.path.realpath(main_module.__file__))
+    dev_proj_dir = os.path.dirname(main_dir)
+    if sys.path[-1] != dev_proj_dir:
+        dev_proj_dir = None
+    global _dev_layout
+    _dev_layout = bool(dev_proj_dir)
+    from pdagent.confdirs import getconfdirs
+    conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
+    _loadConfig(conf_file, default_dirs)
+
+# Load config when this module is imported
+_load()
