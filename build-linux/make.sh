@@ -35,7 +35,12 @@ echo = /etc/...
 mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
 mkdir -p data/etc/init.d
-cp ../bin/agent.py data/etc/init.d/pd-agent
+# the convoluted manner of running agent.py below ensures that all positional
+# parameters passed to pd-agent reach agent.py.
+cat >data/etc/init.d/pd-agent <<INIT_COMMAND
+su pdagent -s /bin/sh -c '/usr/bin/agent.py "\$@"' /usr/bin/agent.py "\$@"
+INIT_COMMAND
+chmod 755 data/etc/init.d/pd-agent
 
 if [[ "$1" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
