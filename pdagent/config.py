@@ -24,30 +24,34 @@ def loadConfig(conf_file, default_dirs):
     cfg['checkFreqSec'] = 60
     cfg['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
 
-    # Config handling
+    # Load config file
     try:
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser.SafeConfigParser()
         config.read(conf_file)
-
-        # Core config
-        cfg['event_api_url'] = config.get('Main', 'event_api_url')
-
-        # Optional config
-        if config.has_option('Main', 'log_level'):
-            custom_log_level = config.get('Main', 'log_level').upper()
-            if custom_log_level in _valid_log_levels:
-                cfg['log_level'] = getattr(logging, custom_log_level)
-
-    except ConfigParser.ParsingError, e:
-        print 'Config file not found or incorrectly formatted'
-        print 'Error:', e.message
-        print 'Agent will now quit'
-        sys.exit(1)
-
     except ConfigParser.Error, e:
-        print 'Config error:', e.message
+        print 'Error loading config:', e.message
         print 'Agent will now quit'
         sys.exit(1)
+
+    # Convert loaded config into "Section.Option" entries
+    if not config.has_section("Main"):
+        print "Config is missing [Main] section"
+        print 'Agent will now quit'
+        sys.exit(1)
+    for option in config.options("Main"):
+        cfg[option] = config.get("Main", option)
+
+    # Check for required keys
+    if not "event_api_url" in cfg:
+        print "Config is missing 'event_api_url'"
+        print "Agent will now quit"
+        sys.exit(1)
+
+    # Convert log level
+    if type(cfg["log_level"]) is not int:
+        custom_log_level = cfg["log_level"].upper()
+        if custom_log_level in _valid_log_levels:
+            cfg["log_level"] = getattr(logging, custom_log_level)
 
     # Check that default config values have been changed (only core config)
     if cfg['event_api_url'] == 'http://example.pagerduty.com':
