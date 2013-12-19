@@ -16,23 +16,23 @@ _default_dirs = None
 _main_config = None
 
 
-def isDevLayout():
+def is_dev_layout():
     return _dev_layout
 
 
-def getConfDirs():
+def get_conf_dirs():
     return _default_dirs
 
 
-def getMainConfig():
+def get_main_config():
     return _main_config
 
 
-def getOutqueueDirectory():
+def get_outqueue_dir():
     return os.path.join(_default_dirs["data_dir"], "outqueue")
 
 
-def _loadConfig(conf_file, default_dirs):
+def _load_config(conf_file, default_dirs):
     global _default_dirs, _main_config
     assert not _main_config, "Cannot load config twice!"
     _default_dirs = default_dirs
@@ -45,8 +45,8 @@ def _loadConfig(conf_file, default_dirs):
     # Config defaults
     cfg = {}
     cfg['log_level'] = logging.INFO
-    cfg['checkFreqSec'] = 60
-    cfg['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
+    cfg['check_freq_sec'] = 60
+    cfg['cleanup_freq_sec'] = 60 * 60 * 3  # clean up every 3 hours.
 
     # Load config file
     try:
@@ -85,9 +85,9 @@ def _loadConfig(conf_file, default_dirs):
 
     # Check to make sure pd_url format is correct
     if re.match(
-        'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
-        cfg['event_api_url']
-        ) == None:
+            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
+            cfg['event_api_url']
+            ) == None:
         print 'Your event_api_url is incorrect. It needs to be in the form' \
             ' https://example.pagerduty.com'
         print 'Agent will now quit'
@@ -108,7 +108,7 @@ def _load():
     _dev_layout = bool(dev_proj_dir)
     from pdagent.confdirs import getconfdirs
     conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
-    _loadConfig(conf_file, default_dirs)
+    _load_config(conf_file, default_dirs)
 
 # Load config when this module is imported
 _load()

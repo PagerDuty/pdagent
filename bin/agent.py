@@ -58,7 +58,7 @@ from pdagent.constants import \
 
 
 # Config handling
-agentConfig = pdagent.config.getMainConfig()
+agentConfig = pdagent.config.get_main_config()
 
 
 def send_event(json_event_str):
@@ -117,7 +117,7 @@ def tick(sc):
         agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
-    sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
+    sc.enter(agentConfig['check_freq_sec'], 1, tick, (sc,))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -167,7 +167,7 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('checkFreqSec: %s', agentConfig['checkFreqSec'])
+        mainLogger.info('check_freq_sec: %s', agentConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()
@@ -175,14 +175,14 @@ class agent(Daemon):
 # Control of daemon
 if __name__ == '__main__':
 
-    conf_dirs = pdagent.config.getConfDirs()
+    conf_dirs = pdagent.config.get_conf_dirs()
     pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
 
     problemDirectories = _ensureWritableDirectories(
-        pdagent.config.isDevLayout(),  # don't create directories in production
+        pdagent.config.is_dev_layout(),  # don't create directories in production
         pidfile_dir, log_dir, data_dir, outqueue_dir
         )
     if problemDirectories:
