@@ -11,6 +11,11 @@ _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
 
 
+_DEFAULT_LOG_LEVEL = logging.INFO
+_DEFAULT_CHECK_FREQ_SEC = 60
+_DEFAULT_CLEANUP_FREQ_SEC = 60 * 60 * 3  # clean up every 3 hours.
+
+
 _dev_layout = False
 _default_dirs = None
 _main_config = None
@@ -44,9 +49,8 @@ def _load_config(conf_file, default_dirs):
 
     # Config defaults
     cfg = {}
-    cfg['log_level'] = logging.INFO
-    cfg['check_freq_sec'] = 60
-    cfg['cleanup_freq_sec'] = 60 * 60 * 3  # clean up every 3 hours.
+    cfg['check_freq_sec'] = _DEFAULT_CHECK_FREQ_SEC
+    cfg['cleanup_freq_sec'] = _DEFAULT_CLEANUP_FREQ_SEC
 
     # Load config file
     try:
@@ -72,10 +76,14 @@ def _load_config(conf_file, default_dirs):
         sys.exit(1)
 
     # Convert log level
-    if type(cfg["log_level"]) is not int:
+    if "log_level" in cfg:
         custom_log_level = cfg["log_level"].upper()
         if custom_log_level in _valid_log_levels:
             cfg["log_level"] = getattr(logging, custom_log_level)
+        else:
+            del cfg["log_level"]
+    if not "log_level" in cfg:
+        cfg["log_level"] = _DEFAULT_LOG_LEVEL
 
     # Check that default config values have been changed (only core config)
     if cfg['event_api_url'] == 'http://example.pagerduty.com':
