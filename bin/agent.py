@@ -109,7 +109,7 @@ def tick(sc):
 
     # clean up if required.
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= agentConfig['cleanupFreqSec']:
+    if secondsSinceCleanup >= agentConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup()
         except:
