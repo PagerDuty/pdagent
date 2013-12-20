@@ -43,7 +43,7 @@ def main():
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
     queue_event(
-        pdagent.config.getOutqueueDirectory(),
+        pdagent.config.get_outqueue_dir(),
         args.event_type, args.service_key, args.incident_key, args.description, details
         )
     print "Event processed."
