@@ -55,6 +55,8 @@ import time
 import json
 import subprocess
 import urllib2
+from urllib2 import URLError, HTTPError
+from ssl import SSLError
 
 # Calculate project directory
 proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -174,16 +176,30 @@ def send_event(json_event_str):
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
 
-    response = httpswithverify.urlopen(request)
-    status_code = response.getcode()
-    result = json.loads(response.read())
+    status_code, result = None, None
+    try:
+        response = httpswithverify.urlopen(request)
+        status_code = response.getcode()
+        result = json.loads(response.read())
+    except CertificateError as e:
+        mainLogger.error(
+            "Server certificate validation error while sending event:",
+            exc_info=True)
+        return EVENT_NOT_CONSUMED
+    except HTTPError as e:
+        status_code = e.getcode()
+        result = json.loads(e.read())
+    except URLError as e:
+        mainLogger.error(
+            "Error establishing a connection for sending event:",
+            exc_info=True)
+        return EVENT_NOT_CONSUMED
 
-    incident_key = None
     if result["status"] == "success":
-        incident_key = result["incident_key"]
-        print "Success! incident_key =", incident_key
+        mainLogger.info("incident_key =", result["incident_key"])
     else:
-        print "Error! Reason:", str(response)
+        mainLogger.error("Error sending event %s; Error code: %d, Reason: %s" %
+            (json_event_str, status_code, result))
 
     if status_code < 300:
         return EVENT_CONSUMED
@@ -204,8 +220,6 @@ def tick(sc):
         pdQueue.dequeue(send_event)
     except EmptyQueue:
         mainLogger.info("Nothing to do - queue is empty!")
-    except CertificateError as e:
-        mainLogger.error("Server certificate validation error while flushing queue:", exc_info=True)
     except IOError as e:
         mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
