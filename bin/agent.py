@@ -56,7 +56,6 @@ import json
 import subprocess
 import urllib2
 from urllib2 import URLError, HTTPError
-from ssl import SSLError
 
 # Calculate project directory
 proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
