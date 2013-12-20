@@ -1,5 +1,6 @@
 import errno
 import os
+import logging
 import time
 from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
 
@@ -35,6 +36,8 @@ class PDQueue(object):
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
             )
+
+        self.mainLogger = logging.getLogger('main')
 
     def _create_queue_dir(self):
         if not os.access(self.queue_dir, os.F_OK):
@@ -121,7 +124,10 @@ class PDQueue(object):
                 # TODO a failure here could lead to duplicate event sends...
                 os.remove(fname_abs)
             elif consume_code is EVENT_BAD_ENTRY:
-                errname_abs = self._abspath(fname.replace("pdq_", "err_"))
+                errname = fname.replace("pdq_", "err_")
+                errname_abs = self._abspath(errname)
+                self.mainLogger.info(
+                    "Bad entry: Renaming %s to %s..." % (fname, errname))
                 os.rename(fname_abs, errname_abs)
         finally:
             lock.release()
@@ -137,8 +143,8 @@ class PDQueue(object):
                     enqueue_time = int(fname.split('.')[0].split('_')[1])
                 except:
                     # invalid file-name; we'll not include it in cleanup.
-                    # TODO use a logger.
-                    print "Cleanup: ignoring invalid file name %s" % fname
+                    self.mainLogger.info(
+                        "Cleanup: ignoring invalid file name %s" % fname)
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
@@ -147,8 +153,8 @@ class PDQueue(object):
                 try:
                     os.remove(self._abspath(fname))
                 except IOError as e:
-                    # TODO use a logger or throw up.
-                    print "Could not clean up file %s: %s" % (fname, e)
+                    self.mainLogger.warning(
+                    "Could not clean up file %s: %s" % (fname, str(e)))
 
         # clean up bad / temp files created before delete-before-time.
         _cleanup_files("err_")
