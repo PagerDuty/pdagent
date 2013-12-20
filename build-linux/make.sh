@@ -35,10 +35,8 @@ echo = /etc/...
 mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
 mkdir -p data/etc/init.d
-# the convoluted manner of running agent.py below ensures that all positional
-# parameters passed to pd-agent reach agent.py.
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
-su pdagent -s /bin/sh -c '/usr/bin/agent.py "\$@"' /usr/bin/agent.py "\$@"
+su pdagent -s /usr/bin/python -- /usr/bin/agent.py "\$@"
 INIT_COMMAND
 chmod 755 data/etc/init.d/pd-agent
 
