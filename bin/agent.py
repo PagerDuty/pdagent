@@ -58,7 +58,8 @@ from pdagent.constants import \
 
 
 # Config handling
-agentConfig = pdagent.config.get_main_config()
+agentConfig = pdagent.config.load_agent_config()
+mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
@@ -109,7 +110,7 @@ def tick(sc):
 
     # clean up if required.
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= agentConfig['cleanup_freq_sec']:
+    if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup()
         except:
@@ -117,7 +118,7 @@ def tick(sc):
         agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
-    sc.enter(agentConfig['check_freq_sec'], 1, tick, (sc,))
+    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -167,7 +168,7 @@ class agent(Daemon):
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('check_freq_sec: %s', agentConfig['check_freq_sec'])
+        mainLogger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()
@@ -175,14 +176,14 @@ class agent(Daemon):
 # Control of daemon
 if __name__ == '__main__':
 
-    conf_dirs = pdagent.config.get_conf_dirs()
+    conf_dirs = agentConfig.get_conf_dirs()
     pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
 
     problemDirectories = _ensureWritableDirectories(
-        pdagent.config.is_dev_layout(),  # don't create directories in production
+        agentConfig.is_dev_layout(),  # don't create directories in production
         pidfile_dir, log_dir, data_dir, outqueue_dir
         )
     if problemDirectories:
@@ -205,14 +206,14 @@ if __name__ == '__main__':
     handler.setFormatter(formatter)
 
     mainLogger = logging.getLogger('main')
-    mainLogger.setLevel(agentConfig['log_level'])
+    mainLogger.setLevel(mainConfig['log_level'])
     mainLogger.addHandler(handler)
 
     mainLogger.info('--')
     mainLogger.info('pd-agent started')  # TODO: log agent version
     mainLogger.info('--')
 
-    mainLogger.info('event_api_url: %s', agentConfig['event_api_url'])
+    mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
 
     from pdagent.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."

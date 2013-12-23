@@ -6,6 +6,28 @@ import os
 import re
 import sys
 
+from pdagent.confdirs import getconfdirs
+
+
+class AgentConfig:
+
+    def __init__(self, dev_layout, default_dirs, main_config):
+        self.dev_layout = dev_layout
+        self.default_dirs = default_dirs
+        self.main_config = main_config
+
+    def is_dev_layout(self):
+        return self.dev_layout
+
+    def get_conf_dirs(self):
+        return self.default_dirs
+
+    def get_main_config(self):
+        return self.main_config
+
+    def get_outqueue_dir(self):
+        return os.path.join(self.default_dirs["data_dir"], "outqueue")
+
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
@@ -18,38 +40,30 @@ _CONFIG_DEFAULTS = {
     }
 
 
-_dev_layout = False
-_default_dirs = None
-_main_config = None
+_agent_config = None
 
 
-def is_dev_layout():
-    return _dev_layout
+def load_agent_config():
+    global _agent_config
+    assert not _agent_config, "Cannot load config twice!"
 
+    # (Re)figure out if we're in dev or prod layout
+    # Main script logic must match this!!!
+    main_module = sys.modules["__main__"]
+    main_dir = os.path.dirname(os.path.realpath(main_module.__file__))
+    dev_proj_dir = os.path.dirname(main_dir)
+    if sys.path[-1] != dev_proj_dir:
+        dev_proj_dir = None
+    dev_layout = bool(dev_proj_dir)
 
-def get_conf_dirs():
-    return _default_dirs
-
-
-def get_main_config():
-    return _main_config
-
-
-def get_outqueue_dir():
-    return os.path.join(_default_dirs["data_dir"], "outqueue")
-
-
-def _load_config(conf_file, default_dirs):
-    global _default_dirs, _main_config
-    assert not _main_config, "Cannot load config twice!"
-    _default_dirs = default_dirs
+    conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
 
     if not os.access(conf_file, os.R_OK):
         print 'Unable to read the config file at ' + conf_file
         print 'Agent will now quit'
         sys.exit(1)
 
-    # Config defaults
+    # Main config defaults
     cfg = dict(_CONFIG_DEFAULTS)
 
     # Load config file
@@ -61,7 +75,7 @@ def _load_config(conf_file, default_dirs):
         print 'Agent will now quit'
         sys.exit(1)
 
-    # Convert loaded config into "Section.Option" entries
+    # Convert Main section into dictionary entries
     if not config.has_section("Main"):
         print "Config is missing [Main] section"
         print 'Agent will now quit'
@@ -100,22 +114,6 @@ def _load_config(conf_file, default_dirs):
         print 'Agent will now quit'
         sys.exit(1)
 
-    _main_config = cfg
+    _agent_config = AgentConfig(dev_layout, default_dirs, cfg)
 
-
-def _load():
-    # (Re)figure out if we're in dev or prod layout
-    # Main script logic must match this!!!
-    main_module = sys.modules["__main__"]
-    main_dir = os.path.dirname(os.path.realpath(main_module.__file__))
-    dev_proj_dir = os.path.dirname(main_dir)
-    if sys.path[-1] != dev_proj_dir:
-        dev_proj_dir = None
-    global _dev_layout
-    _dev_layout = bool(dev_proj_dir)
-    from pdagent.confdirs import getconfdirs
-    conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
-    _load_config(conf_file, default_dirs)
-
-# Load config when this module is imported
-_load()
+    return _agent_config
