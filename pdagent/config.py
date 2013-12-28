@@ -59,9 +59,10 @@ def load_agent_config():
     conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
 
     if not os.access(conf_file, os.R_OK):
-        print 'Unable to read the config file at ' + conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Unable to read the config file at: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Main config defaults
     cfg = dict(_CONFIG_DEFAULTS)
@@ -75,7 +76,6 @@ def load_agent_config():
             "Error loading config: %s\nAgent will now quit"
             % e.message
             )
-        sys.exit(1)
 
     # Convert Main section into dictionary entries
     if not config.has_section("Main"):
