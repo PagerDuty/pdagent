@@ -36,6 +36,12 @@ if int(sys.version_info[1]) <= 3:
         ' Please update to v2.4 or above (v3 is not supported).'
     sys.exit(1)
 
+#
+if os.geteuid() == 0:
+    print "Agent should not be run as root. Use: service pd-agent <comnand>"
+    print "Agent will now quit"
+    sys.exit(1)
+
 
 try:
     import pdagent.config
