@@ -37,9 +37,11 @@ def getconfdirs(main_dir, dev_proj_dir):
         # Production testing is done using `import pdagent` and this can give
         # us a false positive due to mix & match or user PYTHONPATH hacking.
         if not main_dir in _PRODUCTION_MAIN_DIRS:
-            print "Program in unexpected directory:", main_dir
-            print "(another agent may be installed and/or in the python path)"
-            sys.exit(1)
+            raise SystemExit(
+                "Program in unexpected directory: %s\n"
+                "(another agent may be installed and/or in the python path)"
+                % main_dir
+                )
         conf_dir, default_dirs = _linux_production_dirs()
     else:
         # Development layout
