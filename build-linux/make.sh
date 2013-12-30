@@ -35,7 +35,10 @@ echo = /etc/...
 mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
 mkdir -p data/etc/init.d
-cp ../bin/agent.py data/etc/init.d/pd-agent
+cat >data/etc/init.d/pd-agent <<INIT_COMMAND
+sudo -u pdagent /usr/bin/agent.py "\$@"
+INIT_COMMAND
+chmod 755 data/etc/init.d/pd-agent
 
 if [[ "$1" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
