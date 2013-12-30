@@ -8,6 +8,7 @@
     See LICENSE.TXT for licensing details.
 '''
 
+
 ### BEGIN INIT INFO
 # Provides:          pd-agent
 # Required-Start:    $remote_fs $syslog
@@ -18,49 +19,33 @@
 # Description:       Enable PagerDuty Agent daemon process.
 ### END INIT INFO
 
-import logging
+
+# standard python modules
 import logging.handlers
-
-# General config
-agentConfig = {}
-agentConfig['logging'] = logging.INFO
-agentConfig['checkFreqSec'] = 60
-agentConfig['cleanupFreqSec'] = 60 * 60 * 3  # clean up every 3 hours.
-
-agentConfig['version'] = '0.1'
-
-rawConfig = {}
-
-# Check we're not using an old version of Python. Do this before anything else
-# We need 2.4 above because some modules (like subprocess) were only introduced in 2.4.
-import sys
-if int(sys.version_info[1]) <= 3:
-    print 'You are using an outdated version of Python.' \
-        ' Please update to v2.4 or above (v3 is not supported).' \
-        ' For newer OSs, you can update Python without affecting your system install.' \
-        ' See http://blog.boxedice.com/2010/01/19/updating-python-on-rhelcentos/' \
-        ' If you are running RHEl 4 / CentOS 4 then you will need to compile Python manually.'
-    sys.exit(1)
-
-# Core modules
-import ConfigParser
-import glob
 import os
-import re
 import sched
+import sys
 import time
-
-# After the version check as this isn't available on older Python versions
-# and will error before the message is shown
 import json
-import subprocess
 import urllib2
 
-# Calculate project directory
-proj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-# Fix classpath to reach custom modules
-sys.path.append(proj_dir)
+# Check Python version.
+if int(sys.version_info[1]) <= 3:
+    print 'You are using an outdated version of Python.' \
+        ' Please update to v2.4 or above (v3 is not supported).'
+    sys.exit(1)
+
+
+try:
+    import pdagent.config
+except ImportError:
+    # Fix up for dev layout
+    import sys
+    from os.path import realpath, dirname
+    sys.path.append(dirname(dirname(realpath(__file__))))
+    import pdagent.config
+
 
 # Custom modules
 from pdagent.daemon import Daemon
@@ -71,101 +56,10 @@ from pdagent.constants import \
     EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
     EVENTS_API_BASE
 
+
 # Config handling
-try:
-    config = ConfigParser.ConfigParser()
-
-    configPath = os.path.join(proj_dir, "conf", "config.cfg")
-
-    if os.access(configPath, os.R_OK) == False:
-        print 'Unable to read the config file at ' + configPath
-        print 'Agent will now quit'
-        sys.exit(1)
-
-    config.read(configPath)
-
-    # Core config
-    agentConfig['pdUrl'] = config.get('Main', 'pd_url')
-
-    if agentConfig['pdUrl'].endswith('/'):
-        agentConfig['pdUrl'] = agentConfig['pdUrl'][:-1]
-
-    agentConfig['agentKey'] = config.get('Main', 'agent_key')
-
-    # Tmp path
-    # default which may be overriden in the config later
-    agentConfig['tmpDirectory'] = os.path.join(proj_dir, "tmp")
-
-    agentConfig['pidfileDirectory'] = agentConfig['tmpDirectory']
-
-    agentConfig['queueDirectory'] = os.path.join(proj_dir, "queue")
-
-    # Plugin config
-    if config.has_option('Main', 'plugin_directory'):
-        agentConfig['pluginDirectory'] = config.get('Main', 'plugin_directory')
-
-    # Optional config
-    # Also do not need to be present in the config file (case 28326).
-    if config.has_option('Main', 'logging_level'):
-        # Maps log levels from the configuration file to Python log levels
-        loggingLevelMapping = {
-            'debug'    : logging.DEBUG,
-            'info'     : logging.INFO,
-            'error'    : logging.ERROR,
-            'warn'     : logging.WARN,
-            'warning'  : logging.WARNING,
-            'critical' : logging.CRITICAL,
-            'fatal'    : logging.FATAL,
-        }
-
-        customLogging = config.get('Main', 'logging_level')
-
-        try:
-            agentConfig['logging'] = loggingLevelMapping[customLogging.lower()]
-
-        except KeyError, ex:
-            agentConfig['logging'] = logging.INFO
-
-    if config.has_option('Main', 'tmp_directory'):
-        agentConfig['tmpDirectory'] = config.get('Main', 'tmp_directory')
-
-    if config.has_option('Main', 'pidfile_directory'):
-        agentConfig['pidfileDirectory'] = config.get('Main', 'pidfile_directory')
-
-    if config.has_option('Main', 'queue_directory'):
-        agentConfig['queueDirectory'] = config.get('Main', 'queue_directory')
-
-except ConfigParser.NoSectionError, e:
-    print 'Config file not found or incorrectly formatted'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-except ConfigParser.ParsingError, e:
-    print 'Config file not found or incorrectly formatted'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-except ConfigParser.NoOptionError, e:
-    print 'There are some items missing from your config file, but nothing fatal'
-
-# Check to make sure the default config values have been changed (only core config values)
-if agentConfig['pdUrl'] == 'http://example.pagerduty.com' \
-        or agentConfig['agentKey'] == 'keyHere':
-    print 'You have not modified config.cfg for your server'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-# Check to make sure pd_url format is correct
-if re.match('http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)', agentConfig['pdUrl']) == None:
-    print 'Your pd_url is incorrect. It needs to be in the form https://example.pagerduty.com'
-    print 'Agent will now quit'
-    sys.exit(1)
-
-for section in config.sections():
-    rawConfig[section] = {}
-
-    for option in config.options(section):
-        rawConfig[section][option] = config.get(section, option)
+agentConfig = pdagent.config.load_agent_config()
+mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
@@ -204,16 +98,19 @@ def tick(sc):
         pdQueue.dequeue(send_event)
     except EmptyQueue:
         mainLogger.info("Nothing to do - queue is empty!")
-    except CertificateError as e:
-        mainLogger.error("Server certificate validation error while flushing queue:", exc_info=True)
-    except IOError as e:
+    except CertificateError:
+        mainLogger.error(
+            "Server certificate validation error while flushing queue:",
+            exc_info=True
+            )
+    except IOError:
         mainLogger.error("I/O error while flushing queue:", exc_info=True)
     except:
         mainLogger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= agentConfig['cleanupFreqSec']:
+    if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup()
         except:
@@ -221,17 +118,17 @@ def tick(sc):
         agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
-    sc.enter(agentConfig['checkFreqSec'], 1, tick, (sc,))
+    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
 
 
-def _ensureWritableDirectories(*directories):
+def _ensureWritableDirectories(make_missing_dir, *directories):
     problemDirectories = []
     for directory in set(directories):
-        if not os.path.exists(directory):
+        if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
             except OSError:
-                pass  # handled in the check for valid existence immediately below
+                pass  # handled in the check immediately below
         if os.access(directory, os.W_OK) == False:
             problemDirectories.append(directory)
 
@@ -263,77 +160,85 @@ class agent(Daemon):
 
         elif sys.platform.find('freebsd') != -1:
             version = platform.uname()[2]
-            systemStats['fbsdV'] = ('freebsd', version, '') # no codename for FreeBSD
+            # no codename for FreeBSD
+            systemStats['fbsdV'] = ('freebsd', version, '')
 
         mainLogger.info('System: ' + str(systemStats))
 
         mainLogger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('checkFreqSec: %s', agentConfig['checkFreqSec'])
+        mainLogger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
-        tick(s) # start immediately (case 28315)
+        tick(s)  # start immediately
         s.run()
 
 # Control of daemon
 if __name__ == '__main__':
 
-    problemDirectories = _ensureWritableDirectories( \
-            agentConfig['tmpDirectory'], \
-            agentConfig['pidfileDirectory'], \
-            agentConfig['queueDirectory'])
+    conf_dirs = agentConfig.get_conf_dirs()
+    pidfile_dir = conf_dirs['pidfile_dir']
+    log_dir = conf_dirs['log_dir']
+    data_dir = conf_dirs['data_dir']
+    outqueue_dir = conf_dirs["outqueue_dir"]
+
+    problemDirectories = _ensureWritableDirectories(
+        agentConfig.is_dev_layout(),  # don't create directories in production
+        pidfile_dir, log_dir, data_dir, outqueue_dir
+        )
     if problemDirectories:
         for d in problemDirectories:
             print 'Directory %s: cannot create or is not writable' % d
         print 'Agent will now quit'
         sys.exit(1)
 
-    tmpDirectory = agentConfig['tmpDirectory']
-
     # Logging
-    logFile = os.path.join(tmpDirectory, 'sd-agent.log')
+    logFile = os.path.join(log_dir, 'pd-agent.log')
 
     # 10MB files
-    handler = logging.handlers.RotatingFileHandler(logFile, maxBytes=10485760, backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(
+        logFile, maxBytes=10485760, backupCount=5
+        )
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
     handler.setFormatter(formatter)
 
     mainLogger = logging.getLogger('main')
-    mainLogger.setLevel(agentConfig['logging'])
+    mainLogger.setLevel(mainConfig['log_level'])
     mainLogger.addHandler(handler)
 
     mainLogger.info('--')
-    mainLogger.info('sd-agent %s started', agentConfig['version'])
+    mainLogger.info('pd-agent started')  # TODO: log agent version
     mainLogger.info('--')
 
-    mainLogger.info('pd_url: %s', agentConfig['pdUrl'])
-    mainLogger.info('agent_key: %s', agentConfig['agentKey'])
+    mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
 
     from pdagent.argparse import ArgumentParser
-    description="PagerDuty Agent daemon process."
+    description = "PagerDuty Agent daemon process."
     parser = ArgumentParser(description=description)
-    parser.add_argument('action', choices=['start','stop','restart','status'])
-    parser.add_argument("--clean", action="store_true", dest="clean",
-            help="Remove old pid file")
+    parser.add_argument(
+        'action', choices=['start', 'stop', 'restart', 'status']
+        )
+    parser.add_argument(
+        "--clean", action="store_true", dest="clean",
+        help="Remove old pid file"
+        )
 
     args = parser.parse_args()
 
-    pidFile = os.path.join(agentConfig['pidfileDirectory'], 'sd-agent.pid')
+    pidFile = os.path.join(pidfile_dir, 'pd-agent.pid')
 
-    if os.access(agentConfig['pidfileDirectory'], os.W_OK) == False:
+    if os.access(pidfile_dir, os.W_OK) == False:
         print 'Unable to write the PID file at ' + pidFile
         print 'Agent will now quit'
         sys.exit(1)
 
-    mainLogger.info('PID: %s', pidFile)
+    mainLogger.info('PID file: %s', pidFile)
 
     # queue to work on.
-    pdQueue = PDQueue(
-            queue_dir=agentConfig["queueDirectory"],
-            lock_class=FileLock
-            )
+    pdQueue = PDQueue(queue_dir=outqueue_dir, lock_class=FileLock)
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
@@ -341,7 +246,7 @@ if __name__ == '__main__':
     # Helper method for some control options
     def _getDaemonPID():
         try:
-            pf = file(pidFile,'r')
+            pf = file(pidFile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
@@ -382,13 +287,12 @@ if __name__ == '__main__':
 
         pid = _getDaemonPID()
         if pid:
-            print 'sd-agent is running as pid %s.' % pid
+            print 'pd-agent is running as pid %s.' % pid
         else:
-            print 'sd-agent is not running.'
+            print 'pd-agent is not running.'
 
     else:
         print 'Unknown command'
         sys.exit(1)
 
     sys.exit(0)
-

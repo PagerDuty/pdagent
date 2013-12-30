@@ -73,6 +73,8 @@ fpm -s dir \
     --version "0.1" \
     --architecture all \
     $_FPM_DEPENDS \
+    --$1-user root \
+    --$1-group root \
     --post-install ../$1/postinst \
     --pre-uninstall ../$1/prerm \
     -C ../data \
