@@ -36,7 +36,7 @@ mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
 mkdir -p data/etc/init.d
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
-su pdagent -s /usr/bin/python -- /usr/bin/agent.py "\$@"
+sudo -u pdagent /usr/bin/agent.py "\$@"
 INIT_COMMAND
 chmod 755 data/etc/init.d/pd-agent
 
