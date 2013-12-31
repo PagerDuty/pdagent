@@ -239,9 +239,11 @@ if __name__ == '__main__':
     pidFile = os.path.join(pidfile_dir, 'pd-agent.pid')
 
     if os.access(pidfile_dir, os.W_OK) == False:
-        print 'Unable to write the PID file at ' + pidFile
-        print 'Agent will now quit'
-        sys.exit(1)
+        # FIXME: writeable test may only be needed for start
+        raise SystemExit(
+            'Unable to write the PID file at ' + pidFile + '\n'
+            'Agent will now quit'
+            )
 
     mainLogger.info('PID file: %s', pidFile)
 
