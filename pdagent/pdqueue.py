@@ -1,8 +1,10 @@
 import errno
+import json
 import os
 import logging
 import time
-from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
+from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
+    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY
 
 
 class EmptyQueue(Exception):
@@ -118,6 +120,27 @@ class PDQueue(object):
             if not len(file_names):
                 raise EmptyQueue
             file_names = filter_events_to_process_func(file_names)
+            svc_key_attempt = {}        # TODO read from DB
+            svc_key_next_retry = {}     # TODO read from DB
+            backoff_initial_delay_sec = 180     # TODO read from cfg
+            backoff_factor = 2                  # TODO read from cfg
+            err_service_keys = []
+
+            def update_retry(svc_key):
+                attempts = svc_key_attempt.get(svc_key, 0)
+                svc_key_next_retry[svc_key] = int(time.time()) + \
+                    backoff_initial_delay_sec * \
+                    backoff_factor ** attempts
+                svc_key_attempt[svc_key] = attempts + 1
+
+            def handle_bad_entry(fname):
+                errname = fname.replace("pdq_", "err_")
+                errname_abs = self._abspath(errname)
+                self.mainLogger.info(
+                    "Bad entry: Renaming %s to %s..." %
+                    (fname, errname))
+                os.rename(fname_abs, errname_abs)
+
             for fname in file_names:
                 fname_abs = self._abspath(fname)
                 # TODO: handle missing file or other errors
@@ -127,17 +150,36 @@ class PDQueue(object):
                 finally:
                     f.close()
 
-                consume_code = consume_func(s)
+                svc_key = json.loads(s)['service_key']      # TODO no parsing
+                if not err_service_keys or \
+                        svc_key not in err_service_keys or \
+                        svc_key_next_retry.get(svc_key, 0) < time.time():
+                    consume_code = consume_func(s)
 
-                if consume_code is EVENT_CONSUMED:
-                    # TODO a failure here could lead to duplicate event sends...
-                    os.remove(fname_abs)
-                elif consume_code is EVENT_BAD_ENTRY:
-                    errname = fname.replace("pdq_", "err_")
-                    errname_abs = self._abspath(errname)
-                    self.mainLogger.info(
-                        "Bad entry: Renaming %s to %s..." % (fname, errname))
-                    os.rename(fname_abs, errname_abs)
+                    if consume_code is EVENT_CONSUMED:
+                        # TODO a failure here will mean duplicate event sends
+                        os.remove(fname_abs)
+                    elif consume_code is EVENT_STOP_ALL:
+                        # don't process any more events.
+                        break
+                    elif consume_code & EVENT_BACKOFF_SVCKEY:
+                        # don't process more events with same service key.
+                        update_retry(svc_key)
+                        # handle delay-threshold-reached case.
+                        if svc_key_attempt[svc_key] > self.backoff_max_attempts:
+                            if consume_code & EVENT_NOT_CONSUMED:
+                                pass
+                            elif consume_code & EVENT_BAD_ENTRY:
+                                handle_bad_entry(fname)
+                            else:
+                                raise ValueError("Unspecified or invalid "
+                                    "back-off threshold breach action")
+                        # TODO delete entries in file_names instead.
+                        err_service_keys.append(
+                            json.loads(s)['service_key'])
+                    elif consume_code is EVENT_BAD_ENTRY:
+                        handle_bad_entry(fname)
+
         finally:
             lock.release()
 
@@ -147,7 +189,6 @@ class PDQueue(object):
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
             for fname in fnames:
-                enqueue_time = None
                 try:
                     enqueue_time = int(fname.split('.')[0].split('_')[1])
                 except:

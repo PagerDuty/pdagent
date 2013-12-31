@@ -54,8 +54,8 @@ from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
-    EVENTS_API_BASE
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, EVENT_BACKOFF_SVCKEY, \
+    EVENT_STOP_ALL, EVENTS_API_BASE
 
 
 # Config handling
@@ -78,7 +78,7 @@ def send_event(json_event_str):
         mainLogger.error(
             "Server certificate validation error while sending event:",
             exc_info=True)
-        return EVENT_NOT_CONSUMED
+        return EVENT_STOP_ALL
     except HTTPError as e:
         status_code = e.getcode()
         result = json.loads(e.read())
@@ -97,10 +97,16 @@ def send_event(json_event_str):
     if status_code < 300:
         return EVENT_CONSUMED
     elif status_code is 403:
-        # we are getting throttled! we'll retry later.
-        return EVENT_NOT_CONSUMED
+        # We are getting throttled! We'll retry this service key a few more
+        # times, but never consider this event as erroneous.
+        return EVENT_BACKOFF_SVCKEY | EVENT_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
         return EVENT_BAD_ENTRY
+    elif status_code >= 500 and status_code < 600:
+        # Hmm. Could be server-side problem, or a bad entry.
+        # We'll retry this service key a few times, and then decide that this
+        # event is possibly a bad entry.
+        return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
         return EVENT_NOT_CONSUMED
@@ -110,7 +116,7 @@ def tick(sc):
     # flush the event queue.
     mainLogger.info("Flushing event queue")
     try:
-        pdQueue.dequeue(send_event)
+        pdQueue.flush(send_event)
     except EmptyQueue:
         mainLogger.info("Nothing to do - queue is empty!")
     except IOError:
