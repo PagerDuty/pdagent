@@ -99,6 +99,7 @@ def send_event(json_event_str):
 
 
 def tick(sc):
+    global mainLogger
     # flush the event queue.
     mainLogger.info("Flushing event queue")
     try:
@@ -148,6 +149,17 @@ class agent(Daemon):
     lastCleanupTimeSec = 0
 
     def run(self):
+        global mainLogger
+        init_logging()
+
+        mainLogger.info('--')
+        mainLogger.info('pd-agent started')  # TODO: log agent version
+        mainLogger.info('--')
+
+        mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
+
+        mainLogger.info('PID file: %s', self.pidfile)
+
         mainLogger.debug('Collecting basic system stats')
 
         # Get some basic system stats to post back for development/testing
@@ -180,6 +192,25 @@ class agent(Daemon):
         tick(s)  # start immediately
         s.run()
 
+
+def init_logging():
+    global log_dir
+    logFile = os.path.join(log_dir, 'pd-agent.log')
+    # 10MB files
+    handler = logging.handlers.RotatingFileHandler(
+        logFile, maxBytes=10485760, backupCount=5
+        )
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+    handler.setFormatter(formatter)
+
+    global mainLogger
+    mainLogger = logging.getLogger('main')
+    mainLogger.setLevel(mainConfig['log_level'])
+    mainLogger.addHandler(handler)
+
+
 # Control of daemon
 if __name__ == '__main__':
 
@@ -199,29 +230,6 @@ if __name__ == '__main__':
             l.append('Directory %s: cannot create or is not writable' % d)
         l.append('Agent will now quit')
         raise SystemExit("\n".join(l))
-
-    # Logging
-    logFile = os.path.join(log_dir, 'pd-agent.log')
-
-    # 10MB files
-    handler = logging.handlers.RotatingFileHandler(
-        logFile, maxBytes=10485760, backupCount=5
-        )
-
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-    handler.setFormatter(formatter)
-
-    mainLogger = logging.getLogger('main')
-    mainLogger.setLevel(mainConfig['log_level'])
-    mainLogger.addHandler(handler)
-
-    mainLogger.info('--')
-    mainLogger.info('pd-agent started')  # TODO: log agent version
-    mainLogger.info('--')
-
-    mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
 
     from pdagent.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."
@@ -245,8 +253,6 @@ if __name__ == '__main__':
             'Agent will now quit'
             )
 
-    mainLogger.info('PID file: %s', pidFile)
-
     # queue to work on.
     pdQueue = PDQueue(queue_dir=outqueue_dir, lock_class=FileLock)
 
@@ -267,7 +273,7 @@ if __name__ == '__main__':
 
     # Control options
     if args.clean:
-        mainLogger.info('--clean')
+        print '--clean'
         try:
             if _getDaemonPID():
                 daemon.stop()
@@ -277,23 +283,23 @@ if __name__ == '__main__':
             pass
 
     if 'start' == args.action:
-        mainLogger.info('Action: start')
+        print 'Action: start'
         daemon.start()
 
     elif 'stop' == args.action:
-        mainLogger.info('Action: stop')
+        print 'Action: stop'
         daemon.stop()
 
     elif 'restart' == args.action:
-        mainLogger.info('Action: restart')
+        print 'Action: restart'
         daemon.restart()
 
     elif 'foreground' == args.action:
-        mainLogger.info('Action: foreground')
+        print 'Action: foreground'
         daemon.run()
 
     elif 'status' == args.action:
-        mainLogger.info('Action: status')
+        print 'Action: status'
 
         pid = _getDaemonPID()
         if pid:
