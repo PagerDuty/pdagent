@@ -103,32 +103,41 @@ class PDQueue(object):
                 return fname, fname_abs, fd
 
     def dequeue(self, consume_func):
+        # process only first event in queue.
+        self._process_queue(lambda events: events[0:1], consume_func)
+
+    def flush(self, consume_func):
+        # process all events in queue.
+        self._process_queue(lambda events: events, consume_func)
+
+    def _process_queue(self, filter_events_to_process_func, consume_func):
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
         try:
             file_names = self._queued_files()
             if not len(file_names):
                 raise EmptyQueue
-            fname = file_names[0]
-            fname_abs = self._abspath(fname)
-            # TODO: handle missing file or other errors
-            f = open(fname_abs)
-            try:
-                s = f.read()
-            finally:
-                f.close()
+            file_names = filter_events_to_process_func(file_names)
+            for fname in file_names:
+                fname_abs = self._abspath(fname)
+                # TODO: handle missing file or other errors
+                f = open(fname_abs)
+                try:
+                    s = f.read()
+                finally:
+                    f.close()
 
-            consume_code = consume_func(s)
+                consume_code = consume_func(s)
 
-            if consume_code is EVENT_CONSUMED:
-                # TODO a failure here could lead to duplicate event sends...
-                os.remove(fname_abs)
-            elif consume_code is EVENT_BAD_ENTRY:
-                errname = fname.replace("pdq_", "err_")
-                errname_abs = self._abspath(errname)
-                self.mainLogger.info(
-                    "Bad entry: Renaming %s to %s..." % (fname, errname))
-                os.rename(fname_abs, errname_abs)
+                if consume_code is EVENT_CONSUMED:
+                    # TODO a failure here could lead to duplicate event sends...
+                    os.remove(fname_abs)
+                elif consume_code is EVENT_BAD_ENTRY:
+                    errname = fname.replace("pdq_", "err_")
+                    errname_abs = self._abspath(errname)
+                    self.mainLogger.info(
+                        "Bad entry: Renaming %s to %s..." % (fname, errname))
+                    os.rename(fname_abs, errname_abs)
         finally:
             lock.release()
 
