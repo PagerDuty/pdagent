@@ -205,10 +205,12 @@ def init_logging():
         )
     handler.setFormatter(formatter)
 
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(mainConfig['log_level'])
+    rootLogger.addHandler(handler)
+
     global mainLogger
     mainLogger = logging.getLogger('main')
-    mainLogger.setLevel(mainConfig['log_level'])
-    mainLogger.addHandler(handler)
 
 
 # Control of daemon
@@ -283,24 +285,19 @@ if __name__ == '__main__':
             pass
 
     if 'start' == args.action:
-        print 'Action: start'
         daemon.start()
 
     elif 'stop' == args.action:
-        print 'Action: stop'
         daemon.stop()
 
     elif 'restart' == args.action:
-        print 'Action: restart'
         daemon.restart()
 
-    elif 'foreground' == args.action:
-        print 'Action: foreground'
-        daemon.run()
+    # FIXME: this needs to use stdout logging, may be unsafe anyway
+    #elif 'foreground' == args.action:
+    #    daemon.run()
 
     elif 'status' == args.action:
-        print 'Action: status'
-
         pid = _getDaemonPID()
         if pid:
             print 'pd-agent is running as pid %s.' % pid
