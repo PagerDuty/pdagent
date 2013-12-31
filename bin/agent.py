@@ -293,7 +293,7 @@ if __name__ == '__main__':
     elif 'restart' == args.action:
         daemon.restart()
 
-    # FIXME: this needs to use stdout logging, may be unsafe anyway
+    # XXX: unsafe - doesnt use pidfile, may want to log to stdout
     #elif 'foreground' == args.action:
     #    daemon.run()
 
