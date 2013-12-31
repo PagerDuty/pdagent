@@ -32,16 +32,17 @@ import urllib2
 
 # Check Python version.
 if int(sys.version_info[1]) <= 3:
-    print 'You are using an outdated version of Python.' \
+    raise SystemExit(
+        'You are using an outdated version of Python.'
         ' Please update to v2.4 or above (v3 is not supported).'
-    sys.exit(1)
+        )
 
 #
 if os.geteuid() == 0:
-    print "Agent should not be run as root. Use: service pd-agent <comnand>"
-    print "Agent will now quit"
-    sys.exit(1)
-
+    raise SystemExit(
+        "Agent should not be run as root. Use: service pd-agent <command>\n"
+        "Agent will now quit"
+        )
 
 try:
     import pdagent.config
@@ -193,10 +194,11 @@ if __name__ == '__main__':
         pidfile_dir, log_dir, data_dir, outqueue_dir
         )
     if problemDirectories:
+        l = []
         for d in problemDirectories:
-            print 'Directory %s: cannot create or is not writable' % d
-        print 'Agent will now quit'
-        sys.exit(1)
+            l.append('Directory %s: cannot create or is not writable' % d)
+        l.append('Agent will now quit')
+        raise SystemExit("\n".join(l))
 
     # Logging
     logFile = os.path.join(log_dir, 'pd-agent.log')
