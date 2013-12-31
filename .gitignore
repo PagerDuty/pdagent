@@ -4,13 +4,10 @@
 .DS_Store
 .sconsign.dblite
 
-dist/
-queue/
-target/
-tmp/
+/tmp/
 
-.vagrant/
+/.vagrant/
 
-build-linux/data/
-build-linux/target/
+/build-linux/data/
+/build-linux/target/
 

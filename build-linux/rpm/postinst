@@ -2,6 +2,14 @@
 
 set -e
 
+# Create pdagent user & group
+/usr/bin/getent passwd pdagent >/dev/null || \
+    /usr/sbin/adduser --system --shell /bin/false --no-create-home pdagent
+
+# Fix ownership of data and log dirs
+chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
+chmod 777 /var/lib/pdagent/outqueue
+
 # Compile module .py to .pyc
 python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
 
