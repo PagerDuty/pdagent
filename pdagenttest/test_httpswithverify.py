@@ -1,4 +1,3 @@
-import sys
 import unittest
 
 from pdagent.backports.ssl_match_hostname import CertificateError
