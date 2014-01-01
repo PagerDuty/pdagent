@@ -228,7 +228,7 @@ if __name__ == '__main__':
         for d in problemDirectories:
             l.append('Directory %s: is not writable' % d)
         l.append('Agent may be running as the wrong user.')
-        l.append('Use: service pdagent <command>')
+        l.append('Use: service pd-agent <command>')
         l.append('Agent will now quit')
         raise SystemExit("\n".join(l))
 
