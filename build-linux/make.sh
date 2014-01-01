@@ -33,8 +33,8 @@ mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/outqueue
 
 echo = /etc/...
-mkdir -p data/etc/pd-agent/
-cp ../conf/config.cfg data/etc/pd-agent/
+mkdir -p data/etc/pdagent/
+cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
 sudo -u pdagent /usr/bin/agent.py "\$@"

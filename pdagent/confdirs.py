@@ -17,7 +17,7 @@ def _linux_production_dirs():
         "log_dir": "/var/log/pdagent",
         "data_dir": "/var/lib/pdagent",
         }
-    return "/etc/pd-agent", d
+    return "/etc/pdagent", d
 
 
 def _dev_project_dirs(dev_proj_dir):
