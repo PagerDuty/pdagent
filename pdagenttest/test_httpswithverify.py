@@ -11,7 +11,7 @@ class PDVerifiedHttpsTest(unittest.TestCase):
 
     def test_valid_cert(self):
         try:
-            urlopen('https://caduceus.pd-staging.com/')
+            urlopen('https://caduceus.pd-internal.com/')
         except HTTPError as e:
             # if the server cert is valid, we connected to the server,
             # and server has complained to us about authorization.
