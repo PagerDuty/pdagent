@@ -131,7 +131,7 @@ def tick(sc):
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
     problemDirectories = []
-    for directory in set(directories):
+    for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
@@ -149,8 +149,9 @@ class agent(Daemon):
     lastCleanupTimeSec = 0
 
     def run(self):
-        global mainLogger
-        init_logging()
+        global log_dir, mainLogger
+        init_logging(log_dir)
+        mainLogger = logging.getLogger('main')
 
         mainLogger.info('--')
         mainLogger.info('pd-agent started')  # TODO: log agent version
@@ -193,8 +194,7 @@ class agent(Daemon):
         s.run()
 
 
-def init_logging():
-    global log_dir
+def init_logging(log_dir):
     logFile = os.path.join(log_dir, 'pd-agent.log')
     # 10MB files
     handler = logging.handlers.RotatingFileHandler(
@@ -208,9 +208,6 @@ def init_logging():
     rootLogger = logging.getLogger()
     rootLogger.setLevel(mainConfig['log_level'])
     rootLogger.addHandler(handler)
-
-    global mainLogger
-    mainLogger = logging.getLogger('main')
 
 
 # Control of daemon
@@ -229,7 +226,9 @@ if __name__ == '__main__':
     if problemDirectories:
         l = []
         for d in problemDirectories:
-            l.append('Directory %s: cannot create or is not writable' % d)
+            l.append('Directory %s: is not writable' % d)
+        l.append('Agent may be running as the wrong user.')
+        l.append('Use: service pdagent <command>')
         l.append('Agent will now quit')
         raise SystemExit("\n".join(l))
 
