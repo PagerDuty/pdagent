@@ -59,9 +59,10 @@ def load_agent_config():
     conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
 
     if not os.access(conf_file, os.R_OK):
-        print 'Unable to read the config file at ' + conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Unable to read the config file at: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Main config defaults
     cfg = dict(_CONFIG_DEFAULTS)
@@ -71,48 +72,52 @@ def load_agent_config():
         config = ConfigParser.SafeConfigParser()
         config.read(conf_file)
     except ConfigParser.Error, e:
-        print 'Error loading config:', e.message
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Error loading config: %s\nAgent will now quit"
+            % e.message
+            )
 
     # Convert Main section into dictionary entries
     if not config.has_section("Main"):
-        print "Config is missing [Main] section"
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Config is missing [Main] section\nAgent will now quit"
+            )
     for option in config.options("Main"):
         cfg[option] = config.get("Main", option)
 
     # Check for required keys
     if not "event_api_url" in cfg:
-        print "Config is missing 'event_api_url'"
-        print "Agent will now quit"
-        sys.exit(1)
+        raise SystemExit(
+            "Config is missing 'event_api_url'\nAgent will now quit"
+            )
 
     # Convert log level
     log_level = cfg["log_level"].upper()
     if log_level in _valid_log_levels:
         cfg["log_level"] = getattr(logging, log_level)
     else:
-        print 'Bad log_level in config file:', conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Bad log_level in config file: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Check that default config values have been changed (only core config)
     if cfg['event_api_url'] == 'http://example.pagerduty.com':
-        print 'You have not modified config file:', conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "You have not modified config file: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Check to make sure pd_url format is correct
     if re.match(
             'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
             cfg['event_api_url']
             ) == None:
-        print 'Your event_api_url is incorrect. It needs to be in the form' \
-            ' https://example.pagerduty.com'
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Your event_api_url is incorrect. It needs to be in the form" +
+            " https://example.pagerduty.com\n" +
+            "Agent will now quit"
+            )
 
     _agent_config = AgentConfig(dev_layout, default_dirs, cfg)
 
