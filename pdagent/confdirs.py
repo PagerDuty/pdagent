@@ -38,7 +38,7 @@ def getconfdirs(main_dir, dev_proj_dir):
         # us a false positive due to mix & match or user PYTHONPATH hacking.
         if not main_dir in _PRODUCTION_MAIN_DIRS:
             raise SystemExit(
-                "Program in unexpected directory: %s\n"
+                "Program in unexpected directory: %s\n" +
                 "(another agent may be installed and/or in the python path)"
                 % main_dir
                 )

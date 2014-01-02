@@ -33,14 +33,14 @@ import urllib2
 # Check Python version.
 if int(sys.version_info[1]) <= 3:
     raise SystemExit(
-        'You are using an outdated version of Python.'
+        'You are using an outdated version of Python.' +
         ' Please update to v2.4 or above (v3 is not supported).'
         )
 
-#
+# Check we're not running as root
 if os.geteuid() == 0:
     raise SystemExit(
-        "Agent should not be run as root. Use: service pd-agent <command>\n"
+        "Agent should not be run as root. Use: service pd-agent <command>\n" +
         "Agent will now quit"
         )
 
@@ -99,22 +99,22 @@ def send_event(json_event_str):
 
 
 def tick(sc):
-    global mainLogger
+    global main_logger
     # flush the event queue.
-    mainLogger.info("Flushing event queue")
+    main_logger.info("Flushing event queue")
     try:
         pdQueue.dequeue(send_event)
     except EmptyQueue:
-        mainLogger.info("Nothing to do - queue is empty!")
+        main_logger.info("Nothing to do - queue is empty!")
     except CertificateError:
-        mainLogger.error(
+        main_logger.error(
             "Server certificate validation error while flushing queue:",
             exc_info=True
             )
     except IOError:
-        mainLogger.error("I/O error while flushing queue:", exc_info=True)
+        main_logger.error("I/O error while flushing queue:", exc_info=True)
     except:
-        mainLogger.error("Error while flushing queue:", exc_info=True)
+        main_logger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
@@ -122,7 +122,7 @@ def tick(sc):
         try:
             pdQueue.cleanup()
         except:
-            mainLogger.error("Error while cleaning up queue:", exc_info=True)
+            main_logger.error("Error while cleaning up queue:", exc_info=True)
         agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
@@ -149,19 +149,19 @@ class agent(Daemon):
     lastCleanupTimeSec = 0
 
     def run(self):
-        global log_dir, mainLogger
+        global log_dir, main_logger
         init_logging(log_dir)
-        mainLogger = logging.getLogger('main')
+        main_logger = logging.getLogger('main')
 
-        mainLogger.info('--')
-        mainLogger.info('pd-agent started')  # TODO: log agent version
-        mainLogger.info('--')
+        main_logger.info('--')
+        main_logger.info('pd-agent started')  # TODO: log agent version
+        main_logger.info('--')
 
-        mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
+        main_logger.info('event_api_url: %s', mainConfig['event_api_url'])
 
-        mainLogger.info('PID file: %s', self.pidfile)
+        main_logger.info('PID file: %s', self.pidfile)
 
-        mainLogger.debug('Collecting basic system stats')
+        main_logger.debug('Collecting basic system stats')
 
         # Get some basic system stats to post back for development/testing
         import platform
@@ -183,12 +183,12 @@ class agent(Daemon):
             # no codename for FreeBSD
             systemStats['fbsdV'] = ('freebsd', version, '')
 
-        mainLogger.info('System: ' + str(systemStats))
+        main_logger.info('System: ' + str(systemStats))
 
-        mainLogger.debug('Creating tick instance')
+        main_logger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
+        main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     if os.access(pidfile_dir, os.W_OK) == False:
         # FIXME: writeable test may only be needed for start
         raise SystemExit(
-            'Unable to write the PID file at ' + pidFile + '\n'
+            'Unable to write the PID file at ' + pidFile + '\n' +
             'Agent will now quit'
             )
 
@@ -274,7 +274,6 @@ if __name__ == '__main__':
 
     # Control options
     if args.clean:
-        print '--clean'
         try:
             if _getDaemonPID():
                 daemon.stop()

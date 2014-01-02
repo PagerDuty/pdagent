@@ -114,8 +114,8 @@ def load_agent_config():
             cfg['event_api_url']
             ) == None:
         raise SystemExit(
-            "Your event_api_url is incorrect. It needs to be in the form"
-            " https://example.pagerduty.com\n"
+            "Your event_api_url is incorrect. It needs to be in the form" +
+            " https://example.pagerduty.com\n" +
             "Agent will now quit"
             )
 

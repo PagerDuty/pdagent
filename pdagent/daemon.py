@@ -7,7 +7,12 @@
 
     http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 
-    License:     http://creativecommons.org/licenses/by-sa/3.0/
+    License:    http://creativecommons.org/licenses/by-sa/3.0/
+
+    Changes:    - Modifications by PagerDuty - see history at:
+                    https://github.com/PagerDuty/agent/blob/master/pdagent/daemon.py
+                - Based on the file at:
+                    https://github.com/serverdensity/sd-agent/blob/master/daemon.py
 '''
 
 # Core modules
