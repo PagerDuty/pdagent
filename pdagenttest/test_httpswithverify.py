@@ -10,7 +10,7 @@ from ssl import SSLError
 # pointing these to PD servers!
 
 # Server with a valid cert signed by a CA
-_URL_VALID_CERT = 'https://caduceus.pd-internal.com/'
+_URL_VALID_CERT = 'https://caduceus.pd-staging.com/'
 _URL_VALID_CERT_RESPONSE_CODE = 401
 
 # Server with a valid cert but domain does not match
