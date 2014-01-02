@@ -37,6 +37,11 @@ mkdir -p data/etc/pdagent/
 cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
+#!/bin/sh
+#
+# chkconfig: 2345 99 1
+# description: PagerDuty Agent
+#
 sudo -u pdagent /usr/bin/agent.py "\$@"
 INIT_COMMAND
 chmod 755 data/etc/init.d/pd-agent
