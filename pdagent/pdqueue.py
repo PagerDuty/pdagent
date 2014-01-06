@@ -130,19 +130,21 @@ class PDQueue(object):
         lock.acquire()
 
         try:
+            backoff_data = None
             try:
-                backoff_data = self.backoff_db.get() or {
-                    'attempts': {},
-                    'next_retries': {}
-                }
-                svc_key_attempt = backoff_data['attempts']
-                svc_key_next_retry = backoff_data['next_retries']
+                backoff_data = self.backoff_db.get()
             except:
                 self.mainLogger.warning(
                     "Unable to load queue-error back-off history",
                     exc_info=True)
-                svc_key_attempt = {}
-                svc_key_next_retry = {}
+            if not backoff_data:
+                # first time, or errors during db read...
+                backoff_data = {
+                    'attempts': {},
+                    'next_retries': {}
+                }
+            svc_key_attempt = backoff_data['attempts']
+            svc_key_next_retry = backoff_data['next_retries']
 
             file_names = self._queued_files()
 
