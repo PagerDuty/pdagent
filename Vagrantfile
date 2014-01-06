@@ -28,6 +28,7 @@ Vagrant::Config.run do |config|
         config.vm.define name do |conf2|
             conf2.vm.box = conf["box"]
             conf2.vm.box_url = conf["box_url"]
+            conf2.vm.network :bridged
         end
     end
 end

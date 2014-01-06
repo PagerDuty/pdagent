@@ -37,6 +37,11 @@ mkdir -p data/etc/pdagent/
 cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
+#!/bin/sh
+#
+# chkconfig: 2345 99 1
+# description: PagerDuty Agent
+#
 sudo -u pdagent /usr/bin/agent.py "\$@"
 INIT_COMMAND
 chmod 755 data/etc/init.d/pd-agent
@@ -51,6 +56,7 @@ echo = python modules...
 mkdir -p $_PY_SITE_PACKAGES
 (cd .. && find pdagent -type d -exec mkdir build-linux/$_PY_SITE_PACKAGES/{} \;)
 (cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
+(cd .. && find pdagent -type f -name "ca_certs.pem" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 
 if [[ "$1" == "deb" ]]; then
     echo = deb python-support...
@@ -59,6 +65,7 @@ if [[ "$1" == "deb" ]]; then
     echo pyversions=2.6- > $_PD_PUBLIC
     echo >> $_PD_PUBLIC
     find $_PY_SITE_PACKAGES -type f -name "*.py" | cut -c 5- >> $_PD_PUBLIC
+    find $_PY_SITE_PACKAGES -type f -name "ca_certs.pem" | cut -c 5- >> $_PD_PUBLIC
 fi
 
 echo = FPM!
