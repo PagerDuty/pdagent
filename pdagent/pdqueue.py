@@ -128,22 +128,24 @@ class PDQueue(object):
     def _process_queue(self, filter_events_to_process_func, consume_func):
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
-        try:
-            backoff_data = self.backoff_db.get() or {
-                'attempts': {},
-                'next_retries': {}
-            }
-            svc_key_attempt = backoff_data['attempts']
-            svc_key_next_retry = backoff_data['next_retries']
-        except IOError:
-            self.mainLogger.warning(
-                "Unable to load queue-error back-off history",
-                exc_info=True)
-            svc_key_attempt = {}
-            svc_key_next_retry = {}
 
         try:
+            try:
+                backoff_data = self.backoff_db.get() or {
+                    'attempts': {},
+                    'next_retries': {}
+                }
+                svc_key_attempt = backoff_data['attempts']
+                svc_key_next_retry = backoff_data['next_retries']
+            except:
+                self.mainLogger.warning(
+                    "Unable to load queue-error back-off history",
+                    exc_info=True)
+                svc_key_attempt = {}
+                svc_key_next_retry = {}
+
             file_names = self._queued_files()
+
             if not len(file_names):
                 raise EmptyQueue
             file_names = filter_events_to_process_func(file_names)
@@ -208,11 +210,12 @@ class PDQueue(object):
             try:
                 # persist back-off info.
                 self.backoff_db.set(backoff_data)
-            except IOError:
+            except:
                 self.mainLogger.warning(
                     "Unable to save queue-error back-off history",
                     exc_info=True)
-            lock.release()
+            finally:
+                lock.release()
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(time.time()) - delete_before_sec) * 1000
