@@ -22,7 +22,7 @@ def find_in_sys_path(file_path):
 
 
 def queue_event(
-        outqueue_dir,
+        queue_config,
         event_type, service_key, incident_key, description, details
         ):
     from pdqueue import PDQueue
@@ -32,9 +32,9 @@ def queue_event(
         event_type, service_key, incident_key, description, details
         )
     PDQueue(
-        queue_dir=outqueue_dir,
+        queue_config=queue_config,
         lock_class=FileLock
-    ).enqueue(event)
+    ).enqueue(service_key, event)
 
 
 def _build_event_json_str(

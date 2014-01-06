@@ -28,6 +28,8 @@ class AgentConfig:
     def get_outqueue_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "outqueue")
 
+    def get_db_dir(self):
+        return os.path.join(self.default_dirs["data_dir"], "db")
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
@@ -36,7 +38,15 @@ _valid_log_levels = \
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
     "check_freq_sec": 60,
+    "send_event_timeout_sec": 30,
     "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
+    "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
+    # Back-off configuration for failed event-sends -- back off for 180s
+    # initially, then 360s etc. (increasing by a factor of 2) for max 7 times.
+    # This makes about an hour of total retry time.
+    "backoff_initial_delay_sec": 180,
+    "backoff_factor": 2,
+    "backoff_max_attempts": 7,        # total retry time = more than 1hr
     }
 
 

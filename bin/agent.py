@@ -27,6 +27,7 @@ import sched
 import sys
 import time
 import json
+import socket
 import urllib2
 from urllib2 import HTTPError, URLError
 
@@ -71,7 +72,9 @@ def send_event(json_event_str):
 
     status_code, result = None, None
     try:
-        response = httpswithverify.urlopen(request)
+        response = httpswithverify.urlopen(
+            request,
+            timeout=mainConfig["send_event_timeout_sec"])
         status_code = response.getcode()
         result = json.loads(response.read())
     except CertificateError:
@@ -82,11 +85,19 @@ def send_event(json_event_str):
     except HTTPError as e:
         status_code = e.getcode()
         result = json.loads(e.read())
-    except URLError:
-        mainLogger.error(
-            "Error establishing a connection for sending event:",
-            exc_info=True)
-        return EVENT_NOT_CONSUMED
+    except URLError as e:
+        if isinstance(e.reason, socket.timeout):
+            mainLogger.error("Timeout while sending event:", exc_info=True)
+            # This could be real issue with PD, or just some anomaly in
+            # processing this service key or event. We'll retry this service key
+            # a few more times, and then decide that this event is possibly a
+            # bad entry.
+            return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+        else:
+            mainLogger.error(
+                "Error establishing a connection for sending event:",
+                exc_info=True)
+            return EVENT_NOT_CONSUMED
 
     if result["status"] == "success":
         mainLogger.info("incident_key =", result["incident_key"])
@@ -128,7 +139,7 @@ def tick(sc):
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
     if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
         try:
-            pdQueue.cleanup()
+            pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
             mainLogger.error("Error while cleaning up queue:", exc_info=True)
         agent.lastCleanupTimeSec = int(time.time())
@@ -197,10 +208,11 @@ if __name__ == '__main__':
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
+    db_dir = conf_dirs["db_dir"]
 
     problemDirectories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # don't create directories in production
-        pidfile_dir, log_dir, data_dir, outqueue_dir
+        pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problemDirectories:
         for d in problemDirectories:
@@ -254,7 +266,12 @@ if __name__ == '__main__':
     mainLogger.info('PID file: %s', pidFile)
 
     # queue to work on.
-    pdQueue = PDQueue(queue_dir=outqueue_dir, lock_class=FileLock)
+    queue_config = dict(agentConfig.get_main_config())
+    queue_config.update({
+        'outqueue_dir': outqueue_dir,
+        'db_dir': db_dir
+    })
+    pdQueue = PDQueue(queue_config=queue_config, lock_class=FileLock)
 
     # Daemon instance from agent class
     daemon = agent(pidFile)

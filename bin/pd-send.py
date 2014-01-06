@@ -43,9 +43,12 @@ def main():
         if not args.incident_key:
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
+    queue_config = dict(agent_config.get_main_config())
+    queue_config.update(agent_config.get_conf_dirs())
     queue_event(
-        agent_config.get_outqueue_dir(),
-        args.event_type, args.service_key, args.incident_key, args.description, details
+        queue_config,
+        args.event_type, args.service_key, args.incident_key, args.description,
+        details
         )
     print "Event processed."
 

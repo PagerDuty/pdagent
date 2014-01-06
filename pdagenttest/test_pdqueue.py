@@ -6,13 +6,15 @@ import time
 import unittest
 
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, EVENT_BACKOFF_SVCKEY, \
+    EVENT_STOP_ALL
 from pdagent.pdqueue import PDQueue, EmptyQueue
 
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
+TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
 
 
 class NoOpLock:
@@ -29,12 +31,28 @@ class NoOpLock:
 
 class PDQueueTest(unittest.TestCase):
 
+    config = {
+        "outqueue_dir": TEST_QUEUE_DIR,
+        "db_dir": TEST_DB_DIR,
+        "backoff_initial_delay_sec": 1,
+        "backoff_factor": 2,
+        "backoff_max_attempts": 3
+    }
+
     def setUp(self):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
+        if os.path.exists(TEST_DB_DIR):
+            shutil.rmtree(TEST_DB_DIR)
+
+    def tearDown(self):
+        if os.path.exists(TEST_QUEUE_DIR):
+            shutil.rmtree(TEST_QUEUE_DIR)
+        if os.path.exists(TEST_DB_DIR):
+            shutil.rmtree(TEST_DB_DIR)
 
     def newQueue(self):
-        return PDQueue(TEST_QUEUE_DIR, NoOpLock)
+        return PDQueue(PDQueueTest.config, NoOpLock)
 
     def test__open_creat_excl_with_retry(self):
         from pdagent.pdqueue import _open_creat_excl
@@ -61,11 +79,11 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(q._queued_files(), [])
 
-        f_foo = q.enqueue("foo")
+        f_foo = q.enqueue("svckey", "foo")
         self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
 
-        f_bar = q.enqueue("bar")
+        f_bar = q.enqueue("svckey", "bar")
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
@@ -87,7 +105,7 @@ class PDQueueTest(unittest.TestCase):
     def test_dont_consume(self):
         # The item should stay in the queue if we don't consume it.
         q = self.newQueue()
-        q.enqueue("foo")
+        q.enqueue("svckey", "foo")
 
         def dont_consume_foo(s):
             self.assertEquals("foo", s)
@@ -106,7 +124,7 @@ class PDQueueTest(unittest.TestCase):
         # The item should get tagged as error, and not be available for
         # further consumption, if consumption causes error.
         q = self.newQueue()
-        q.enqueue("foo")
+        q.enqueue("svckey", "foo")
 
         def erroneous_consume_foo(s):
             self.assertEquals("foo", s)
@@ -116,10 +134,127 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files("err_")), 1)
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
 
+    def test_backoff(self):
+        # The item and all other items for same service key must get backed off
+        # until backoff limit is hit, then the offending item should get tagged
+        # as error, and not be available for further consumption.
+        q = self.newQueue()
+        q.enqueue("svckey1", "foo")
+        time.sleep(1)
+        q.enqueue("svckey1", "bar")
+        time.sleep(1)
+        q.enqueue("svckey2", "baz")
+
+        events_processed = []
+        count = 0
+        max_attempts = PDQueueTest.config["backoff_max_attempts"]
+        sleep_time_sec = PDQueueTest.config["backoff_initial_delay_sec"]
+        sleep_factor = PDQueueTest.config["backoff_factor"]
+
+        def consume_with_backoff(s):
+            events_processed.append(s)
+            if count == 1 and s == "baz":
+                # good service key.
+                return EVENT_CONSUMED
+            elif count <= max_attempts and s == "foo":
+                # before back-off limit is reached for bad event.
+                return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+            elif count == max_attempts and s == "bar":
+                # next event after bad event is kicked out.
+                return EVENT_CONSUMED
+            else:
+                self.fail(
+                    "Unexpected event %s in attempt %d" % (s, count))
+
+        self.assertEquals(len(q._queued_files()), 3)
+
+        # flush once.
+        count += 1
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
+        self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+        self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
+
+        # retry immediately. later-retriable events must not be processed.
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(len(events_processed), 0)
+        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(len(q._queued_files("err_")), 0)
+
+        # retry after retriable-time, up to max attempts.
+        for i in range(2, max_attempts):
+            time.sleep(sleep_time_sec)
+            sleep_time_sec *= sleep_factor
+            count += 1
+            events_processed = []
+            q.flush(consume_with_backoff)
+            self.assertEquals(events_processed, ["foo"])  # bad event
+            self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+            self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
+
+        # retry now (max-th time). bad event should be kicked out.
+        time.sleep(sleep_time_sec)
+        count += 1
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
+        self.assertEquals(len(q._queued_files()), 0)
+        self.assertEquals(len(q._queued_files("err_")), 1)
+
+        # and now, the queue must be empty.
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
+
+    def test_stop_processing(self):
+        # No later event must be processed.
+        q = self.newQueue()
+        q.enqueue("svckey1", "foo")
+        time.sleep(1)
+        q.enqueue("svckey1", "bar")
+        time.sleep(1)
+        q.enqueue("svckey2", "baz")
+
+        events_processed = []
+        count = 0
+
+        def consume_with_stopall(s):
+            events_processed.append(s)
+            if count == 1 and s == "foo":
+                # first time, we'll ask that no further events be processed.
+                return EVENT_STOP_ALL
+            elif count == 2:
+                # next time, we'll consider it a success.
+                return EVENT_CONSUMED
+            else:
+                self.fail(
+                    "Unexpected event %s in attempt %d" % (s, count))
+
+        self.assertEquals(len(q._queued_files()), 3)
+
+        # flush once. later events must not be processed.
+        count += 1
+        events_processed = []
+        q.flush(consume_with_stopall)
+        self.assertEquals(events_processed, ["foo"])
+        self.assertEquals(len(q._queued_files()), 3)  # 2 from bad svckey
+        self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+
+        # retry. all events must now be processed.
+        count += 1
+        events_processed = []
+        q.flush(consume_with_stopall)
+        self.assertEquals(events_processed, ["foo", "bar", "baz"])
+        self.assertEquals(len(q._queued_files()), 0)
+        self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+
+        # and now, the queue must be empty.
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
+
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
         q = self.newQueue()
-        f_foo = q.enqueue("foo")
+        f_foo = q.enqueue("svckey", "foo")
 
         trace = []
 
@@ -152,7 +287,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(trace, ["Li", "La", "C1"])
         self.assertEquals(q._queued_files(), [f_foo])
 
-        f_bar = q.enqueue("bar")
+        f_bar = q.enqueue("svckey", "bar")
 
         self.assertEquals(trace, ["Li", "La", "C1"])
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
@@ -162,12 +297,12 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(trace, ["Li", "La", "C1", "C2", "Lr"])
         self.assertEquals(q._queued_files(), [f_bar])
 
-    def test_parallel_dequeque(self):
+    def test_parallel_dequeue(self):
         # test that a dequeue blocks another dequeue using locking
 
         q1 = self.newQueue()
         q2 = self.newQueue()
-        q1.enqueue("foo")
+        q1.enqueue("svckey", "foo")
 
         dequeue_lockfile = q1._dequeue_lockfile
         trace = []
@@ -234,7 +369,10 @@ class PDQueueTest(unittest.TestCase):
 
         def enqueue_before(sec, prefix="pdq"):
             enqueue_time_ms = (int(time.time()) - sec) * 1000
-            fname = "%s_%d.txt" % (prefix, enqueue_time_ms)
+            fname = "%s_%d_%s.txt" % (
+                prefix,
+                enqueue_time_ms,
+                "svckey%d" % (enqueue_time_ms % 10))
             fpath = os.path.join(q.queue_dir, fname)
             os.close(os.open(fpath, os.O_CREAT))
             return fname
