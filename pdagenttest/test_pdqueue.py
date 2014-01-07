@@ -70,24 +70,29 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(q._queued_files(), [])
 
-        f_foo = q.enqueue("svckey", "foo")
+        f_foo = q.enqueue("svckey1", "foo")
         self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
 
-        f_bar = q.enqueue("svckey", "bar")
+        f_bar = q.enqueue("svckey2", "bar")  # different service key
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
 
-        def consume_foo(s):
-            self.assertEquals("foo", s)
-            return EVENT_CONSUMED
-        q.dequeue(consume_foo)
+        f_baz = q.enqueue("svckey1", "baz")
+        self.assertEquals(q._queued_files(), [f_foo, f_bar, f_baz])
+        self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
+        self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
+        self.assertEquals(open(q._abspath(f_baz)).read(), "baz")
 
-        def consume_bar(s):
-            self.assertEquals("bar", s)
-            return EVENT_CONSUMED
-        q.dequeue(consume_bar)
+        def verify_and_consume(event):
+            def consume(s):
+                self.assertEquals(event, s)
+                return EVENT_CONSUMED
+            return consume
+        q.dequeue(verify_and_consume("foo"))
+        q.dequeue(verify_and_consume("bar"))
+        q.dequeue(verify_and_consume("baz"))
 
         # check queue is empty
         self.assertEquals(q._queued_files(), [])
