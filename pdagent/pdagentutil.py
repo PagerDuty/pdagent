@@ -47,6 +47,15 @@ def resurrect_events(queue_config, service_key):
     ).resurrect(service_key)
 
 
+def get_status(queue_config, service_key):
+    from pdqueue import PDQueue
+
+    return PDQueue(
+        queue_config=queue_config,
+        lock_class=FileLock
+    ).get_status(service_key)
+
+
 def _build_event_json_str(
     event_type, service_key, incident_key, description, details
     ):

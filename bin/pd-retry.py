@@ -23,6 +23,9 @@ def main():
     parser = build_arg_parser(description)
     args = parser.parse_args()
 
+    # We explicitly require either a specific service key, or an indication that
+    # events of all service keys can be resurrected. We don't want to assume
+    # anything here.
     if not args.service_key and not args.all_keys:
         parser.error("A specific service key or a flag for all keys required")
     elif args.service_key and args.all_keys:
