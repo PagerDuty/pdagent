@@ -70,21 +70,22 @@ def send_event(json_event_str):
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
 
-    status_code, result = None, None
+    status_code, result_str = None, None
     try:
         response = httpswithverify.urlopen(
             request,
             timeout=mainConfig["send_event_timeout_sec"])
         status_code = response.getcode()
-        result = json.loads(response.read())
+        result_str = response.read()
+    except HTTPError as e:
+        # the http error is structured similar to an http response.
+        status_code = e.getcode()
+        result_str = e.read()
     except CertificateError:
         mainLogger.error(
             "Server certificate validation error while sending event:",
             exc_info=True)
         return EVENT_STOP_ALL
-    except HTTPError as e:
-        status_code = e.getcode()
-        result = json.loads(e.read())
     except URLError as e:
         if isinstance(e.reason, socket.timeout):
             mainLogger.error("Timeout while sending event:", exc_info=True)
@@ -98,12 +99,22 @@ def send_event(json_event_str):
                 "Error establishing a connection for sending event:",
                 exc_info=True)
             return EVENT_NOT_CONSUMED
+    except IOError:
+        mainLogger.error("Error while sending event:", exc_info=True)
+        return EVENT_NOT_CONSUMED
 
-    if result["status"] == "success":
-        mainLogger.info("incident_key =", result["incident_key"])
+    try:
+        result = json.loads(result_str)
+    except:
+        mainLogger.warning(
+            "Error reading response data while sending event:",
+            exc_info=True)
+        result = {}
+    if result.get("status") == "success":
+        mainLogger.info("incident_key =", result.get("incident_key"))
     else:
         mainLogger.error("Error sending event %s; Error code: %d, Reason: %s" %
-            (json_event_str, status_code, result))
+            (json_event_str, status_code, result_str))
 
     if status_code < 300:
         return EVENT_CONSUMED
