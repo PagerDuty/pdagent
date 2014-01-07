@@ -7,6 +7,10 @@ vms = {
         "box"       => "centos58",
         "box_url"   => "http://tag1consulting.com/files/centos-5.8-x86-64-minimal.box",
     },
+    "agent-centos64-zabbix"    =>  {
+        "box"       => "centos64",
+        "box_url"   => "http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box",
+    },
     "agent-centos64"    =>  {
         "box"       => "centos64",
         "box_url"   => "http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box",
@@ -30,6 +34,56 @@ Vagrant::Config.run do |config|
             conf2.vm.box_url = conf["box_url"]
             conf2.vm.network :bridged
         end
+        if name == "agent-centos64-zabbix"
+            #server_ip = "127.0.0.1"
+            server_ip = "10.99.10.243"
+            config.vm.provision :chef_solo do |chef|
+                chef.json = {
+                  :mysql => {
+                    :server_root_password => 'rootpass',
+                    :server_debian_password => 'debpass',
+                    :server_repl_password => 'replpass'
+                  },
+                  'postgresql' => {
+                    'password' => {
+                      'postgres' => 'rootpass'
+                    }
+                  },
+                  'zabbix' => {
+                    'agent' => {
+                      'servers' => [server_ip],
+                      'servers_active' => [server_ip]
+                    },
+                    'web' => {
+                      'install_method' => 'apache',
+                      'fqdn' => server_ip
+                    },
+                    'server' => {
+                      'install' => true,
+                      'ipaddress' => server_ip
+                    },
+                    'database' => {
+                      #'dbport' => '5432',
+                      #'install_method' => 'postgres',
+                      'dbpassword' => 'password123'
+                    }
+                  }
+                }
+
+                chef.add_recipe "database::mysql"
+                chef.add_recipe "mysql::server"
+                chef.add_recipe "zabbix"
+                chef.add_recipe "zabbix::database"
+                chef.add_recipe "zabbix::server"
+                chef.add_recipe "zabbix::web"
+                #chef.add_recipe "zabbix::agent_registration"
+
+                #chef.log_level = :debug
+            end
+
+        end
     end
+
+
 end
 
