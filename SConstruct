@@ -155,7 +155,7 @@ def _get_virt_names():
         subprocess \
         .check_output(["vagrant", "status"]) \
         .splitlines() \
-        if v.find(" running (") >= 0]
+        if (v.startswith("agent-minimal-") and v.find(" running (") >= 0)]
 
 
 def _run_on_virts(remote_command, virts=[]):
