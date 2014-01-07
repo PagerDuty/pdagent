@@ -188,13 +188,24 @@ class PDQueue(object):
                     elif consume_code is EVENT_STOP_ALL:
                         # don't process any more events.
                         break
+                    elif consume_code is EVENT_BAD_ENTRY:
+                        handle_bad_entry(fname)
                     elif consume_code & EVENT_BACKOFF_SVCKEY:
                         # don't process more events with same service key.
                         err_service_keys.add(svc_key)
                         # has back-off threshold been reached?
                         attempt = svc_key_attempt.get(svc_key, 0) + 1
                         if attempt >= self.backoff_max_attempts:
-                            if consume_code & EVENT_BAD_ENTRY:
+                            if consume_code & EVENT_NOT_CONSUMED:
+                                # consume function does not want us to do
+                                # anything with the event.
+                                # WARNING: We'll still consider this service
+                                # key to be erroneous, though, and continue
+                                # backing off events in the key. This will
+                                # result in a high back-off interval after
+                                # enough number of attempts.
+                                pass
+                            elif consume_code & EVENT_BAD_ENTRY:
                                 handle_bad_entry(fname)
                                 # now that we have handled the bad entry, we'll
                                 # want to give the other events in this service
@@ -205,8 +216,6 @@ class PDQueue(object):
                                     "back-off threshold breach action")
                         if svc_key in err_service_keys:
                             update_retry(svc_key)
-                    elif consume_code is EVENT_BAD_ENTRY:
-                        handle_bad_entry(fname)
 
         finally:
             try:

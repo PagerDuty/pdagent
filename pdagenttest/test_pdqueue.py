@@ -134,7 +134,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files("err_")), 1)
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
 
-    def test_backoff(self):
+    def test_backoff_bad_event(self):
         # The item and all other items for same service key must get backed off
         # until backoff limit is hit, then the offending item should get tagged
         # as error, and not be available for further consumption.
@@ -202,6 +202,78 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(len(q._queued_files("err_")), 1)
+
+        # and now, the queue must be empty.
+        self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
+
+    def test_backoff_not_consumed(self):
+        # The item and all other items for same service key must get backed off
+        # until backoff limit is hit, then continue getting backed off until the
+        # erroneous event is consumed.
+        q = self.newQueue()
+        q.enqueue("svckey1", "foo")
+        time.sleep(1)
+        q.enqueue("svckey1", "bar")
+        time.sleep(1)
+        q.enqueue("svckey2", "baz")
+
+        events_processed = []
+        count = 0
+        max_attempts = PDQueueTest.config["backoff_max_attempts"]
+        sleep_time_sec = PDQueueTest.config["backoff_initial_delay_sec"]
+        sleep_factor = PDQueueTest.config["backoff_factor"]
+
+        def consume_with_backoff(s):
+            events_processed.append(s)
+            if count == 1 and s == "baz":
+                # good service key.
+                return EVENT_CONSUMED
+            elif count <= max_attempts and s == "foo":
+                # before back-off limit is reached + one attempt after.
+                return EVENT_BACKOFF_SVCKEY | EVENT_NOT_CONSUMED
+            elif count == max_attempts + 1 and (s == "foo" or s == "bar"):
+                # after <back-off limit + 1> is reached.
+                return EVENT_CONSUMED
+            else:
+                self.fail(
+                    "Unexpected event %s in attempt %d" % (s, count))
+
+        self.assertEquals(len(q._queued_files()), 3)
+
+        # flush once.
+        count += 1
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
+        self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+        self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
+
+        # retry immediately. later-retriable events must not be processed.
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(len(events_processed), 0)
+        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(len(q._queued_files("err_")), 0)
+
+        # retry after retriable-time, up to one more than max attempts.
+        for i in range(2, max_attempts + 1):
+            time.sleep(sleep_time_sec)
+            sleep_time_sec *= sleep_factor
+            count += 1
+            events_processed = []
+            q.flush(consume_with_backoff)
+            self.assertEquals(events_processed, ["foo"])  # bad event
+            self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+            self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
+
+        # retry now (max+1-th time).
+        time.sleep(sleep_time_sec)
+        count += 1
+        events_processed = []
+        q.flush(consume_with_backoff)
+        self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
+        self.assertEquals(len(q._queued_files()), 0)
+        self.assertEquals(len(q._queued_files("err_")), 0)   # no errors
 
         # and now, the queue must be empty.
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
