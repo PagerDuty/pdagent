@@ -6,6 +6,8 @@
 /*.iml
 /.idea/
 
+/pdagenttest/test_db/
+/pdagenttest/test_queue/
 /tmp/
 
 /.vagrant/

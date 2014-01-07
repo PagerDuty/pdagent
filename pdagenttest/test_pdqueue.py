@@ -42,14 +42,10 @@ class PDQueueTest(unittest.TestCase):
     def setUp(self):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
+        os.makedirs(TEST_QUEUE_DIR)
         if os.path.exists(TEST_DB_DIR):
             shutil.rmtree(TEST_DB_DIR)
-
-    def tearDown(self):
-        if os.path.exists(TEST_QUEUE_DIR):
-            shutil.rmtree(TEST_QUEUE_DIR)
-        if os.path.exists(TEST_DB_DIR):
-            shutil.rmtree(TEST_DB_DIR)
+        os.makedirs(TEST_DB_DIR)
 
     def newQueue(self):
         return PDQueue(PDQueueTest.config, NoOpLock)
@@ -68,11 +64,6 @@ class PDQueueTest(unittest.TestCase):
             os.close(fd1)
             if fd2:
                 os.close(fd2)
-
-    def test_init_creates_directory(self):
-        self.assertFalse(os.path.exists(TEST_QUEUE_DIR))
-        self.newQueue()
-        self.assertTrue(os.path.exists(TEST_QUEUE_DIR))
 
     def test_enqueue_and_dequeue(self):
         q = self.newQueue()
