@@ -10,6 +10,9 @@
 
 import json
 
+from pdqueue import PDQueue
+from filelock import FileLock
+
 
 def find_in_sys_path(file_path):
     import os
@@ -25,8 +28,6 @@ def queue_event(
         queue_config,
         event_type, service_key, incident_key, description, details
         ):
-    from pdqueue import PDQueue
-    from filelock import FileLock
 
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
@@ -35,6 +36,15 @@ def queue_event(
         queue_config=queue_config,
         lock_class=FileLock
     ).enqueue(service_key, event)
+
+
+def resurrect_events(queue_config, service_key):
+    from pdqueue import PDQueue
+
+    PDQueue(
+        queue_config=queue_config,
+        lock_class=FileLock
+    ).resurrect(service_key)
 
 
 def _build_event_json_str(

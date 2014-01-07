@@ -435,6 +435,37 @@ class PDQueueTest(unittest.TestCase):
             "q2_EQ",
              ])
 
+    def test_resurrect(self):
+        q = self.newQueue()
+        fnames = []
+        errnames = []
+        fnames.append(q.enqueue("svckey1", "foo"))
+        fnames.append(q.enqueue("svckey1", "bar"))
+        fnames.append(q.enqueue("svckey2", "baz"))
+        fnames.append(q.enqueue("svckey2", "boo"))
+        fnames.append(q.enqueue("svckey3", "bam"))
+        for fname in q._queued_files():
+            if fname == fnames[0] or fname == fnames[2] or  fname == fnames[4]:
+                errname = fname.replace("pdq_", "err_")
+                errnames.append(errname)
+                os.rename(q._abspath(fname), q._abspath(errname))
+
+        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(len(q._queued_files("err_")), 3)
+
+        q.resurrect("svckey1")
+        self.assertEquals(len(q._queued_files()), 3)
+        errfiles = q._queued_files("err_")
+        self.assertEquals(len(errfiles), 2)
+        for errname in errfiles:
+            self.assertEquals(errname.find("svckey1"), -1)
+            self.assertTrue(errname.find("svckey2") == -1 or \
+                errname.find("svckey3") == -1)
+
+        q.resurrect()
+        self.assertEquals(len(q._queued_files()), 5)
+        self.assertEquals(len(q._queued_files("err_")), 0)
+
     def test_cleanup(self):
         # simulate enqueues done a while ago.
         q = self.newQueue()

@@ -227,6 +227,20 @@ class PDQueue(object):
         finally:
             lock.release()
 
+    def resurrect(self, service_key=None):
+        # move dead events of given service key back to queue.
+        errnames = self._queued_files("err_")
+        for errname in errnames:
+            if not service_key or \
+                    _get_event_metadata(errname)["service_key"] == service_key:
+                fname = errname.replace("err_", "pdq_")
+                errname_abs = self._abspath(errname)
+                fname_abs = self._abspath(fname)
+                self.mainLogger.info(
+                    "Resurrecting %s to %s..." %
+                    (errname, fname))
+                os.rename(errname_abs, fname_abs)
+
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(time.time()) - delete_before_sec) * 1000
 
