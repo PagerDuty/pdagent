@@ -34,7 +34,6 @@ class PDQueue(object):
         self.db_dir = queue_config['db_dir']
         self.lock_class = lock_class
 
-        self._create_dirs()
         self._verify_permissions()
 
         self._dequeue_lockfile = os.path.join(
@@ -49,12 +48,6 @@ class PDQueue(object):
             queue_config['backoff_initial_delay_sec']
         self.backoff_factor = queue_config['backoff_factor']
         self.backoff_max_attempts = queue_config['backoff_max_attempts']
-
-    def _create_dirs(self):
-        if not os.access(self.queue_dir, os.F_OK):
-            os.mkdir(self.queue_dir, 0700)
-        if not os.access(self.db_dir, os.F_OK):
-            os.mkdir(self.db_dir, 0700)
 
     def _verify_permissions(self):
         def verify(dir):
