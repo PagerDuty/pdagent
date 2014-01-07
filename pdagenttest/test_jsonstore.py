@@ -60,7 +60,6 @@ class JsonStoreTest(unittest.TestCase):
             os.chmod(_TEST_DIR, stat.S_IREAD | stat.S_IEXEC)
             k = dict(j)
             k["baz"] = False
-            #self.store.set(k)
             self.assertRaises(IOError, self.store.set, k)
             # old value is retained in this case.
             self.assertEqual(self.store.get(), j)
@@ -68,6 +67,20 @@ class JsonStoreTest(unittest.TestCase):
             os.chmod(
                 _TEST_DIR,
                 stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+
+    def test_bad_data(self):
+        j = {
+            "foo": "bar",
+            "baz": True
+        }
+        self.store.set(j)   # successful write.
+        # now corrupt the persisted data.
+        out = open(_TEST_STORE_FILE, "w")
+        out.write("bad json!")
+        out.flush()
+        out.close()
+        # bad json => data is cleared.
+        self.assertEqual(self.store.get(), None)
 
 if __name__ == '__main__':
     unittest.main()
