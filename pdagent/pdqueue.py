@@ -217,7 +217,6 @@ class PDQueue(object):
                         if svc_key in err_service_keys:
                             update_retry(svc_key)
 
-        finally:
             try:
                 # persist back-off info.
                 self.backoff_db.set(backoff_data)
@@ -225,8 +224,8 @@ class PDQueue(object):
                 self.mainLogger.warning(
                     "Unable to save queue-error back-off history",
                     exc_info=True)
-            finally:
-                lock.release()
+        finally:
+            lock.release()
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(time.time()) - delete_before_sec) * 1000
