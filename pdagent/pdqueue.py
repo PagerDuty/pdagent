@@ -201,6 +201,8 @@ class PDQueue(object):
                     if consume_code == EVENT_CONSUMED:
                         # TODO a failure here will mean duplicate event sends
                         os.remove(fname_abs)
+                    elif consume_code == EVENT_NOT_CONSUMED:
+                        pass
                     elif consume_code == EVENT_STOP_ALL:
                         # don't process any more events.
                         break
