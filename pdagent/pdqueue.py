@@ -8,6 +8,8 @@ from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
 from pdagent.jsonstore import JsonStore
 
 
+logger = logging.getLogger(__name__)
+
 class EmptyQueue(Exception):
     pass
 
@@ -39,8 +41,6 @@ class PDQueue(object):
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
             )
-
-        self.mainLogger = logging.getLogger('main')
 
         # error-handling: back-off related stuff.
         self.backoff_db = JsonStore("backoff", self.db_dir)
@@ -127,7 +127,7 @@ class PDQueue(object):
             try:
                 backoff_data = self.backoff_db.get()
             except:
-                self.mainLogger.warning(
+                logger.warning(
                     "Unable to load queue-error back-off history",
                     exc_info=True)
             if not backoff_data:
@@ -180,7 +180,7 @@ class PDQueue(object):
             def handle_bad_entry(fname):
                 errname = fname.replace("pdq_", "err_")
                 errname_abs = self._abspath(errname)
-                self.mainLogger.info(
+                logger.info(
                     "Bad entry: Renaming %s to %s..." %
                     (fname, errname))
                 os.rename(fname_abs, errname_abs)
@@ -221,7 +221,7 @@ class PDQueue(object):
                 # persist back-off info.
                 self.backoff_db.set(backoff_data)
             except:
-                self.mainLogger.warning(
+                logger.warning(
                     "Unable to save queue-error back-off history",
                     exc_info=True)
         finally:
@@ -237,7 +237,7 @@ class PDQueue(object):
                     _, enqueue_time, _ = _get_event_metadata(fname)
                 except:
                     # invalid file-name; we'll not include it in cleanup.
-                    self.mainLogger.info(
+                    logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
                     fnames.remove(fname)
                 else:
@@ -247,7 +247,7 @@ class PDQueue(object):
                 try:
                     os.remove(self._abspath(fname))
                 except IOError as e:
-                    self.mainLogger.warning(
+                    logger.warning(
                         "Could not clean up file %s: %s" % (fname, str(e)))
 
         # clean up bad / temp files created before delete-before-time.
