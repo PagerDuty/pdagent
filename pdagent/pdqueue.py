@@ -168,8 +168,9 @@ class PDQueue(object):
                         # key a chance.
                         err_service_keys.remove(svc_key)
                     else:
-                        raise ValueError("Unspecified or invalid " +
-                                         "back-off threshold breach action")
+                        raise ValueError(
+                            "Invalid back-off threshold breach code %d" %
+                            consume_code)
                 if svc_key in err_service_keys:
                     svc_key_next_retry[svc_key] = int(time.time()) + \
                         self.backoff_initial_delay_sec * \
@@ -193,7 +194,7 @@ class PDQueue(object):
                 finally:
                     f.close()
 
-                svc_key = _get_event_metadata(fname)["service_key"]
+                _, _, svc_key = _get_event_metadata(fname)
                 if svc_key not in err_service_keys and \
                         svc_key_next_retry.get(svc_key, 0) < time.time():
                     consume_code = consume_func(s)
@@ -233,7 +234,7 @@ class PDQueue(object):
             fnames = self._queued_files(fname_prefix)
             for fname in fnames:
                 try:
-                    enqueue_time = _get_event_metadata(fname)["enqueue_time"]
+                    _, enqueue_time, _ = _get_event_metadata(fname)
                 except:
                     # invalid file-name; we'll not include it in cleanup.
                     self.mainLogger.info(
@@ -264,9 +265,5 @@ def _open_creat_excl(fname_abs):
             raise
 
 def _get_event_metadata(fname):
-    parts = fname.split('.')[0].split('_')
-    return {
-        "type": parts[0],
-        "enqueue_time": int(parts[1]),
-        "service_key": parts[2]
-    }
+    type, enqueue_time_str, service_key = fname.split('.')[0].split('_')
+    return type, int(enqueue_time_str), service_key
