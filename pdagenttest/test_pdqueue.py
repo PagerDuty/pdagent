@@ -6,7 +6,8 @@ import time
 import unittest
 
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, EVENT_BACKOFF_SVCKEY, \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
+    EVENT_BACKOFF_SVCKEY_BAD_ENTRY, EVENT_BACKOFF_SVCKEY_NOT_CONSUMED, \
     EVENT_STOP_ALL
 from pdagent.pdqueue import PDQueue, EmptyQueue
 
@@ -74,11 +75,13 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
 
+        time.sleep(0.05)
         f_bar = q.enqueue("svckey2", "bar")  # different service key
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
 
+        time.sleep(0.05)
         f_baz = q.enqueue("svckey1", "baz")
         self.assertEquals(q._queued_files(), [f_foo, f_bar, f_baz])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
@@ -136,9 +139,9 @@ class PDQueueTest(unittest.TestCase):
         # as error, and not be available for further consumption.
         q = self.newQueue()
         q.enqueue("svckey1", "foo")
-        time.sleep(1)
+        time.sleep(0.05)
         q.enqueue("svckey1", "bar")
-        time.sleep(1)
+        time.sleep(0.05)
         q.enqueue("svckey2", "baz")
 
         events_processed = []
@@ -154,7 +157,7 @@ class PDQueueTest(unittest.TestCase):
                 return EVENT_CONSUMED
             elif count <= max_attempts and s == "foo":
                 # before back-off limit is reached for bad event.
-                return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+                return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
             elif count == max_attempts and s == "bar":
                 # next event after bad event is kicked out.
                 return EVENT_CONSUMED
@@ -208,9 +211,9 @@ class PDQueueTest(unittest.TestCase):
         # erroneous event is consumed.
         q = self.newQueue()
         q.enqueue("svckey1", "foo")
-        time.sleep(1)
+        time.sleep(0.05)
         q.enqueue("svckey1", "bar")
-        time.sleep(1)
+        time.sleep(0.05)
         q.enqueue("svckey2", "baz")
 
         events_processed = []
@@ -226,7 +229,7 @@ class PDQueueTest(unittest.TestCase):
                 return EVENT_CONSUMED
             elif count <= max_attempts and s == "foo":
                 # before back-off limit is reached + one attempt after.
-                return EVENT_BACKOFF_SVCKEY | EVENT_NOT_CONSUMED
+                return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
             elif count == max_attempts + 1 and (s == "foo" or s == "bar"):
                 # after <back-off limit + 1> is reached.
                 return EVENT_CONSUMED

@@ -55,7 +55,8 @@ from pdagent.pdqueue import PDQueue, EmptyQueue
 from pdagent.filelock import FileLock
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, EVENT_BACKOFF_SVCKEY, \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
+    EVENT_BACKOFF_SVCKEY_BAD_ENTRY, EVENT_BACKOFF_SVCKEY_NOT_CONSUMED, \
     EVENT_STOP_ALL, EVENTS_API_BASE
 
 
@@ -93,7 +94,7 @@ def send_event(json_event_str):
             # processing this service key or event. We'll retry this service key
             # a few more times, and then decide that this event is possibly a
             # bad entry.
-            return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+            return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
         else:
             mainLogger.error(
                 "Error establishing a connection for sending event:",
@@ -121,14 +122,14 @@ def send_event(json_event_str):
     elif status_code is 403:
         # We are getting throttled! We'll retry this service key a few more
         # times, but never consider this event as erroneous.
-        return EVENT_BACKOFF_SVCKEY | EVENT_NOT_CONSUMED
+        return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
         return EVENT_BAD_ENTRY
     elif status_code >= 500 and status_code < 600:
         # Hmm. Could be server-side problem, or a bad entry.
         # We'll retry this service key a few times, and then decide that this
         # event is possibly a bad entry.
-        return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+        return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
         return EVENT_NOT_CONSUMED

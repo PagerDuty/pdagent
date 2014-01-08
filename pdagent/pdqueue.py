@@ -1,10 +1,10 @@
 import errno
-import json
 import os
 import logging
 import time
 from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
-    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY
+    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
+    EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
 from pdagent.jsonstore import JsonStore
 
 
@@ -146,12 +146,35 @@ class PDQueue(object):
             file_names = filter_events_to_process_func(file_names)
             err_service_keys = set()
 
-            def update_retry(svc_key):
-                attempts = svc_key_attempt.get(svc_key, 0)
-                svc_key_next_retry[svc_key] = int(time.time()) + \
-                    self.backoff_initial_delay_sec * \
-                    self.backoff_factor ** attempts
-                svc_key_attempt[svc_key] = attempts + 1
+            def handle_backoff(consume_code, svc_key, fname):
+                # don't process more events with same service key.
+                err_service_keys.add(svc_key)
+                # has back-off threshold been reached?
+                cur_attempt = svc_key_attempt.get(svc_key, 0) + 1
+                if cur_attempt >= self.backoff_max_attempts:
+                    if consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
+                        # consume function does not want us to do
+                        # anything with the event.
+                        # WARNING: We'll still consider this service
+                        # key to be erroneous, though, and continue
+                        # backing off events in the key. This will
+                        # result in a high back-off interval after
+                        # enough number of attempts.
+                        pass
+                    elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
+                        handle_bad_entry(fname)
+                        # now that we have handled the bad entry, we'll
+                        # want to give the other events in this service
+                        # key a chance.
+                        err_service_keys.remove(svc_key)
+                    else:
+                        raise ValueError("Unspecified or invalid " +
+                                         "back-off threshold breach action")
+                if svc_key in err_service_keys:
+                    svc_key_next_retry[svc_key] = int(time.time()) + \
+                        self.backoff_initial_delay_sec * \
+                        self.backoff_factor ** (cur_attempt - 1)
+                    svc_key_attempt[svc_key] = cur_attempt
 
             def handle_bad_entry(fname):
                 errname = fname.replace("pdq_", "err_")
@@ -175,40 +198,21 @@ class PDQueue(object):
                         svc_key_next_retry.get(svc_key, 0) < time.time():
                     consume_code = consume_func(s)
 
-                    if consume_code is EVENT_CONSUMED:
+                    if consume_code == EVENT_CONSUMED:
                         # TODO a failure here will mean duplicate event sends
                         os.remove(fname_abs)
-                    elif consume_code is EVENT_STOP_ALL:
+                    elif consume_code == EVENT_STOP_ALL:
                         # don't process any more events.
                         break
-                    elif consume_code is EVENT_BAD_ENTRY:
+                    elif consume_code == EVENT_BAD_ENTRY:
                         handle_bad_entry(fname)
-                    elif consume_code & EVENT_BACKOFF_SVCKEY:
-                        # don't process more events with same service key.
-                        err_service_keys.add(svc_key)
-                        # has back-off threshold been reached?
-                        attempt = svc_key_attempt.get(svc_key, 0) + 1
-                        if attempt >= self.backoff_max_attempts:
-                            if consume_code & EVENT_NOT_CONSUMED:
-                                # consume function does not want us to do
-                                # anything with the event.
-                                # WARNING: We'll still consider this service
-                                # key to be erroneous, though, and continue
-                                # backing off events in the key. This will
-                                # result in a high back-off interval after
-                                # enough number of attempts.
-                                pass
-                            elif consume_code & EVENT_BAD_ENTRY:
-                                handle_bad_entry(fname)
-                                # now that we have handled the bad entry, we'll
-                                # want to give the other events in this service
-                                # key a chance.
-                                err_service_keys.remove(svc_key)
-                            else:
-                                raise ValueError("Unspecified or invalid " +
-                                    "back-off threshold breach action")
-                        if svc_key in err_service_keys:
-                            update_retry(svc_key)
+                    elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY or \
+                            consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
+                        handle_backoff(consume_code, svc_key, fname)
+                    else:
+                        raise ValueError(
+                            "Unsupported dequeue consume code %d" %
+                            consume_code)
 
             try:
                 # persist back-off info.
