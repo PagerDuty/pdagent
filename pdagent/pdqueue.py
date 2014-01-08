@@ -144,11 +144,11 @@ class PDQueue(object):
             if not len(file_names):
                 raise EmptyQueue
             file_names = filter_events_to_process_func(file_names)
-            err_service_keys = set()
+            err_svc_keys = set()
 
-            def handle_backoff(consume_code, svc_key, fname):
+            def handle_backoff():
                 # don't process more events with same service key.
-                err_service_keys.add(svc_key)
+                err_svc_keys.add(svc_key)
                 # has back-off threshold been reached?
                 cur_attempt = svc_key_attempt.get(svc_key, 0) + 1
                 if cur_attempt >= self.backoff_max_attempts:
@@ -162,22 +162,22 @@ class PDQueue(object):
                         # enough number of attempts.
                         pass
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
-                        handle_bad_entry(fname)
-                        # now that we have handled the bad entry, we'll
-                        # want to give the other events in this service
-                        # key a chance.
-                        err_service_keys.remove(svc_key)
+                        handle_bad_entry()
+                        # now that we have handled the bad entry, we'll want
+                        # to give the other events in this service key a chance,
+                        # so don't consider svc key as erroneous.
+                        err_svc_keys.remove(svc_key)
                     else:
                         raise ValueError(
                             "Invalid back-off threshold breach code %d" %
                             consume_code)
-                if svc_key in err_service_keys:
+                if svc_key in err_svc_keys:
                     svc_key_next_retry[svc_key] = int(time.time()) + \
                         self.backoff_initial_delay_sec * \
                         self.backoff_factor ** (cur_attempt - 1)
                     svc_key_attempt[svc_key] = cur_attempt
 
-            def handle_bad_entry(fname):
+            def handle_bad_entry():
                 errname = fname.replace("pdq_", "err_")
                 errname_abs = self._abspath(errname)
                 logger.info(
@@ -195,7 +195,7 @@ class PDQueue(object):
                     f.close()
 
                 _, _, svc_key = _get_event_metadata(fname)
-                if svc_key not in err_service_keys and \
+                if svc_key not in err_svc_keys and \
                         svc_key_next_retry.get(svc_key, 0) < time.time():
                     consume_code = consume_func(s)
 
@@ -208,10 +208,10 @@ class PDQueue(object):
                         # don't process any more events.
                         break
                     elif consume_code == EVENT_BAD_ENTRY:
-                        handle_bad_entry(fname)
+                        handle_bad_entry()
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY or \
                             consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
-                        handle_backoff(consume_code, svc_key, fname)
+                        handle_backoff()
                     else:
                         raise ValueError(
                             "Unsupported dequeue consume code %d" %
