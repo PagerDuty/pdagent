@@ -43,11 +43,11 @@ class PDQueue(object):
             )
 
         # error-handling: back-off related stuff.
+        self.backoff_secs = [
+            int(s.strip()) for s in queue_config["backoff_secs"].split(",")
+        ]
+        self.max_backoff_attempts = len(self.backoff_secs)
         self.backoff_db = JsonStore("backoff", self.db_dir)
-        self.backoff_initial_delay_sec = \
-            queue_config['backoff_initial_delay_sec']
-        self.backoff_factor = queue_config['backoff_factor']
-        self.backoff_max_attempts = queue_config['backoff_max_attempts']
 
     def _verify_permissions(self):
         def verify(dir):
@@ -151,15 +151,12 @@ class PDQueue(object):
                 err_svc_keys.add(svc_key)
                 # has back-off threshold been reached?
                 cur_attempt = svc_key_attempt.get(svc_key, 0) + 1
-                if cur_attempt >= self.backoff_max_attempts:
+                if cur_attempt > self.max_backoff_attempts:
                     if consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
                         # consume function does not want us to do
-                        # anything with the event.
-                        # WARNING: We'll still consider this service
-                        # key to be erroneous, though, and continue
-                        # backing off events in the key. This will
-                        # result in a high back-off interval after
-                        # enough number of attempts.
+                        # anything with the event. We'll still consider this
+                        # service key to be erroneous, though, and continue
+                        # backing off events in the key.
                         pass
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
                         handle_bad_entry()
@@ -172,9 +169,12 @@ class PDQueue(object):
                             "Invalid back-off threshold breach code %d" %
                             consume_code)
                 if svc_key in err_svc_keys:
+                    # if backoff-seconds have been exhausted, reuse the last one.
+                    backoff_index = min(
+                        cur_attempt,
+                        self.max_backoff_attempts) - 1
                     svc_key_next_retry[svc_key] = int(time.time()) + \
-                        self.backoff_initial_delay_sec * \
-                        self.backoff_factor ** (cur_attempt - 1)
+                        self.backoff_secs[backoff_index]
                     svc_key_attempt[svc_key] = cur_attempt
 
             def handle_bad_entry():
