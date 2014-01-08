@@ -22,19 +22,14 @@ def find_in_sys_path(file_path):
 
 
 def queue_event(
-        queue_config,
         event_type, service_key, incident_key, description, details
         ):
-    from pdqueue import PDQueue
-    from filelock import FileLock
+    from pdagent.config import load_agent_config
 
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue(
-        queue_config=queue_config,
-        lock_class=FileLock
-    ).enqueue(service_key, event)
+    load_agent_config().get_queue().enqueue(service_key, event)
 
 
 def _build_event_json_str(

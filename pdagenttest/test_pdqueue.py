@@ -16,6 +16,7 @@ _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
+BACKOFF_SECS = [1, 2, 4]
 
 
 class NoOpLock:
@@ -32,13 +33,6 @@ class NoOpLock:
 
 class PDQueueTest(unittest.TestCase):
 
-    backoff_secs = [1, 2, 4]
-    config = {
-        "outqueue_dir": TEST_QUEUE_DIR,
-        "db_dir": TEST_DB_DIR,
-        "backoff_secs": ",".join([str(i) for i in backoff_secs])
-    }
-
     def setUp(self):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
@@ -48,7 +42,11 @@ class PDQueueTest(unittest.TestCase):
         os.makedirs(TEST_DB_DIR)
 
     def newQueue(self):
-        return PDQueue(PDQueueTest.config, NoOpLock)
+        return PDQueue(
+            queue_dir=TEST_QUEUE_DIR,
+            db_dir=TEST_DB_DIR,
+            lock_class=NoOpLock,
+            backoff_secs=BACKOFF_SECS)
 
     def test__open_creat_excl_with_retry(self):
         from pdagent.pdqueue import _open_creat_excl
@@ -145,18 +143,20 @@ class PDQueueTest(unittest.TestCase):
 
         events_processed = []
         count = 0
-        max_backoff_attempts = len(PDQueueTest.backoff_secs)
+        # total attempts including backoffs, after which corrective action
+        # for bad event kicks in, i.e. kicks in for the max-th attempt.
+        max_total_attempts = len(BACKOFF_SECS) + 1
 
         def consume_with_backoff(s):
             events_processed.append(s)
             if count == 1 and s == "baz":
                 # good service key; processed only once.
                 return EVENT_CONSUMED
-            elif count <= max_backoff_attempts + 1 and s == "foo":
-                # till back-off limit has exceeded for bad event, only first
+            elif count <= max_total_attempts and s == "foo":
+                # while back-off limit is not exceeded for bad event, only first
                 # event for service key is processed.
                 return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
-            elif count == max_backoff_attempts + 1 and s == "bar":
+            elif count == max_total_attempts and s == "bar":
                 # when back-off limit has exceeded, bad event is kicked out, and
                 # next event is finally processed.
                 return EVENT_CONSUMED
@@ -181,9 +181,9 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 0)
 
-        # retry after retriable-time, max_backoff_attempts backoffs totally.
-        for i in range(2, max_backoff_attempts + 1):
-            time.sleep(PDQueueTest.backoff_secs[i-2])
+        # retry just shy of max allowed times.
+        for i in range(2, max_total_attempts):
+            time.sleep(BACKOFF_SECS[i-2])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff)
@@ -191,9 +191,9 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
 
-        # retry now (no more backoffs). bad event should be kicked out, and next
-        # event should finally be processed.
-        time.sleep(PDQueueTest.backoff_secs[max_backoff_attempts-1])
+        # retry now. there should be no more backoffs, bad event should be
+        # kicked out, and next event should finally be processed.
+        time.sleep(BACKOFF_SECS[len(BACKOFF_SECS)-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
@@ -217,20 +217,23 @@ class PDQueueTest(unittest.TestCase):
 
         events_processed = []
         count = 0
-        max_backoff_attempts = len(PDQueueTest.backoff_secs)
+        # total attempts including backoffs, after which corrective action
+        # for bad event kicks in, i.e. kicks in for the max-th attempt.
+        #max_backoff_attempts = len(BACKOFF_SECS)
+        max_total_attempts = len(BACKOFF_SECS) + 1
 
         def consume_with_backoff(s):
             events_processed.append(s)
             if count == 1 and s == "baz":
                 # good service key; processed only once.
                 return EVENT_CONSUMED
-            elif count <= max_backoff_attempts + 2 and s == "foo":
+            elif count <= max_total_attempts + 1 and s == "foo":
                 # until, and even after, back-off limit has exceeded, bad event
                 # is processed. (Next event is processed only when bad event
                 # becomes good.)
                 return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
-            elif count == max_backoff_attempts + 3 and s in ["foo", "bar"]:
-                # next event finally processed because bad event is now good.
+            elif count == max_total_attempts + 2 and s in ["foo", "bar"]:
+                # next event finally processed because all events are now good.
                 return EVENT_CONSUMED
             else:
                 self.fail(
@@ -253,9 +256,9 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 0)
 
-        # retry after retriable-time, max_backoff_attempts backoffs totally.
-        for i in range(2, max_backoff_attempts + 2):
-            time.sleep(PDQueueTest.backoff_secs[i-2])
+        # retry max allowed times.
+        for i in range(2, max_total_attempts + 1):
+            time.sleep(BACKOFF_SECS[i-2])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff)
@@ -264,7 +267,7 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
 
         # try one more time to check that bad event is still processed.
-        time.sleep(PDQueueTest.backoff_secs[max_backoff_attempts-1])
+        time.sleep(BACKOFF_SECS[len(BACKOFF_SECS)-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
@@ -273,7 +276,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files("err_")), 0)  # still no errors
 
         # retry now (much after max_backoff_attempts), with no bad event.
-        time.sleep(PDQueueTest.backoff_secs[max_backoff_attempts-1])
+        time.sleep(BACKOFF_SECS[len(BACKOFF_SECS)-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)

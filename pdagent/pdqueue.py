@@ -31,9 +31,9 @@ class PDQueue(object):
     - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
-    def __init__(self, queue_config, lock_class):
-        self.queue_dir = queue_config['outqueue_dir']
-        self.db_dir = queue_config['db_dir']
+    def __init__(self, queue_dir, db_dir, lock_class, backoff_secs):
+        self.queue_dir = queue_dir
+        self.db_dir = db_dir
         self.lock_class = lock_class
 
         self._verify_permissions()
@@ -43,9 +43,7 @@ class PDQueue(object):
             )
 
         # error-handling: back-off related stuff.
-        self.backoff_secs = [
-            int(s.strip()) for s in queue_config["backoff_secs"].split(",")
-        ]
+        self.backoff_secs = backoff_secs
         self.max_backoff_attempts = len(self.backoff_secs)
         self.backoff_db = JsonStore("backoff", self.db_dir)
 

@@ -51,8 +51,7 @@ except ImportError:
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import PDQueue, EmptyQueue
-from pdagent.filelock import FileLock
+from pdagent.pdqueue import EmptyQueue
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
     EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
@@ -278,12 +277,7 @@ if __name__ == '__main__':
     mainLogger.info('PID file: %s', pidFile)
 
     # queue to work on.
-    queue_config = dict(agentConfig.get_main_config())
-    queue_config.update({
-        'outqueue_dir': outqueue_dir,
-        'db_dir': db_dir
-    })
-    pdQueue = PDQueue(queue_config=queue_config, lock_class=FileLock)
+    pdQueue = agentConfig.get_queue()
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
