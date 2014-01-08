@@ -28,11 +28,11 @@ Vagrant::Config.run do |config|
         config.vm.define name do |conf2|
             conf2.vm.box = conf["box"]
             conf2.vm.box_url = conf["box_url"]
-            conf2.vm.network :bridged
+            conf2.vm.network :bridged, :bridge => "en0: Wi-Fi (AirPort)"
         end
         if name == "agent-centos64-zabbix"
-            #server_ip = "127.0.0.1"
-            server_ip = "10.99.10.243"
+            server_ip = "127.0.0.1"
+            config.vm.forward_port 80, 32080
             config.vm.provision :chef_solo do |chef|
                 chef.json = {
                   :mysql => {
