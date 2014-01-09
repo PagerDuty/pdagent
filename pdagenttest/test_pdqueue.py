@@ -159,11 +159,11 @@ class PDQueueTest(unittest.TestCase):
         # until backoff limit is hit, then the offending item should get tagged
         # as error, and not be available for further consumption.
         q = self.newQueue()
-        q.enqueue("svckey1", "foo")
+        e1_1 = q.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
-        q.enqueue("svckey1", "bar")
+        e1_2 = q.enqueue("svckey1", "bar")
         q.time.sleep(0.05)
-        q.enqueue("svckey2", "baz")
+        e2_1 = q.enqueue("svckey2", "baz")
 
         events_processed = []
         count = 0
@@ -188,24 +188,24 @@ class PDQueueTest(unittest.TestCase):
                 self.fail(
                     "Unexpected event %s in attempt %d" % (s, count))
 
-        self.assertEquals(len(q._queued_files()), 3)
+        self.assertEquals(q._queued_files(), [e1_1, e1_2, e2_1])
 
         # flush once.
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
-        self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+        self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
-        self._assertBackupData(q, [("svckey1", 1, 0)])
+        self._assertBackoffData(q, [("svckey1", 1, 0)])
 
         # retry immediately. later-retriable events must not be processed.
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(len(events_processed), 0)
-        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(q._queued_files(), [e1_1, e1_2])
         self.assertEquals(len(q._queued_files("err_")), 0)
-        self._assertBackupData(q, [("svckey1", 1, 0)])
+        self._assertBackoffData(q, [("svckey1", 1, 0)])
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
@@ -214,20 +214,21 @@ class PDQueueTest(unittest.TestCase):
             events_processed = []
             q.flush(consume_with_backoff)
             self.assertEquals(events_processed, ["foo"])  # bad event
-            self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+            self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
-            self._assertBackupData(q, [("svckey1", i, i-1)])
+            self._assertBackoffData(q, [("svckey1", i, i-1)])
 
         # retry now. there should be no more backoffs, bad event should be
         # kicked out, and next event should finally be processed.
-        q.time.sleep(BACKOFF_SECS[len(BACKOFF_SECS)-1])
+        q.time.sleep(BACKOFF_SECS[-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
         self.assertEquals(len(q._queued_files()), 0)
-        self.assertEquals(len(q._queued_files("err_")), 1)
-        self._assertBackupData(q, None)
+        self.assertEquals(q._queued_files("err_"),
+            [e1_1.replace("pdq_", "err_")])
+        self._assertBackoffData(q, None)
 
         # and now, the queue must be empty.
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
@@ -237,11 +238,11 @@ class PDQueueTest(unittest.TestCase):
         # until backoff limit is hit, then continue getting backed off until the
         # erroneous event is consumed.
         q = self.newQueue()
-        q.enqueue("svckey1", "foo")
+        e1_1 = q.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
-        q.enqueue("svckey1", "bar")
+        e1_2 = q.enqueue("svckey1", "bar")
         q.time.sleep(0.05)
-        q.enqueue("svckey2", "baz")
+        e2_1 = q.enqueue("svckey2", "baz")
 
         events_processed = []
         count = 0
@@ -266,24 +267,24 @@ class PDQueueTest(unittest.TestCase):
                 self.fail(
                     "Unexpected event %s in attempt %d" % (s, count))
 
-        self.assertEquals(len(q._queued_files()), 3)
+        self.assertEquals(q._queued_files(), [e1_1, e1_2, e2_1])
 
         # flush once.
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
-        self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+        self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
-        self._assertBackupData(q, [("svckey1", 1, 0)])
+        self._assertBackoffData(q, [("svckey1", 1, 0)])
 
         # retry immediately. later-retriable events must not be processed.
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(len(events_processed), 0)
-        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(q._queued_files(), [e1_1, e1_2])
         self.assertEquals(len(q._queued_files("err_")), 0)
-        self._assertBackupData(q, [("svckey1", 1, 0)])
+        self._assertBackoffData(q, [("svckey1", 1, 0)])
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
@@ -292,34 +293,33 @@ class PDQueueTest(unittest.TestCase):
             events_processed = []
             q.flush(consume_with_backoff)
             self.assertEquals(events_processed, ["foo"])  # bad event
-            self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+            self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
-            self._assertBackupData(q, [("svckey1", i, i-1)])
+            self._assertBackoffData(q, [("svckey1", i, i-1)])
 
         # try a couple more times (we exceed max attempts going forward) --
         # bad event is still processed.
-        latest_backoff_sec_index = len(BACKOFF_SECS)-1
         for i in [0, 1]:
-            q.time.sleep(BACKOFF_SECS[len(BACKOFF_SECS)-1])
+            q.time.sleep(BACKOFF_SECS[-1])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff)
             self.assertEquals(events_processed, ["foo"])  # bad event
-            self.assertEquals(len(q._queued_files()), 2)  # 2 from bad svckey
+            self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # still no errors
-            self._assertBackupData(q,
-                [("svckey1", max_total_attempts + i, latest_backoff_sec_index)]
+            self._assertBackoffData(q,
+                [("svckey1", max_total_attempts + i, -1)]
             )
 
         # retry now (much after max_backoff_attempts), with no bad event.
-        q.time.sleep(BACKOFF_SECS[latest_backoff_sec_index])
+        q.time.sleep(BACKOFF_SECS[-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff)
         self.assertEquals(events_processed, ["foo", "bar"])  # all good events
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(len(q._queued_files("err_")), 0)   # no errors
-        self._assertBackupData(q, None)
+        self._assertBackoffData(q, None)
 
         # and now, the queue must be empty.
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
@@ -522,7 +522,7 @@ class PDQueueTest(unittest.TestCase):
         actual_unremoved.extend(q._queued_files("err"))
         self.assertEquals(expected_unremoved, actual_unremoved)
 
-    def _assertBackupData(self, q, data):
+    def _assertBackoffData(self, q, data):
         backup_data = q.backoff_db.get()
         attempts = {}
         retries = {}

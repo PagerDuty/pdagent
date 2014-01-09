@@ -77,7 +77,6 @@ class JsonStoreTest(unittest.TestCase):
         # now corrupt the persisted data.
         out = open(_TEST_STORE_FILE, "w")
         out.write("bad json!")
-        out.flush()
         out.close()
         # bad json => data is cleared.
         self.assertEqual(self.store.get(), None)
