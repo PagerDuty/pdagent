@@ -42,8 +42,9 @@ class AgentConfig:
                 lock_class=FileLock,
                 queue_dir=self.default_dirs["outqueue_dir"],
                 time_calc=time,
+                max_event_bytes=self.main_config["max_event_bytes"],
                 backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
-                backoff_secs= [
+                backoff_secs=[
                     int(s.strip()) for s in
                     self.main_config["backoff_secs"].split(",")
                 ]
@@ -60,6 +61,7 @@ _CONFIG_DEFAULTS = {
     "send_event_timeout_sec": 30,
     "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
     "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
+    "max_event_bytes": 4194304,  # 4MB limit on the request data we send out.
     }
 
 

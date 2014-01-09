@@ -69,6 +69,7 @@ class PDQueueTest(unittest.TestCase):
             queue_dir=TEST_QUEUE_DIR,
             lock_class=NoOpLock,
             time_calc=MockTime(),
+            max_event_bytes=10,
             backoff_secs=BACKOFF_SECS,
             backoff_db=MockBackupDB())
 
@@ -153,6 +154,20 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(len(q._queued_files("err_")), 1)
         self.assertRaises(EmptyQueue, q.dequeue, lambda s: EVENT_CONSUMED)
+
+    def test_huge_event_not_processed(self):
+        # The item should get tagged as error, and not be available for
+        # further consumption.
+        q = self.newQueue()
+        f = q.enqueue("svckey", "huuuuuuuuge")
+        self.assertEquals(q._queued_files(), [f])
+
+        def unexpected_consume(s):
+            self.fail("Unexpected event %s" % s)
+        q.dequeue(unexpected_consume)  # consume function must not be called.
+
+        self.assertEquals(len(q._queued_files()), 0)
+        self.assertEquals(len(q._queued_files("err_")), 1)
 
     def test_backoff_bad_event(self):
         # The item and all other items for same service key must get backed off
