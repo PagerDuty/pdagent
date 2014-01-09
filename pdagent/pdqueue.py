@@ -213,8 +213,8 @@ class PDQueue(object):
                         elif consume_code == EVENT_BAD_ENTRY:
                             self._tag_as_error(fname)
                         elif consume_code in [
-                                EVENT_BACKOFF_SVCKEY_BAD_ENTRY,
-                                EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+                            EVENT_BACKOFF_SVCKEY_BAD_ENTRY,
+                            EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
                         ]:
                             handle_backoff()
                         else:
