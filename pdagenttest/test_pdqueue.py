@@ -496,6 +496,73 @@ class PDQueueTest(unittest.TestCase):
             "q2_EQ",
              ])
 
+    def test_resurrect(self):
+        q = self.newQueue()
+        fnames = []
+        fnames.append(q.enqueue("svckey1", "foo"))
+        fnames.append(q.enqueue("svckey1", "bar"))
+        fnames.append(q.enqueue("svckey2", "baz"))
+        fnames.append(q.enqueue("svckey2", "boo"))
+        fnames.append(q.enqueue("svckey3", "bam"))
+        q._tag_as_error(fnames[0])
+        q._tag_as_error(fnames[2])
+        q._tag_as_error(fnames[4])
+
+        self.assertEquals(len(q._queued_files()), 2)
+        self.assertEquals(len(q._queued_files("err_")), 3)
+
+        q.resurrect("svckey1")
+        self.assertEquals(len(q._queued_files()), 3)
+        errfiles = q._queued_files("err_")
+        self.assertEquals(len(errfiles), 2)
+        for errname in errfiles:
+            self.assertEquals(errname.find("svckey1"), -1)
+            self.assertTrue(errname.find("svckey2") == -1 or \
+                errname.find("svckey3") == -1)
+
+        q.resurrect("non_existent_key")  # should not throw an error.
+
+        q.resurrect()
+        self.assertEquals(len(q._queued_files()), 5)
+        self.assertEquals(len(q._queued_files("err_")), 0)
+
+    def test_status(self):
+        q = self.newQueue()
+        fnames = []
+        fnames.append(q.enqueue("svckey1", "e1"))
+        fnames.append(q.enqueue("svckey1", "e2"))
+        fnames.append(q.enqueue("svckey2", "e3"))
+        fnames.append(q.enqueue("svckey2", "e4"))
+        fnames.append(q.enqueue("svckey3", "e5"))
+        fnames.append(q.enqueue("svckey3", "e6"))
+        q._tag_as_error(fnames[0])
+        q._tag_as_error(fnames[2])
+        q._tag_as_error(fnames[3])
+
+        self.assertDictEqual(q.get_status("svckey1"), {
+            "svckey1": {
+                "pending": 1,
+                "error": 1
+            }
+        })
+
+        self.assertDictEqual(q.get_status("non_existent_key"), {})
+
+        self.assertDictEqual(q.get_status(), {
+            "svckey1": {
+                "pending": 1,
+                "error": 1
+            },
+            "svckey2": {
+                "pending": 0,
+                "error": 2
+            },
+            "svckey3": {
+                "pending": 2,
+                "error": 0
+            }
+        })
+
     def test_cleanup(self):
         # simulate enqueues done a while ago.
         q = self.newQueue()
