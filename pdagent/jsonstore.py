@@ -8,6 +8,10 @@ class JsonStore(object):
     """
 
     def __init__(self, db_name, db_dir):
+        from pdagentutil import \
+            ensure_readable_directory, ensure_writable_directory
+        ensure_readable_directory(db_dir)
+        ensure_writable_directory(db_dir)
         self._path = os.path.join(db_dir, db_name)
         self._backup_path = os.path.join(db_dir, "%s.bak" % db_name)
 

@@ -9,6 +9,7 @@
 #
 
 import json
+import os
 
 
 def find_in_sys_path(file_path):
@@ -19,6 +20,18 @@ def find_in_sys_path(file_path):
         if os.access(abs_path, os.R_OK):
             return abs_path
     return None
+
+def ensure_readable_directory(dir):
+    if not os.access(dir, os.R_OK):
+        raise Exception(
+            "Can't read directory %s, please check permissions" % dir
+        )
+
+def ensure_writable_directory(dir):
+    if not os.access(dir, os.W_OK):
+        raise Exception(
+            "Can't write to directory %s, please check permissions" % dir
+        )
 
 
 def queue_event(

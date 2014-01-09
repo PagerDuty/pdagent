@@ -5,7 +5,6 @@ import time
 from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
     EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
     EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
-from pdagent.jsonstore import JsonStore
 
 
 logger = logging.getLogger(__name__)
@@ -31,13 +30,14 @@ class PDQueue(object):
     - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
-    def __init__(self, queue_dir, db_dir, lock_class, backoff_secs):
+    def __init__(self,
+            queue_dir, lock_class, time_calc,
+            backoff_secs, backoff_db):
         self.queue_dir = queue_dir
-        self.db_dir = db_dir
-        self.lock_class = lock_class
 
         self._verify_permissions()
 
+        self.lock_class = lock_class
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
             )
@@ -45,17 +45,15 @@ class PDQueue(object):
         # error-handling: back-off related stuff.
         self.backoff_secs = backoff_secs
         self.max_backoff_attempts = len(self.backoff_secs)
-        self.backoff_db = JsonStore("backoff", self.db_dir)
+        self.backoff_db = backoff_db
+        # the time calculator.
+        self.time = time_calc
 
     def _verify_permissions(self):
-        def verify(dir):
-            if not (os.access(dir, os.R_OK) and os.access(dir, os.W_OK)):
-                raise Exception(
-                    "Can't read/write to directory %s, please check permissions"
-                    % dir
-                    )
-        verify(self.queue_dir)
-        verify(self.db_dir)
+        from pdagentutil import \
+            ensure_readable_directory, ensure_writable_directory
+        ensure_readable_directory(self.queue_dir)
+        ensure_writable_directory(self.queue_dir)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -91,14 +89,14 @@ class PDQueue(object):
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
         while True:
-            t_millisecs = int(time.time() * 1000)
+            t_millisecs = int(self.time.time() * 1000)
             fname = fname_fmt % t_millisecs
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs)
             if fd is None:
                 n += 1
                 if n < 100:
-                    time.sleep(0.001)
+                    self.time.sleep(0.001)
                     continue
                 else:
                     raise Exception(
@@ -121,21 +119,27 @@ class PDQueue(object):
         lock.acquire()
 
         try:
-            backoff_data = None
+            prev_backoff_data = None
             try:
-                backoff_data = self.backoff_db.get()
+                prev_backoff_data = self.backoff_db.get()
             except:
                 logger.warning(
                     "Unable to load queue-error back-off history",
                     exc_info=True)
-            if not backoff_data:
+            if not prev_backoff_data:
                 # first time, or errors during db read...
-                backoff_data = {
+                prev_backoff_data = {
                     'attempts': {},
                     'next_retries': {}
                 }
-            svc_key_attempt = backoff_data['attempts']
-            svc_key_next_retry = backoff_data['next_retries']
+            cur_backoff_data = {
+                'attempts': {},
+                'next_retries': {}
+            }
+            prev_svc_key_attempt = prev_backoff_data['attempts']
+            prev_svc_key_next_retry = prev_backoff_data['next_retries']
+            cur_svc_key_attempt = cur_backoff_data['attempts']
+            cur_svc_key_next_retry = cur_backoff_data['next_retries']
 
             file_names = self._queued_files()
 
@@ -148,7 +152,7 @@ class PDQueue(object):
                 # don't process more events with same service key.
                 err_svc_keys.add(svc_key)
                 # has back-off threshold been reached?
-                cur_attempt = svc_key_attempt.get(svc_key, 0) + 1
+                cur_attempt = prev_svc_key_attempt.get(svc_key, 0) + 1
                 if cur_attempt > self.max_backoff_attempts:
                     if consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
                         # consume function does not want us to do
@@ -171,9 +175,9 @@ class PDQueue(object):
                     backoff_index = min(
                         cur_attempt,
                         self.max_backoff_attempts) - 1
-                    svc_key_next_retry[svc_key] = int(time.time()) + \
+                    cur_svc_key_next_retry[svc_key] = int(self.time.time()) + \
                         self.backoff_secs[backoff_index]
-                    svc_key_attempt[svc_key] = cur_attempt
+                    cur_svc_key_attempt[svc_key] = cur_attempt
 
             def handle_bad_entry():
                 errname = fname.replace("pdq_", "err_")
@@ -183,6 +187,7 @@ class PDQueue(object):
                     (fname, errname))
                 os.rename(fname_abs, errname_abs)
 
+            now = self.time.time()
             for fname in file_names:
                 fname_abs = self._abspath(fname)
                 # TODO: handle missing file or other errors
@@ -193,8 +198,15 @@ class PDQueue(object):
                     f.close()
 
                 _, _, svc_key = _get_event_metadata(fname)
-                if svc_key not in err_svc_keys and \
-                        svc_key_next_retry.get(svc_key, 0) < time.time():
+                if prev_svc_key_next_retry.get(svc_key, 0) > now:
+                    # not yet time to retry. copy over the backup data.
+                    cur_svc_key_attempt[svc_key] = \
+                        prev_svc_key_attempt.get(svc_key)
+                    cur_svc_key_next_retry[svc_key] = \
+                        prev_svc_key_next_retry.get(svc_key)
+                elif cur_svc_key_next_retry.get(svc_key, 0) <= now and \
+                        svc_key not in err_svc_keys:
+                    # nothing has gone wrong in this pass yet.
                     consume_code = consume_func(s)
 
                     if consume_code == EVENT_CONSUMED:
@@ -217,7 +229,7 @@ class PDQueue(object):
 
             try:
                 # persist back-off info.
-                self.backoff_db.set(backoff_data)
+                self.backoff_db.set(cur_backoff_data)
             except:
                 logger.warning(
                     "Unable to save queue-error back-off history",
@@ -226,7 +238,7 @@ class PDQueue(object):
             lock.release()
 
     def cleanup(self, delete_before_sec):
-        delete_before_time = (int(time.time()) - delete_before_sec) * 1000
+        delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
 
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
@@ -251,6 +263,15 @@ class PDQueue(object):
         # clean up bad / temp files created before delete-before-time.
         _cleanup_files("err_")
         _cleanup_files("tmp_")
+
+
+class Time:
+
+    def time(self):
+        return time.time()
+
+    def sleep(self, duration_sec):
+        time.sleep(duration_sec)
 
 
 def _open_creat_excl(fname_abs):
