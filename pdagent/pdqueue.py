@@ -260,7 +260,7 @@ class PDQueue(object):
     def get_status(self, service_key=None):
         status = {}
         for fname in self._queued_files():
-            svc_key = _get_event_metadata(fname)["service_key"]
+            svc_key = _get_event_metadata(fname)[2]
             if not service_key or svc_key == service_key:
                 status[svc_key] = status.get(
                     svc_key,
@@ -270,7 +270,7 @@ class PDQueue(object):
                     })
                 status[svc_key]["pending"] += 1
         for errname in self._queued_files("err_"):
-            svc_key = _get_event_metadata(errname)["service_key"]
+            svc_key = _get_event_metadata(errname)[2]
             if not service_key or svc_key == service_key:
                 status[svc_key] = status.get(svc_key, {
                     "pending": 0,
