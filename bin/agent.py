@@ -51,11 +51,11 @@ except ImportError:
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import PDQueue, EmptyQueue
-from pdagent.filelock import FileLock
+from pdagent.pdqueue import EmptyQueue
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, EVENT_BACKOFF_SVCKEY, \
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
+    EVENT_BACKOFF_SVCKEY_BAD_ENTRY, EVENT_BACKOFF_SVCKEY_NOT_CONSUMED, \
     EVENT_STOP_ALL, EVENTS_API_BASE
 
 
@@ -70,21 +70,22 @@ def send_event(json_event_str):
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
 
-    status_code, result = None, None
+    status_code, result_str = None, None
     try:
         response = httpswithverify.urlopen(
             request,
             timeout=mainConfig["send_event_timeout_sec"])
         status_code = response.getcode()
-        result = json.loads(response.read())
+        result_str = response.read()
+    except HTTPError as e:
+        # the http error is structured similar to an http response.
+        status_code = e.getcode()
+        result_str = e.read()
     except CertificateError:
         mainLogger.error(
             "Server certificate validation error while sending event:",
             exc_info=True)
         return EVENT_STOP_ALL
-    except HTTPError as e:
-        status_code = e.getcode()
-        result = json.loads(e.read())
     except URLError as e:
         if isinstance(e.reason, socket.timeout):
             mainLogger.error("Timeout while sending event:", exc_info=True)
@@ -92,32 +93,42 @@ def send_event(json_event_str):
             # processing this service key or event. We'll retry this service key
             # a few more times, and then decide that this event is possibly a
             # bad entry.
-            return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+            return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
         else:
             mainLogger.error(
                 "Error establishing a connection for sending event:",
                 exc_info=True)
             return EVENT_NOT_CONSUMED
+    except IOError:
+        mainLogger.error("Error while sending event:", exc_info=True)
+        return EVENT_NOT_CONSUMED
 
-    if result["status"] == "success":
-        mainLogger.info("incident_key =", result["incident_key"])
+    try:
+        result = json.loads(result_str)
+    except:
+        mainLogger.warning(
+            "Error reading response data while sending event:",
+            exc_info=True)
+        result = {}
+    if result.get("status") == "success":
+        mainLogger.info("incident_key =", result.get("incident_key"))
     else:
         mainLogger.error("Error sending event %s; Error code: %d, Reason: %s" %
-            (json_event_str, status_code, result))
+            (json_event_str, status_code, result_str))
 
     if status_code < 300:
         return EVENT_CONSUMED
     elif status_code is 403:
         # We are getting throttled! We'll retry this service key a few more
         # times, but never consider this event as erroneous.
-        return EVENT_BACKOFF_SVCKEY | EVENT_NOT_CONSUMED
+        return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
         return EVENT_BAD_ENTRY
     elif status_code >= 500 and status_code < 600:
         # Hmm. Could be server-side problem, or a bad entry.
         # We'll retry this service key a few times, and then decide that this
         # event is possibly a bad entry.
-        return EVENT_BACKOFF_SVCKEY | EVENT_BAD_ENTRY
+        return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
         return EVENT_NOT_CONSUMED
@@ -266,12 +277,7 @@ if __name__ == '__main__':
     mainLogger.info('PID file: %s', pidFile)
 
     # queue to work on.
-    queue_config = dict(agentConfig.get_main_config())
-    queue_config.update({
-        'outqueue_dir': outqueue_dir,
-        'db_dir': db_dir
-    })
-    pdQueue = PDQueue(queue_config=queue_config, lock_class=FileLock)
+    pdQueue = agentConfig.get_queue()
 
     # Daemon instance from agent class
     daemon = agent(pidFile)

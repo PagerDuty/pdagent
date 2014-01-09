@@ -16,14 +16,11 @@ def build_arg_parser(description):
 
 def main():
     from pdagent.pdagentutil import get_status
-    agent_config = pdagent.config.load_agent_config()
     description = "Print out status of events that agent knows of."
     parser = build_arg_parser(description)
     args = parser.parse_args()
 
-    queue_config = dict(agent_config.get_main_config())
-    queue_config.update(agent_config.get_conf_dirs())
-    status = get_status(queue_config, args.service_key)  # 'None' for all-keys.
+    status = get_status(args.service_key)  # 'None' for all-keys.
     if not status:
         print "Nothing to report."
     else:

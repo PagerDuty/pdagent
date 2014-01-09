@@ -9,9 +9,7 @@
 #
 
 import json
-
-from pdqueue import PDQueue
-from filelock import FileLock
+import os
 
 
 def find_in_sys_path(file_path):
@@ -23,38 +21,40 @@ def find_in_sys_path(file_path):
             return abs_path
     return None
 
+def ensure_readable_directory(dir):
+    if not os.access(dir, os.R_OK):
+        raise Exception(
+            "Can't read directory %s, please check permissions" % dir
+        )
+
+def ensure_writable_directory(dir):
+    if not os.access(dir, os.W_OK):
+        raise Exception(
+            "Can't write to directory %s, please check permissions" % dir
+        )
+
 
 def queue_event(
-        queue_config,
         event_type, service_key, incident_key, description, details
         ):
-
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue(
-        queue_config=queue_config,
-        lock_class=FileLock
-    ).enqueue(service_key, event)
+    _get_queue().enqueue(service_key, event)
 
 
-def resurrect_events(queue_config, service_key):
-    from pdqueue import PDQueue
-
-    PDQueue(
-        queue_config=queue_config,
-        lock_class=FileLock
-    ).resurrect(service_key)
+def resurrect_events(service_key):
+    _get_queue().resurrect(service_key)
 
 
-def get_status(queue_config, service_key):
-    from pdqueue import PDQueue
+def get_status(service_key):
+    _get_queue().get_status(service_key)
 
-    return PDQueue(
-        queue_config=queue_config,
-        lock_class=FileLock
-    ).get_status(service_key)
 
+def _get_queue():
+    from pdagent.config import load_agent_config
+
+    load_agent_config().get_queue()
 
 def _build_event_json_str(
     event_type, service_key, incident_key, description, details
