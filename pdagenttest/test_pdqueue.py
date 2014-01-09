@@ -505,6 +505,8 @@ class PDQueueTest(unittest.TestCase):
             self.assertTrue(errname.find("svckey2") == -1 or \
                 errname.find("svckey3") == -1)
 
+        q.resurrect("non_existent_key")  # should not throw an error.
+
         q.resurrect()
         self.assertEquals(len(q._queued_files()), 5)
         self.assertEquals(len(q._queued_files("err_")), 0)
@@ -528,6 +530,8 @@ class PDQueueTest(unittest.TestCase):
                 "error": 1
             }
         })
+
+        self.assertDictEqual(q.get_status("non_existent_key"), {})
 
         self.assertDictEqual(q.get_status(), {
             "svckey1": {
