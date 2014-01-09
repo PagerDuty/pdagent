@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sys
+import time
 
 from pdagent.confdirs import getconfdirs
 from pdagent.filelock import FileLock
@@ -34,13 +35,13 @@ class AgentConfig:
         return os.path.join(self.default_dirs["data_dir"], "db")
 
     def get_queue(self):
-        from pdagent.pdqueue import PDQueue, Time
+        from pdagent.pdqueue import PDQueue
         from pdagent.jsonstore import JsonStore
         if not self._queue:
             self._queue = PDQueue(
                 lock_class=FileLock,
                 queue_dir=self.default_dirs["outqueue_dir"],
-                time_calc=Time(),
+                time_calc=time,
                 backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
                 backoff_secs= [
                     int(s.strip()) for s in

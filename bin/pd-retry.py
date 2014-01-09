@@ -18,6 +18,8 @@ def build_arg_parser(description):
 
 def main():
     from pdagent.pdagentutil import resurrect_events
+    from pdagent.config import load_agent_config
+
     description = "Set up 'dead' PagerDuty events for retry."
     parser = build_arg_parser(description)
     args = parser.parse_args()
@@ -31,7 +33,9 @@ def main():
         parser.error(
             "Only one of specific service key or flag for all keys required")
 
-    resurrect_events(args.service_key)  # 'None' for all keys.
+    resurrect_events(
+        load_agent_config().get_queue(),
+        args.service_key)  # 'None' for all keys.
     print "Events set up for retry."
 
 
