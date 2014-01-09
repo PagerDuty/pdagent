@@ -161,7 +161,7 @@ class PDQueue(object):
                         # backing off events in the key.
                         pass
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
-                        handle_bad_entry()
+                        self._tag_as_error(fname)
                         # now that we have handled the bad entry, we'll want
                         # to give the other events in this service key a chance,
                         # so don't consider svc key as erroneous.
@@ -178,14 +178,6 @@ class PDQueue(object):
                     cur_svc_key_next_retry[svc_key] = int(self.time.time()) + \
                         self.backoff_secs[backoff_index]
                     cur_svc_key_attempt[svc_key] = cur_attempt
-
-            def handle_bad_entry():
-                errname = fname.replace("pdq_", "err_")
-                errname_abs = self._abspath(errname)
-                logger.info(
-                    "Bad entry: Renaming %s to %s..." %
-                    (fname, errname))
-                os.rename(fname_abs, errname_abs)
 
             now = self.time.time()
             for fname in file_names:
@@ -218,7 +210,7 @@ class PDQueue(object):
                         # don't process any more events.
                         break
                     elif consume_code == EVENT_BAD_ENTRY:
-                        handle_bad_entry()
+                        self._tag_as_error(fname)
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY or \
                             consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
                         handle_backoff()
@@ -242,14 +234,8 @@ class PDQueue(object):
         errnames = self._queued_files("err_")
         for errname in errnames:
             if not service_key or \
-                    _get_event_metadata(errname)["service_key"] == service_key:
-                fname = errname.replace("err_", "pdq_")
-                errname_abs = self._abspath(errname)
-                fname_abs = self._abspath(fname)
-                self.mainLogger.info(
-                    "Resurrecting %s to %s..." %
-                    (errname, fname))
-                os.rename(errname_abs, fname_abs)
+                    _get_event_metadata(errname)[2] == service_key:
+                self._untag_as_error(errname)
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
@@ -299,6 +285,24 @@ class PDQueue(object):
                 })
                 status[svc_key]["error"] += 1
         return status
+
+    def _tag_as_error(self, fname):
+        errname = fname.replace("pdq_", "err_")
+        fname_abs = self._abspath(fname)
+        errname_abs = self._abspath(errname)
+        logger.info(
+            "Tagging as error: %s -> %s..." %
+            (fname, errname))
+        os.rename(fname_abs, errname_abs)
+
+    def _untag_as_error(self, errname):
+        fname = errname.replace("err_", "pdq_")
+        errname_abs = self._abspath(errname)
+        fname_abs = self._abspath(fname)
+        logger.info(
+            "Untagging as error: %s -> %s..." %
+            (errname, fname))
+        os.rename(errname_abs, fname_abs)
 
 
 class Time:

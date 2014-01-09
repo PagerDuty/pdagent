@@ -490,11 +490,9 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(q.enqueue("svckey2", "baz"))
         fnames.append(q.enqueue("svckey2", "boo"))
         fnames.append(q.enqueue("svckey3", "bam"))
-        for fname in q._queued_files():
-            if fname == fnames[0] or fname == fnames[2] or  fname == fnames[4]:
-                errname = fname.replace("pdq_", "err_")
-                errnames.append(errname)
-                os.rename(q._abspath(fname), q._abspath(errname))
+        q._tag_as_error(fnames[0])
+        q._tag_as_error(fnames[2])
+        q._tag_as_error(fnames[4])
 
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 3)
