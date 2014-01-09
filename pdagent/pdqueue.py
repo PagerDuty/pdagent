@@ -33,9 +33,13 @@ class PDQueue(object):
     def __init__(self,
             queue_dir, lock_class, time_calc,
             backoff_secs, backoff_db):
+        from pdagentutil import \
+            ensure_readable_directory, ensure_writable_directory
+
         self.queue_dir = queue_dir
 
-        self._verify_permissions()
+        ensure_readable_directory(self.queue_dir)
+        ensure_writable_directory(self.queue_dir)
 
         self.lock_class = lock_class
         self._dequeue_lockfile = os.path.join(
@@ -48,12 +52,6 @@ class PDQueue(object):
         self.backoff_db = backoff_db
         # the time calculator.
         self.time = time_calc
-
-    def _verify_permissions(self):
-        from pdagentutil import \
-            ensure_readable_directory, ensure_writable_directory
-        ensure_readable_directory(self.queue_dir)
-        ensure_writable_directory(self.queue_dir)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -166,10 +164,6 @@ class PDQueue(object):
                         # to give the other events in this service key a chance,
                         # so don't consider svc key as erroneous.
                         err_svc_keys.remove(svc_key)
-                    else:
-                        raise ValueError(
-                            "Invalid back-off threshold breach code %d" %
-                            consume_code)
                 if svc_key in err_svc_keys:
                     # if backoff-seconds have been exhausted, reuse the last one.
                     backoff_index = min(
@@ -189,17 +183,9 @@ class PDQueue(object):
 
             now = self.time.time()
             for fname in file_names:
-                fname_abs = self._abspath(fname)
-                # TODO: handle missing file or other errors
-                f = open(fname_abs)
-                try:
-                    s = f.read()
-                finally:
-                    f.close()
-
                 _, _, svc_key = _get_event_metadata(fname)
                 if prev_svc_key_next_retry.get(svc_key, 0) > now:
-                    # not yet time to retry. copy over the backup data.
+                    # not yet time to retry; copy over back-off data.
                     cur_svc_key_attempt[svc_key] = \
                         prev_svc_key_attempt.get(svc_key)
                     cur_svc_key_next_retry[svc_key] = \
@@ -207,6 +193,13 @@ class PDQueue(object):
                 elif cur_svc_key_next_retry.get(svc_key, 0) <= now and \
                         svc_key not in err_svc_keys:
                     # nothing has gone wrong in this pass yet.
+                    fname_abs = self._abspath(fname)
+                    # TODO: handle missing file or other errors
+                    f = open(fname_abs)
+                    try:
+                        s = f.read()
+                    finally:
+                        f.close()
                     consume_code = consume_func(s)
 
                     if consume_code == EVENT_CONSUMED:
@@ -263,15 +256,6 @@ class PDQueue(object):
         # clean up bad / temp files created before delete-before-time.
         _cleanup_files("err_")
         _cleanup_files("tmp_")
-
-
-class Time:
-
-    def time(self):
-        return time.time()
-
-    def sleep(self, duration_sec):
-        time.sleep(duration_sec)
 
 
 def _open_creat_excl(fname_abs):

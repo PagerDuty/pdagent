@@ -35,14 +35,13 @@ def ensure_writable_directory(dir):
 
 
 def queue_event(
+        queue,
         event_type, service_key, incident_key, description, details
         ):
-    from pdagent.config import load_agent_config
-
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    load_agent_config().get_queue().enqueue(service_key, event)
+    queue.enqueue(service_key, event)
 
 
 def _build_event_json_str(

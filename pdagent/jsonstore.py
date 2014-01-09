@@ -16,27 +16,21 @@ class JsonStore(object):
         self._backup_path = os.path.join(db_dir, "%s.bak" % db_name)
 
     def get(self):
-        data = None
         fp = None
         try:
             fp = open(self._path, "r")
-            data = json.load(fp)
+            return json.load(fp)
         except (IOError, ValueError):
             # file could not be opened, or had bad json in it.
-            pass
+            return None
         finally:
             if fp:
                 fp.close()
-        return data
 
     def set(self, json_data):
-        fp = None
+        fp = open(self._backup_path, "w")
         try:
-            fp = open(self._backup_path, "w")
             json.dump(json_data, fp)
         finally:
-            if fp:
-                fp.flush()
-                fp.close()
-        if fp:
-            os.rename(self._backup_path, self._path)
+            fp.close()
+        os.rename(self._backup_path, self._path)
