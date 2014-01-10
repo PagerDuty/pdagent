@@ -6,7 +6,18 @@ Vagrant setup notes for OS X 10.8 (Mountain Lion).
 
 ## Installation
 
-See instructions at http://www.vagrantup.com/
+1. Install Vagrant.  See instructions at http://www.vagrantup.com/
+
+2. Install Vagrant plugins:
+
+        vagrant plugin install vagrant-omnibus
+
+        gem install berkshelf
+        vagrant plugin install vagrant-berkshelf
+
+3. Install chef cookbooks:
+
+        berks install
 
 
 ## Managing VMs
