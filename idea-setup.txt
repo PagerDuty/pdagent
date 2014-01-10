@@ -1,0 +1,77 @@
+
+# IntelliJ IDEA Setup
+
+IntelliJ IDEA 13 Community Edition setup notes for OS X 10.8 (Mountain Lion).
+
+
+## Install IntelliJ IDEA 13 Community Edition
+
+- The Python plugin is available only with version 13+, so install / upgrade from
+  http://www.jetbrains.com/idea/download/.
+
+
+## Install Python plugin
+
+- Launch IDEA. Click Configure -> Plugins.
+
+- Browse repositories. Search for `Python Community Edition`. You should find
+  version 3.1 or greater. Double-click the plugin name to install it.
+
+
+## Configuration
+
+- Launch IDEA.
+
+- Open Preferences and apply the following settings:
+
+    - In the section: Code Style -> General
+        - Set *Right margin (columns)* to 100.
+        - Ensure that *Use tab character* is unchecked.
+
+    - In the section: Code Style -> Python
+        - Tabs and Indents
+          - Ensure that *Use tab character* is unchecked.
+        - Wrapping and Braces
+          - Uncheck *Align when multiline* everywhere.
+        - Blank Lines
+          - Set minimum blank lines in *After imports* to 2.
+
+    - In the section: Editor
+      - Set *Strip trailing spaces on Save* to *Modified Lines*.
+
+    - (Optional) In the section: Editor -> Appearance
+        - Check *Show right margin*
+        - Check *Show line numbers*
+
+    - In the section: Pydev -> Editor -> Code Style -> Code Formatter
+        - Check *Right trim lines?*
+
+    - In the section: Inspections
+        - Under `Python`, ensure that:
+          - Ensure that *PEP 8 coding style violation* is checked, and the
+            *Severity* is set to from "Weak Warning" or higher.
+          - Ensure that *PEP 8 naming convention violation* is checked, and the
+            *Severity* is set to from "Weak Warning" or higher.
+
+
+## Project Setup
+
+- Launch IDEA. Click `Create New Project`.
+
+- Choose `Python` project-type. Choose your agent install directory as location,
+  e.g. `~/workspace/agent`.
+
+- Click `Configure` to set up a Python Interpretor.
+
+- In the dialog that pops up, click `+` to add a Python SDK. Choose an
+  existing default / custom Python installation.
+
+- Wait for the Python SDK to be set up.
+
+- Once done, choose your python interpretor for your project. Click `Finish`.
+
+- When editing, use Format Code and Organize Imports for consistent formatting
+
+    > TIP: Organize imports should not be used in some cases, especially python
+    > files which modify sys.path before import.
+

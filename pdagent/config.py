@@ -5,8 +5,10 @@ import logging
 import os
 import re
 import sys
+import time
 
 from pdagent.confdirs import getconfdirs
+from pdagent.filelock import FileLock
 
 
 class AgentConfig:
@@ -15,6 +17,7 @@ class AgentConfig:
         self.dev_layout = dev_layout
         self.default_dirs = default_dirs
         self.main_config = main_config
+        self._queue = None
 
     def is_dev_layout(self):
         return self.dev_layout
@@ -28,6 +31,25 @@ class AgentConfig:
     def get_outqueue_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "outqueue")
 
+    def get_db_dir(self):
+        return os.path.join(self.default_dirs["data_dir"], "db")
+
+    def get_queue(self):
+        from pdagent.pdqueue import PDQueue
+        from pdagent.jsonstore import JsonStore
+        if not self._queue:
+            self._queue = PDQueue(
+                lock_class=FileLock,
+                queue_dir=self.default_dirs["outqueue_dir"],
+                time_calc=time,
+                max_event_bytes=self.main_config["max_event_bytes"],
+                backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
+                backoff_secs=[
+                    int(s.strip()) for s in
+                    self.main_config["backoff_secs"].split(",")
+                ]
+            )
+        return self._queue
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
@@ -36,7 +58,10 @@ _valid_log_levels = \
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
     "check_freq_sec": 60,
+    "send_event_timeout_sec": 30,
     "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
+    "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
+    "max_event_bytes": 4 * 1024 * 1024,  # 4MB limit on request data sent out.
     }
 
 

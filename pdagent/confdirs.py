@@ -49,6 +49,8 @@ def getconfdirs(main_dir, dev_proj_dir):
 
     default_dirs["outqueue_dir"] = \
         os.path.join(default_dirs["data_dir"], "outqueue")
+    default_dirs["db_dir"] = \
+        os.path.join(default_dirs["data_dir"], "db")
     conf_file = os.path.join(conf_dir, "config.cfg")
 
     return conf_file, default_dirs

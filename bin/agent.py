@@ -27,7 +27,9 @@ import sched
 import sys
 import time
 import json
+import socket
 import urllib2
+from urllib2 import HTTPError, URLError
 
 
 # Check Python version.
@@ -56,12 +58,12 @@ except ImportError:
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import PDQueue, EmptyQueue
-from pdagent.filelock import FileLock
+from pdagent.pdqueue import EmptyQueue
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
-    EVENTS_API_BASE
+    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
+    EVENT_BACKOFF_SVCKEY_BAD_ENTRY, EVENT_BACKOFF_SVCKEY_NOT_CONSUMED, \
+    EVENT_STOP_ALL, EVENTS_API_BASE
 
 
 # Config handling
@@ -75,24 +77,65 @@ def send_event(json_event_str):
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
 
-    response = httpswithverify.urlopen(request)
-    status_code = response.getcode()
-    result = json.loads(response.read())
+    status_code, result_str = None, None
+    try:
+        response = httpswithverify.urlopen(
+            request,
+            timeout=mainConfig["send_event_timeout_sec"])
+        status_code = response.getcode()
+        result_str = response.read()
+    except HTTPError as e:
+        # the http error is structured similar to an http response.
+        status_code = e.getcode()
+        result_str = e.read()
+    except CertificateError:
+        main_logger.error(
+            "Server certificate validation error while sending event:",
+            exc_info=True)
+        return EVENT_STOP_ALL
+    except URLError as e:
+        if isinstance(e.reason, socket.timeout):
+            main_logger.error("Timeout while sending event:", exc_info=True)
+            # This could be real issue with PD, or just some anomaly in
+            # processing this service key or event. We'll retry this service key
+            # a few more times, and then decide that this event is possibly a
+            # bad entry.
+            return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
+        else:
+            main_logger.error(
+                "Error establishing a connection for sending event:",
+                exc_info=True)
+            return EVENT_NOT_CONSUMED
+    except IOError:
+        main_logger.error("Error while sending event:", exc_info=True)
+        return EVENT_NOT_CONSUMED
 
-    incident_key = None
-    if result["status"] == "success":
-        incident_key = result["incident_key"]
-        print "Success! incident_key =", incident_key
+    try:
+        result = json.loads(result_str)
+    except:
+        main_logger.warning(
+            "Error reading response data while sending event:",
+            exc_info=True)
+        result = {}
+    if result.get("status") == "success":
+        main_logger.info("incident_key =", result.get("incident_key"))
     else:
-        print "Error! Reason:", str(response)
+        main_logger.error("Error sending event %s; Error code: %d, Reason: %s" %
+            (json_event_str, status_code, result_str))
 
     if status_code < 300:
         return EVENT_CONSUMED
     elif status_code is 403:
-        # we are getting throttled! we'll retry later.
-        return EVENT_NOT_CONSUMED
+        # We are getting throttled! We'll retry this service key a few more
+        # times, but never consider this event as erroneous.
+        return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
         return EVENT_BAD_ENTRY
+    elif status_code >= 500 and status_code < 600:
+        # Hmm. Could be server-side problem, or a bad entry.
+        # We'll retry this service key a few times, and then decide that this
+        # event is possibly a bad entry.
+        return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
         return EVENT_NOT_CONSUMED
@@ -103,14 +146,9 @@ def tick(sc):
     # flush the event queue.
     main_logger.info("Flushing event queue")
     try:
-        pdQueue.dequeue(send_event)
+        pdQueue.flush(send_event)
     except EmptyQueue:
         main_logger.info("Nothing to do - queue is empty!")
-    except CertificateError:
-        main_logger.error(
-            "Server certificate validation error while flushing queue:",
-            exc_info=True
-            )
     except IOError:
         main_logger.error("I/O error while flushing queue:", exc_info=True)
     except:
@@ -120,7 +158,7 @@ def tick(sc):
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
     if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
         try:
-            pdQueue.cleanup()
+            pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
             main_logger.error("Error while cleaning up queue:", exc_info=True)
         agent.lastCleanupTimeSec = int(time.time())
@@ -218,10 +256,11 @@ if __name__ == '__main__':
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
+    db_dir = conf_dirs["db_dir"]
 
     problemDirectories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # don't create directories in production
-        pidfile_dir, log_dir, data_dir, outqueue_dir
+        pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problemDirectories:
         l = []
@@ -255,7 +294,7 @@ if __name__ == '__main__':
             )
 
     # queue to work on.
-    pdQueue = PDQueue(queue_dir=outqueue_dir, lock_class=FileLock)
+    pdQueue = agentConfig.get_queue()
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
