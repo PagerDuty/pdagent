@@ -6,6 +6,9 @@
     "mysql": {
       "locked_version": "4.0.14"
     },
+    "yum": {
+      "locked_version": "2.4.4"
+    },
     "zabbix": {
       "locked_version": "0.0.42",
       "git": "git://github.com/laradji/zabbix.git",
@@ -37,9 +40,6 @@
     },
     "firewall": {
       "locked_version": "0.11.2"
-    },
-    "yum": {
-      "locked_version": "3.0.4"
     },
     "php-fpm": {
       "locked_version": "0.6.3"
