@@ -42,7 +42,7 @@ Vagrant.configure("2") do |conf_outer|
             # Public/bridged network so VM can install packages from the internet
             config.vm.network :public_network, :bridge => "en0: Wi-Fi (AirPort)"
 
-            if name.starts_with? "agent-zabbix-"
+            if name.start_with? "agent-zabbix-"
 
                 # vagrant-omnibus will install chef
                 config.omnibus.chef_version = :latest
