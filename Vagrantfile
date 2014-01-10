@@ -1,30 +1,31 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-_box_centos64 = {
-    "box"       => "centos64",
-    "box_url"   => "http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box",
+
+_bento_centos65 = {
+    "box"       => "bento_centos65",
+    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-6.5_chef-provisionerless.box",
 }
-_box_lucid32 = {
-    "box"       => "lucid32",
-    "box_url"   => "http://files.vagrantup.com/lucid32.box",
+_bento_ubuntu1004 = {
+    "box"       => "bento_ubuntu1004",
+    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-10.04_chef-provisionerless.box",
 }
-_box_precise32 = {
-    "box"       => "precise32",
-    "box_url"   => "http://files.vagrantup.com/precise32.box",
+_bento_ubuntu1204 = {
+    "box"       => "bento_ubuntu1204",
+    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-12.04_chef-provisionerless.box",
 }
 
 vms = {
-    "agent-minimal-centos64"    =>  _box_centos64,
-    "agent-minimal-lucid32"     =>  _box_lucid32,
-    "agent-minimal-precise32"   =>  _box_precise32,
-    "agent-zabbix-centos64"     =>  _box_centos64,
-    "agent-zabbix-lucid32"      =>  _box_lucid32,
-    "agent-zabbix-precise32"    =>  _box_precise32,
+    "agent-minimal-centos65"    => _bento_centos65,
+    "agent-minimal-ubuntu1004"  => _bento_ubuntu1004,
+    "agent-minimal-ubuntu1204"  => _bento_ubuntu1204,
+    "agent-zabbix-centos65"     => _bento_centos65,
+    "agent-zabbix-ubuntu1004"   => _bento_ubuntu1004,
+    "agent-zabbix-ubuntu1204"   => _bento_ubuntu1204,
 }
 
 
-Vagrant::Config.run do |conf_outer|
+Vagrant.configure("2") do |conf_outer|
 
     vm_num = 0
 
@@ -38,17 +39,22 @@ Vagrant::Config.run do |conf_outer|
             config.vm.box = conf["box"]
             config.vm.box_url = conf["box_url"]
 
-            # Bridged network so VM can install packages from the internet
-            config.vm.network :bridged, :bridge => "en0: Wi-Fi (AirPort)"
+            # Public/bridged network so VM can install packages from the internet
+            config.vm.network :public_network, :bridge => "en0: Wi-Fi (AirPort)"
 
             if name.starts_with? "agent-zabbix-"
+
+                # vagrant-omnibus will install chef
+                config.omnibus.chef_version = :latest
+
                 server_ip = "127.0.0.1"
 
-                config.vm.forward_port 80, (32080 + vm_num_snapshot * 100)
+                #config.vm.forward_port 80, (8080 + vm_num_snapshot)
+
                 ## CentOS64 box has iptables blocking all traffic - allow http
                 #config.vm.provision "shell",
                 #    inline: "sudo iptables -I INPUT 2 -p tcp --dport 80 -j ACCEPT"
-=begin
+
                 config.vm.provision :chef_solo do |chef|
                     chef.json = {
                       :mysql => {
@@ -92,10 +98,12 @@ Vagrant::Config.run do |conf_outer|
 
                     #chef.log_level = :debug
                 end
-=end
-            end
-        end
-    end
 
-end
+            end # zabbix
+
+        end # conf_outer.vm.define
+
+    end # vms.each
+
+end # Vagrant.configure
 
