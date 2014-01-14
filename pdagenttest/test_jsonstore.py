@@ -17,12 +17,12 @@ class JsonStoreTest(unittest.TestCase):
         try:
             os.makedirs(_TEST_DIR)
         except OSError as e:
-            if e.errno is not errno.EEXIST:
+            if e.errno != errno.EEXIST:
                 raise
         try:
             os.unlink(_TEST_STORE_FILE)
         except OSError as e:
-            if e.errno is not errno.ENOENT:
+            if e.errno != errno.ENOENT:
                 raise
         self.store = JsonStore(_TEST_STORE_NAME, _TEST_DIR)
 
