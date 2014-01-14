@@ -228,7 +228,7 @@ class PDQueue(object):
         for errname in errnames:
             if not service_key or \
                     _get_event_metadata(errname)[2] == service_key:
-                self._untag_as_error(errname)
+                self._unsafe_untag_as_error(errname)
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
@@ -259,23 +259,21 @@ class PDQueue(object):
 
     def get_status(self, service_key=None):
         status = {}
+        empty_stats = {
+            "pending": 0,
+            "error": 0
+        }
         for fname in self._queued_files():
             svc_key = _get_event_metadata(fname)[2]
             if not service_key or svc_key == service_key:
-                status[svc_key] = status.get(
-                    svc_key,
-                    {
-                        "pending": 0,
-                        "error": 0
-                    })
+                if not status.get(svc_key):
+                    status[svc_key] = dict(empty_stats)
                 status[svc_key]["pending"] += 1
         for errname in self._queued_files("err_"):
             svc_key = _get_event_metadata(errname)[2]
             if not service_key or svc_key == service_key:
-                status[svc_key] = status.get(svc_key, {
-                    "pending": 0,
-                    "error": 0
-                })
+                if not status.get(svc_key):
+                    status[svc_key] = dict(empty_stats)
                 status[svc_key]["error"] += 1
         return status
 
@@ -288,7 +286,10 @@ class PDQueue(object):
             (fname, errname))
         os.rename(fname_abs, errname_abs)
 
-    def _untag_as_error(self, errname):
+    # This function moves error files back into regular files, so ensure that
+    # you have considered any concurrency-related consequences to other queue
+    # operations before invoking this function.
+    def _unsafe_untag_as_error(self, errname):
         fname = errname.replace("err_", "pdq_")
         errname_abs = self._abspath(errname)
         fname_abs = self._abspath(fname)
