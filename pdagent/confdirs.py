@@ -13,7 +13,7 @@ _PRODUCTION_MAIN_DIRS = [
 
 def _linux_production_dirs():
     d = {
-        "pidfile_dir": "/var/run",
+        "pidfile_dir": "/var/run/pdagent",
         "log_dir": "/var/log/pdagent",
         "data_dir": "/var/lib/pdagent",
         }
