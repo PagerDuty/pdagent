@@ -16,8 +16,19 @@ def create_dist(target, source, env):
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
     ret_code = 0
-    ret_code += _create_deb_package()
-    ret_code += _create_rpm_package()
+    virts = env.get("virts")
+
+    debian_vms = [
+        v for v in virts
+        if v.find("lucid") != -1 or v.find("precise") != -1
+    ]
+    if debian_vms:
+        ret_code += _create_deb_package(debian_vms)
+
+    redhat_vms = [v for v in virts if v.find("centos") != -1]
+    if redhat_vms:
+        ret_code += _create_rpm_package(redhat_vms)
+
     return ret_code
 
 
@@ -28,7 +39,7 @@ def run_integration_tests(target, source, env):
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".sh"),
         executable="sh")
-    return _run_on_virts("sh %s" % test_runner_file)
+    return _run_on_virts("sh %s" % test_runner_file, env.get("virts"))
 
 
 def run_unit_tests(target, source, env):
@@ -42,7 +53,7 @@ def run_unit_tests(target, source, env):
     remote_test_command = ["python", remote_test_runner]
     remote_test_command.extend(\
         [os.path.join(remote_project_root, t) for t in test_paths])
-    return _run_on_virts(" ".join(remote_test_command), env.get("virts", []))
+    return _run_on_virts(" ".join(remote_test_command), env.get("virts"))
 
 
 def run_unit_tests_local(target, source, env):
@@ -57,20 +68,6 @@ def run_unit_tests_local(target, source, env):
     return subprocess.call(test_command)
 
 
-def run_unit_tests_specific_vms(target, source, env):
-    virts = env.get("virts", [])
-    if not virts:
-        print "No virtual machines specified!"
-        return 1
-    # cannot declare start-vm and run-tests as task dependencies because they
-    # require different option-keys on the command-line to specify the VMs etc.
-    start_vm_exit_code = start_virtual_boxes(target, source, env)
-    if start_vm_exit_code == 0:
-        return run_unit_tests(target, source, env)
-    else:
-        return start_vm_exit_code
-
-
 def start_virtual_boxes(target, source, env):
     virts = env.get("virts", [])
     start_cmd = ["vagrant", "up"]
@@ -78,16 +75,24 @@ def start_virtual_boxes(target, source, env):
     return subprocess.call(start_cmd)
 
 
-def _create_deb_package():
-    # TODO create the package.
+def _create_deb_package(virts):
+    # Assuming that all requisite packages are available.
+    # (see build-linux/howto.txt)
     print "\nCreating .deb package..."
-    return 0
+    return subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
 
 
-def _create_rpm_package():
-    # TODO create the package.
+def _create_rpm_package(virts):
+    # create a temporary file to cd to required directory and make rpm.
+    make_file = os.path.join(tmp_dir, "make_rpm")
+    _create_text_file(make_file, [
+        'set -e',
+        'cd %s' % os.path.join(remote_project_root, build_linux_dir),
+        'sh make.sh rpm'
+    ])
+    make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .rpm package..."
-    return 0
+    return _run_on_virts("sh %s" % make_file_on_vm, virts)
 
 
 def _generate_remote_test_runner_file(
@@ -108,14 +113,7 @@ def _generate_remote_test_runner_file(
         run_commands.append("e=$(( $e + $? ))")
     run_commands.append("exit $e")
 
-    #TODO this doesn't work -- 'Textfile' is not recognized.
-#     env.Textfile(
-#         target=test_runner_file,
-#         source=run_commands)
-    out = open(test_runner_file, "w")
-    out.write(os.linesep.join(run_commands))
-    out.flush()
-    out.close()
+    _create_text_file(test_runner_file, run_commands)
 
     return os.path.join(remote_project_root, test_runner_file)
 
@@ -143,6 +141,16 @@ def _get_file_paths_recursive(source_paths, filename_matcher):
     return list(files)
 
 
+def _create_text_file(filepath, data):
+    #TODO this doesn't work -- 'Textfile' is not recognized.
+    #     env.Textfile(
+    #         target=test_runner_file,
+    #         source=run_commands)
+    out = open(filepath, "w")
+    out.write(os.linesep.join(data))
+    out.close()
+
+
 def _get_arg_values(key, default=None):
     values = [v for k, v in ARGLIST if k == key]
     if not values and default:
@@ -155,10 +163,10 @@ def _get_virt_names():
         subprocess \
         .check_output(["vagrant", "status"]) \
         .splitlines() \
-        if v.find(" running (") >= 0]
+        if (v.startswith("agent-minimal-") and v.find(" running (") >= 0)]
 
 
-def _run_on_virts(remote_command, virts=[]):
+def _run_on_virts(remote_command, virts=None):
     exit_code = 0
     if not virts:
         virts = _get_virt_names()
@@ -216,6 +224,7 @@ test-vm             Runs unit tests on the specified virtual machine,
                     scons test-vm test-vm=agent-lucid32 test=test_foo.py
 """)
 
+build_linux_dir = "build-linux"
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
@@ -223,40 +232,36 @@ remote_project_root = os.sep + "vagrant"  # TODO windows
 
 unit_test_local_task = env.Command(
     "test-local",
-    _get_arg_values("test-local", ["pdagenttest"]),
+    _get_arg_values("test", ["pdagenttest"]),
     env.Action(run_unit_tests_local, "\n--- Running unit tests locally"))
 
 start_virts_task = env.Command(
     "start-virt",
     None,
     env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
-    virts=_get_arg_values("start-virt"))
+    virts=_get_arg_values("virt"))
 
 unit_test_task = env.Command(
     "test",
     _get_arg_values("test", ["pdagenttest"]),
     env.Action(run_unit_tests,
-        "\n--- Running unit tests on virtual boxes"))
+        "\n--- Running unit tests on virtual boxes"),
+    virts=_get_arg_values("virt"))
 env.Requires(unit_test_task, start_virts_task)
-
-unit_test_specific_vms_task = env.Command(
-    "test-vm",
-    _get_arg_values("test", ["pdagenttest"]),
-    env.Action(run_unit_tests_specific_vms,
-        "\n--- Running unit tests on specified virtual boxes"),
-    virts=_get_arg_values("test-vm"))
 
 create_packages_task = env.Command(
     "package",
     None,
-    env.Action(create_packages, "\n--- Creating install packages"))
-env.Requires(create_packages_task, unit_test_task)
+    env.Action(create_packages, "\n--- Creating install packages"),
+    virts=_get_arg_values("virt"))
+env.Requires(create_packages_task, [unit_test_task, start_virts_task])
 
 integration_test_task = env.Command(
     "test-integration",
-    _get_arg_values("test-integration", ["pdagenttestinteg"]),
+    _get_arg_values("test", ["pdagenttestinteg"]),
     env.Action(run_integration_tests,
-        "\n--- Running integration tests on virtual boxes"))
+        "\n--- Running integration tests on virtual boxes"),
+    virts=_get_arg_values("virt"))
 env.Requires(integration_test_task, [start_virts_task])
 
 dist_task = env.Command(
