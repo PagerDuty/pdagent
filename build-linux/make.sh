@@ -37,6 +37,26 @@ mkdir -p data/etc/pd-agent/
 cp ../conf/config.cfg data/etc/pd-agent/
 mkdir -p data/etc/init.d
 cat >data/etc/init.d/pd-agent <<INIT_COMMAND
+###
+#   PagerDuty
+#   www.pagerduty.com
+#   ----
+#   Monitoring system agent for PagerDuty integration.
+#
+#   See LICENSE.TXT for licensing details.
+###
+
+
+### BEGIN INIT INFO
+# Provides:          pd-agent
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start PagerDuty Agent at boot time
+# Description:       Enable PagerDuty Agent daemon process.
+### END INIT INFO
+
 sudo -u pdagent /usr/bin/agent.py "\$@"
 INIT_COMMAND
 chmod 755 data/etc/init.d/pd-agent
