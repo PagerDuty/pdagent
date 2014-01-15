@@ -64,4 +64,8 @@ def _build_event_json_str(
     if description is not None:
         d["description"] = description
 
-    return json.dumps(d)
+    return json.dumps(
+        d,
+        separators=(',', ':'),  # compact json str
+        sort_keys=True
+    )

@@ -32,6 +32,7 @@ class PDQueue(object):
 
     def __init__(self,
             queue_dir, lock_class, time_calc,
+            max_event_bytes,
             backoff_secs, backoff_db):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
@@ -45,6 +46,8 @@ class PDQueue(object):
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
             )
+
+        self.max_event_bytes = max_event_bytes
 
         # error-handling: back-off related stuff.
         self.backoff_secs = backoff_secs
@@ -192,25 +195,32 @@ class PDQueue(object):
                         s = f.read()
                     finally:
                         f.close()
-                    consume_code = consume_func(s)
 
-                    if consume_code == EVENT_CONSUMED:
-                        # TODO a failure here will mean duplicate event sends
-                        os.remove(fname_abs)
-                    elif consume_code == EVENT_NOT_CONSUMED:
-                        pass
-                    elif consume_code == EVENT_STOP_ALL:
-                        # don't process any more events.
-                        break
-                    elif consume_code == EVENT_BAD_ENTRY:
+                    # ensure that the event is not too large.
+                    if len(s) > self.max_event_bytes:
                         self._tag_as_error(fname)
-                    elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY or \
-                            consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
-                        handle_backoff()
                     else:
-                        raise ValueError(
-                            "Unsupported dequeue consume code %d" %
-                            consume_code)
+                        consume_code = consume_func(s)
+
+                        if consume_code == EVENT_CONSUMED:
+                            # TODO a failure here means duplicate event sends
+                            os.remove(fname_abs)
+                        elif consume_code == EVENT_NOT_CONSUMED:
+                            pass
+                        elif consume_code == EVENT_STOP_ALL:
+                            # don't process any more events.
+                            break
+                        elif consume_code == EVENT_BAD_ENTRY:
+                            self._tag_as_error(fname)
+                        elif consume_code in [
+                            EVENT_BACKOFF_SVCKEY_BAD_ENTRY,
+                            EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+                        ]:
+                            handle_backoff()
+                        else:
+                            raise ValueError(
+                                "Unsupported dequeue consume code %d" %
+                                consume_code)
 
             try:
                 # persist back-off info.

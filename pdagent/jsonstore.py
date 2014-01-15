@@ -30,7 +30,12 @@ class JsonStore(object):
     def set(self, json_data):
         fp = open(self._backup_path, "w")
         try:
-            json.dump(json_data, fp)
+            json.dump(
+                json_data,
+                fp,
+                indent=4,
+                separators=(',', ': '),
+                sort_keys=True)
         finally:
             fp.close()
         os.rename(self._backup_path, self._path)
