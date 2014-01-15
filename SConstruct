@@ -18,10 +18,7 @@ def create_packages(target, source, env):
     ret_code = 0
     virts = env.get("virts")
 
-    debian_vms = [
-        v for v in virts
-        if v.find("lucid") != -1 or v.find("precise") != -1
-    ]
+    debian_vms = [v for v in virts if v.find("ubuntu") != -1]
     if debian_vms:
         ret_code += _create_deb_package(debian_vms)
 
@@ -69,7 +66,9 @@ def run_unit_tests_local(target, source, env):
 
 
 def start_virtual_boxes(target, source, env):
-    virts = env.get("virts", [])
+    virts = env.get("virts")
+    if not virts:
+        virts =  _get_virt_names()
     start_cmd = ["vagrant", "up"]
     start_cmd.extend(virts)
     return subprocess.call(start_cmd)
@@ -155,23 +154,26 @@ def _create_text_file(filepath, data):
 
 def _get_arg_values(key, default=None):
     values = [v for k, v in ARGLIST if k == key]
-    if not values and default:
+    if not values:
         values = default
     return values
 
 
-def _get_virt_names():
-    return [v.split()[0] for v in \
-        subprocess \
-        .check_output(["vagrant", "status"]) \
-        .splitlines() \
-        if (v.startswith("agent-minimal-") and v.find(" running (") >= 0)]
+def _get_virt_names(running=False):
+    return [
+        v.split()[0] for v in
+        subprocess
+        .check_output(["vagrant", "status"])
+        .splitlines()
+        if v.startswith("agent-minimal-") and
+        (not running or v.find(" running (") >= 0)
+    ]
 
 
 def _run_on_virts(remote_command, virts=None):
     exit_code = 0
     if not virts:
-        virts = _get_virt_names()
+        virts = _get_virt_names(running=True)
     for virt in virts:
         command = ["vagrant", "ssh", virt, "-c", remote_command]
         print "Running on %s..." % virt
@@ -277,7 +279,7 @@ env.Clean([unit_test_task, integration_test_task], tmp_dir)
 env.Clean([create_packages_task], target_dir)
 env.Clean([dist_task], dist_dir)
 
-build_task = env.Alias("build",\
+build_task = env.Alias("build",
     [unit_test_task, create_packages_task, integration_test_task])
 env.Alias("all", ["."])
 
