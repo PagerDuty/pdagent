@@ -123,6 +123,18 @@ def load_agent_config():
         print 'Agent will now quit'
         sys.exit(1)
 
+    # parse integer values.
+    for key in [
+        "check_freq_sec", "cleanup_freq_sec", "cleanup_before_sec",
+        "send_event_timeout_sec", "max_event_bytes"
+    ]:
+        try:
+            cfg[key] = int(cfg[key])
+        except ValueError:
+            print 'Bad %s in config file: %s' % (key, conf_file)
+            print 'Agent will now quit'
+            sys.exit(1)
+
     # Check that default config values have been changed (only core config)
     if cfg['event_api_url'] == 'http://example.pagerduty.com':
         print 'You have not modified config file:', conf_file
