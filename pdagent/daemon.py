@@ -7,19 +7,12 @@
 
     http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 
-    License:     http://creativecommons.org/licenses/by-sa/3.0/
+    License:    http://creativecommons.org/licenses/by-sa/3.0/
 
-    Changes:    23rd Jan 2009 (David Mytton <david@boxedice.com>)
-                - Replaced hard coded '/dev/null in __init__ with os.devnull
-                - Added OS check to conditionally remove code that doesn't
-                    work on OS X
-                - Added output to console on completion
-                - Tidied up formatting
-                11th Mar 2009 (David Mytton <david@boxedice.com>)
-                - Fixed problem with daemon exiting on Python 2.4 (before
-                    SystemExit was part of the Exception base)
-                13th Aug 2010 (David Mytton <david@boxedice.com>
-                - Fixed unhandled exception if PID file is empty
+    Changes:    - Modifications by PagerDuty - see history at:
+                    https://github.com/PagerDuty/agent/blob/master/pdagent/daemon.py
+                - Based on the file at:
+                    https://github.com/serverdensity/sd-agent/blob/master/daemon.py
 '''
 
 # Core modules
@@ -55,13 +48,17 @@ class Daemon:
         try:
             pid = os.fork()
             if pid > 0:
-                # Exit first parent
-                sys.exit(0)
+                # Exit from First parent
+                _, status = os.waitpid(pid, 0)
+                if status:
+                    raise SystemExit("Error in second parent: %s" % status)
+                else:
+                    print "Started"
+                    sys.exit(0)
         except OSError, e:
-            sys.stderr.write(
+            raise SystemExit(
                 "fork #1 failed: %d (%s)\n" % (e.errno, e.strerror)
                 )
-            sys.exit(1)
 
         # Decouple from parent environment
         os.chdir("/")
@@ -75,10 +72,9 @@ class Daemon:
                 # Exit from second parent
                 sys.exit(0)
         except OSError, e:
-            sys.stderr.write(
+            raise SystemExit(
                 "fork #2 failed: %d (%s)\n" % (e.errno, e.strerror)
                 )
-            sys.exit(1)
 
         if sys.platform != 'darwin':  # This block breaks on OS X
             # Redirect standard file descriptors
@@ -90,8 +86,6 @@ class Daemon:
             os.dup2(si.fileno(), sys.stdin.fileno())
             os.dup2(so.fileno(), sys.stdout.fileno())
             os.dup2(se.fileno(), sys.stderr.fileno())
-
-        print "Started"
 
         # Write pidfile
         atexit.register(self.delpid)  # Make sure pidfile is removed if we quit
@@ -120,8 +114,7 @@ class Daemon:
 
         if pid:
             message = "pidfile %s already exists. Is it already running?\n"
-            sys.stderr.write(message % self.pidfile)
-            sys.exit(1)
+            raise SystemExit(message % self.pidfile)
 
         # Start the daemon
         self.daemonize()
@@ -166,8 +159,7 @@ class Daemon:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print str(err)
-                sys.exit(1)
+                raise SystemExit(str(err))
 
         print "Stopped"
 

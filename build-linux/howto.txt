@@ -7,7 +7,7 @@ should happen automatically)
 
 ## Debian
 
-Dev Setup: (one-time)
+Dev Setup: (one-time for your development Mac)
 
     gem install fpm
 
@@ -35,7 +35,7 @@ Uninstall & test cleanup:
 
 ## Redhat/CentOS
 
-Dev Setup: (one-time)
+Dev Setup: (one-time for the CentOS VM)
 
     vagrant ssh agent-centos64
     sudo yum install rpm-build
@@ -56,7 +56,7 @@ Install & test the .rpm:
 
     sudo rpm -i target/pdagent-0.1-1.noarch.rpm
 
-    /etc/rc.d/pd-agent status
+    service pd-agent status
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 

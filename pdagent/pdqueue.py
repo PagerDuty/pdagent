@@ -198,6 +198,12 @@ class PDQueue(object):
 
                     # ensure that the event is not too large.
                     if len(s) > self.max_event_bytes:
+                        logger.error(
+                            (
+                                "Not processing event %s " +
+                                "because it exceeds max-allowed size"
+                            ) %
+                            fname)
                         self._tag_as_error(fname)
                     else:
                         consume_code = consume_func(s)
