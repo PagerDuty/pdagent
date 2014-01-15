@@ -125,7 +125,7 @@ def send_event(json_event_str):
 
     if status_code < 300:
         return EVENT_CONSUMED
-    elif status_code is 403:
+    elif status_code == 403:
         # We are getting throttled! We'll retry this service key a few more
         # times, but never consider this event as erroneous.
         return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED

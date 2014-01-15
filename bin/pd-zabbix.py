@@ -55,8 +55,12 @@ def main():
         message_type, service_key, incident_key, description, details)
 
 if __name__ == "__main__":
-    import sys
-    from os.path import abspath, dirname, join
-    proj_dir = dirname(dirname(abspath(__file__)))
-    sys.path.append(proj_dir)
+    try:
+        import pdagent.config
+    except ImportError:
+        # Fix up for dev layout
+        import sys
+        from os.path import realpath, dirname
+        sys.path.append(dirname(dirname(realpath(__file__))))
+        import pdagent.config
     main()
