@@ -1,7 +1,6 @@
 import errno
 import os
 import logging
-import time
 from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
     EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
     EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
@@ -198,7 +197,7 @@ class PDQueue(object):
 
                     # ensure that the event is not too large.
                     if len(s) > self.max_event_bytes:
-                        logger.error(
+                        logger.info(
                             (
                                 "Not processing event %s " +
                                 "because it exceeds max-allowed size"
