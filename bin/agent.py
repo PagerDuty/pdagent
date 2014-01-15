@@ -34,10 +34,17 @@ from urllib2 import HTTPError, URLError
 
 # Check Python version.
 if int(sys.version_info[1]) <= 3:
-    print 'You are using an outdated version of Python.' \
+    raise SystemExit(
+        'You are using an outdated version of Python.' +
         ' Please update to v2.4 or above (v3 is not supported).'
-    sys.exit(1)
+        )
 
+# Check we're not running as root
+if os.geteuid() == 0:
+    raise SystemExit(
+        "Agent should not be run as root. Use: service pd-agent <command>\n" +
+        "Agent will now quit"
+        )
 
 try:
     import pdagent.config
@@ -82,38 +89,38 @@ def send_event(json_event_str):
         status_code = e.getcode()
         result_str = e.read()
     except CertificateError:
-        mainLogger.error(
+        main_logger.error(
             "Server certificate validation error while sending event:",
             exc_info=True)
         return EVENT_STOP_ALL
     except URLError as e:
         if isinstance(e.reason, socket.timeout):
-            mainLogger.error("Timeout while sending event:", exc_info=True)
+            main_logger.error("Timeout while sending event:", exc_info=True)
             # This could be real issue with PD, or just some anomaly in
             # processing this service key or event. We'll retry this service key
             # a few more times, and then decide that this event is possibly a
             # bad entry.
             return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            mainLogger.error(
+            main_logger.error(
                 "Error establishing a connection for sending event:",
                 exc_info=True)
             return EVENT_NOT_CONSUMED
     except IOError:
-        mainLogger.error("Error while sending event:", exc_info=True)
+        main_logger.error("Error while sending event:", exc_info=True)
         return EVENT_NOT_CONSUMED
 
     try:
         result = json.loads(result_str)
     except:
-        mainLogger.warning(
+        main_logger.warning(
             "Error reading response data while sending event:",
             exc_info=True)
         result = {}
     if result.get("status") == "success":
-        mainLogger.info("incident_key =", result.get("incident_key"))
+        main_logger.info("incident_key =", result.get("incident_key"))
     else:
-        mainLogger.error("Error sending event %s; Error code: %d, Reason: %s" %
+        main_logger.error("Error sending event %s; Error code: %d, Reason: %s" %
             (json_event_str, status_code, result_str))
 
     if status_code < 300:
@@ -135,16 +142,17 @@ def send_event(json_event_str):
 
 
 def tick(sc):
+    global main_logger
     # flush the event queue.
-    mainLogger.info("Flushing event queue")
+    main_logger.info("Flushing event queue")
     try:
         pdQueue.flush(send_event)
     except EmptyQueue:
-        mainLogger.info("Nothing to do - queue is empty!")
+        main_logger.info("Nothing to do - queue is empty!")
     except IOError:
-        mainLogger.error("I/O error while flushing queue:", exc_info=True)
+        main_logger.error("I/O error while flushing queue:", exc_info=True)
     except:
-        mainLogger.error("Error while flushing queue:", exc_info=True)
+        main_logger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
     secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
@@ -152,7 +160,7 @@ def tick(sc):
         try:
             pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
-            mainLogger.error("Error while cleaning up queue:", exc_info=True)
+            main_logger.error("Error while cleaning up queue:", exc_info=True)
         agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
@@ -161,7 +169,7 @@ def tick(sc):
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
     problemDirectories = []
-    for directory in set(directories):
+    for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
@@ -179,7 +187,19 @@ class agent(Daemon):
     lastCleanupTimeSec = 0
 
     def run(self):
-        mainLogger.debug('Collecting basic system stats')
+        global log_dir, main_logger
+        init_logging(log_dir)
+        main_logger = logging.getLogger('main')
+
+        main_logger.info('--')
+        main_logger.info('pd-agent started')  # TODO: log agent version
+        main_logger.info('--')
+
+        main_logger.info('event_api_url: %s', mainConfig['event_api_url'])
+
+        main_logger.info('PID file: %s', self.pidfile)
+
+        main_logger.debug('Collecting basic system stats')
 
         # Get some basic system stats to post back for development/testing
         import platform
@@ -201,15 +221,32 @@ class agent(Daemon):
             # no codename for FreeBSD
             systemStats['fbsdV'] = ('freebsd', version, '')
 
-        mainLogger.info('System: ' + str(systemStats))
+        main_logger.info('System: ' + str(systemStats))
 
-        mainLogger.debug('Creating tick instance')
+        main_logger.debug('Creating tick instance')
 
         # Schedule the tick
-        mainLogger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
+        main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()
+
+
+def init_logging(log_dir):
+    logFile = os.path.join(log_dir, 'pd-agent.log')
+    # 10MB files
+    handler = logging.handlers.RotatingFileHandler(
+        logFile, maxBytes=10485760, backupCount=5
+        )
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+    handler.setFormatter(formatter)
+
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(mainConfig['log_level'])
+    rootLogger.addHandler(handler)
+
 
 # Control of daemon
 if __name__ == '__main__':
@@ -226,33 +263,13 @@ if __name__ == '__main__':
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problemDirectories:
+        l = []
         for d in problemDirectories:
-            print 'Directory %s: cannot create or is not writable' % d
-        print 'Agent will now quit'
-        sys.exit(1)
-
-    # Logging
-    logFile = os.path.join(log_dir, 'pd-agent.log')
-
-    # 10MB files
-    handler = logging.handlers.RotatingFileHandler(
-        logFile, maxBytes=10485760, backupCount=5
-        )
-
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-    handler.setFormatter(formatter)
-
-    mainLogger = logging.getLogger('main')
-    mainLogger.setLevel(mainConfig['log_level'])
-    mainLogger.addHandler(handler)
-
-    mainLogger.info('--')
-    mainLogger.info('pd-agent started')  # TODO: log agent version
-    mainLogger.info('--')
-
-    mainLogger.info('event_api_url: %s', mainConfig['event_api_url'])
+            l.append('Directory %s: is not writable' % d)
+        l.append('Agent may be running as the wrong user.')
+        l.append('Use: service pd-agent <command>')
+        l.append('Agent will now quit')
+        raise SystemExit("\n".join(l))
 
     from pdagent.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."
@@ -270,11 +287,11 @@ if __name__ == '__main__':
     pidFile = os.path.join(pidfile_dir, 'pd-agent.pid')
 
     if os.access(pidfile_dir, os.W_OK) == False:
-        print 'Unable to write the PID file at ' + pidFile
-        print 'Agent will now quit'
-        sys.exit(1)
-
-    mainLogger.info('PID file: %s', pidFile)
+        # FIXME: writeable test may only be needed for start
+        raise SystemExit(
+            'Unable to write the PID file at ' + pidFile + '\n' +
+            'Agent will now quit'
+            )
 
     # queue to work on.
     pdQueue = agentConfig.get_queue()
@@ -296,7 +313,6 @@ if __name__ == '__main__':
 
     # Control options
     if args.clean:
-        mainLogger.info('--clean')
         try:
             if _getDaemonPID():
                 daemon.stop()
@@ -306,24 +322,19 @@ if __name__ == '__main__':
             pass
 
     if 'start' == args.action:
-        mainLogger.info('Action: start')
         daemon.start()
 
     elif 'stop' == args.action:
-        mainLogger.info('Action: stop')
         daemon.stop()
 
     elif 'restart' == args.action:
-        mainLogger.info('Action: restart')
         daemon.restart()
 
-    elif 'foreground' == args.action:
-        mainLogger.info('Action: foreground')
-        daemon.run()
+    # XXX: unsafe - doesnt use pidfile, may want to log to stdout
+    #elif 'foreground' == args.action:
+    #    daemon.run()
 
     elif 'status' == args.action:
-        mainLogger.info('Action: status')
-
         pid = _getDaemonPID()
         if pid:
             print 'pd-agent is running as pid %s.' % pid

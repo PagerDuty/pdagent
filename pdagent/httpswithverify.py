@@ -10,9 +10,9 @@ import socket
 _verified_https_possible = False
 
 from pdagent.pdagentutil import find_in_sys_path
-DEFAULT_CA_CERTS_FILE = find_in_sys_path("conf/root_certs/ca_certs.pem")
+DEFAULT_CA_CERTS_FILE = find_in_sys_path("pdagent/root_certs/ca_certs.pem")
 
-# TODO test for Python <2.7
+# TODO test for Python <2.6
 if hasattr(httplib, 'HTTPS'):
 
     try:
@@ -36,9 +36,10 @@ if hasattr(httplib, 'HTTPS'):
                 from pdagent.backports.ssl_match_hostname import \
                     match_hostname, CertificateError
 
-                sock = socket.create_connection(
-                    (self.host, self.port), self.timeout, self.source_address
-                    )
+                args = [(self.host, self.port), self.timeout]
+                if hasattr(self, 'source_address'):
+                    args.append(self.source_address)
+                sock = socket.create_connection(*args)
                 if self._tunnel_host:
                     self.sock = sock
                     self._tunnel()
