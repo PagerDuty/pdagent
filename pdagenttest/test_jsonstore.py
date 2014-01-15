@@ -7,7 +7,10 @@ import unittest
 from pdagent.jsonstore import JsonStore
 
 
-_TEST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_db")
+# not using a path under agent code directory because it is the sync'ed
+# directory in the VMs, and we need to change permissions of directories in our
+# tests, and permissions of sync'ed directories cannot be changed in VMs.
+_TEST_DIR = os.path.join("/tmp", "test_db")
 _TEST_STORE_NAME = "test"
 _TEST_STORE_FILE = os.path.join(_TEST_DIR, _TEST_STORE_NAME)
 
@@ -28,7 +31,7 @@ class JsonStoreTest(unittest.TestCase):
 
     def test_first_read(self):
         j = self.store.get()
-        self.assertIsNone(j)
+        self.assertTrue(j is None)
 
     def test_write_and_read(self):
         j = {
