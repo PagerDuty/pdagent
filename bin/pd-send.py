@@ -30,7 +30,8 @@ def parse_fields(fields):
 
 def main():
     from pdagent.pdagentutil import queue_event
-    agent_config = pdagent.config.load_agent_config()
+    from pdagent.config import load_agent_config
+
     description = "Queue up a trigger, acknowledge or resolve event to PagerDuty."
     parser = build_queue_arg_parser(description)
     args = parser.parse_args()
@@ -44,8 +45,9 @@ def main():
             parser.error("Event type '%s' requires incident key" % args.event_type)
 
     queue_event(
-        agent_config.get_outqueue_dir(),
-        args.event_type, args.service_key, args.incident_key, args.description, details
+        load_agent_config().get_queue(),
+        args.event_type, args.service_key, args.incident_key, args.description,
+        details
         )
     print "Event processed."
 

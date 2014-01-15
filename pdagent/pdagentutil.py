@@ -9,6 +9,7 @@
 #
 
 import json
+import os
 
 
 def find_in_sys_path(file_path):
@@ -20,22 +21,35 @@ def find_in_sys_path(file_path):
             return abs_path
     return None
 
+def ensure_readable_directory(dir):
+    if not os.access(dir, os.R_OK):
+        raise Exception(
+            "Can't read directory %s, please check permissions" % dir
+        )
+
+def ensure_writable_directory(dir):
+    if not os.access(dir, os.W_OK):
+        raise Exception(
+            "Can't write to directory %s, please check permissions" % dir
+        )
+
 
 def queue_event(
-        outqueue_dir,
+        queue,
         event_type, service_key, incident_key, description, details
         ):
-    from pdqueue import PDQueue
-    from filelock import FileLock
-
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details
         )
-    PDQueue(
-        queue_dir=outqueue_dir,
-        lock_class=FileLock
-    ).enqueue(event)
+    queue.enqueue(service_key, event)
 
+
+def resurrect_events(queue, service_key):
+    queue.resurrect(service_key)
+
+
+def get_status(queue, service_key):
+    return queue.get_status(service_key)
 
 def _build_event_json_str(
     event_type, service_key, incident_key, description, details
@@ -50,4 +64,8 @@ def _build_event_json_str(
     if description is not None:
         d["description"] = description
 
-    return json.dumps(d)
+    return json.dumps(
+        d,
+        separators=(',', ':'),  # compact json str
+        sort_keys=True
+    )

@@ -1,8 +1,13 @@
 import errno
 import os
+import logging
 import time
-from constants import EVENT_CONSUMED, EVENT_BAD_ENTRY
+from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
+    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
+    EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
 
+
+logger = logging.getLogger(__name__)
 
 class EmptyQueue(Exception):
     pass
@@ -25,28 +30,31 @@ class PDQueue(object):
     - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
-    def __init__(self, queue_dir, lock_class):
+    def __init__(self,
+            queue_dir, lock_class, time_calc,
+            max_event_bytes,
+            backoff_secs, backoff_db):
+        from pdagentutil import \
+            ensure_readable_directory, ensure_writable_directory
+
         self.queue_dir = queue_dir
+
+        ensure_readable_directory(self.queue_dir)
+        ensure_writable_directory(self.queue_dir)
+
         self.lock_class = lock_class
-
-        self._create_queue_dir()
-        self._verify_permissions()
-
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
             )
 
-    def _create_queue_dir(self):
-        if not os.access(self.queue_dir, os.F_OK):
-            os.mkdir(self.queue_dir, 0700)
+        self.max_event_bytes = max_event_bytes
 
-    def _verify_permissions(self):
-        if not (os.access(self.queue_dir, os.R_OK)
-            and os.access(self.queue_dir, os.W_OK)):
-            raise Exception(
-                "Can't read/write to directory %s, please check permissions."
-                % self.queue_dir
-                )
+        # error-handling: back-off related stuff.
+        self.backoff_secs = backoff_secs
+        self.max_backoff_attempts = len(self.backoff_secs)
+        self.backoff_db = backoff_db
+        # the time calculator.
+        self.time = time_calc
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -59,15 +67,15 @@ class PDQueue(object):
     def _abspath(self, fname):
         return os.path.join(self.queue_dir, fname)
 
-    def enqueue(self, s):
+    def enqueue(self, service_key, s):
         # write to an exclusive temp file
         _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
-            "tmp_%d.txt"
+            "tmp_%%d_%s.txt" % service_key
             )
         os.write(tmp_fd, s)
         # get an exclusive queue entry file
         pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
-            "pdq_%d.txt"
+            "pdq_%%d_%s.txt" % service_key
             )
         # since we're exclusive on both files, we can safely rename
         # the tmp file
@@ -82,14 +90,14 @@ class PDQueue(object):
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
         while True:
-            t_millisecs = int(time.time() * 1000)
+            t_millisecs = int(self.time.time() * 1000)
             fname = fname_fmt % t_millisecs
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs)
             if fd is None:
                 n += 1
                 if n < 100:
-                    time.sleep(0.001)
+                    self.time.sleep(0.001)
                     continue
                 else:
                     raise Exception(
@@ -100,45 +108,150 @@ class PDQueue(object):
                 return fname, fname_abs, fd
 
     def dequeue(self, consume_func):
+        # process only first event in queue.
+        self._process_queue(lambda events: events[0:1], consume_func)
+
+    def flush(self, consume_func):
+        # process all events in queue.
+        self._process_queue(lambda events: events, consume_func)
+
+    def _process_queue(self, filter_events_to_process_func, consume_func):
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
+
         try:
+            prev_backoff_data = None
+            try:
+                prev_backoff_data = self.backoff_db.get()
+            except:
+                logger.warning(
+                    "Unable to load queue-error back-off history",
+                    exc_info=True)
+            if not prev_backoff_data:
+                # first time, or errors during db read...
+                prev_backoff_data = {
+                    'attempts': {},
+                    'next_retries': {}
+                }
+            cur_backoff_data = {
+                'attempts': {},
+                'next_retries': {}
+            }
+            prev_svc_key_attempt = prev_backoff_data['attempts']
+            prev_svc_key_next_retry = prev_backoff_data['next_retries']
+            cur_svc_key_attempt = cur_backoff_data['attempts']
+            cur_svc_key_next_retry = cur_backoff_data['next_retries']
+
             file_names = self._queued_files()
+
             if not len(file_names):
                 raise EmptyQueue
-            fname = file_names[0]
-            fname_abs = self._abspath(fname)
-            # TODO: handle missing file or other errors
-            f = open(fname_abs)
+            file_names = filter_events_to_process_func(file_names)
+            err_svc_keys = set()
+
+            def handle_backoff():
+                # don't process more events with same service key.
+                err_svc_keys.add(svc_key)
+                # has back-off threshold been reached?
+                cur_attempt = prev_svc_key_attempt.get(svc_key, 0) + 1
+                if cur_attempt > self.max_backoff_attempts:
+                    if consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
+                        # consume function does not want us to do
+                        # anything with the event. We'll still consider this
+                        # service key to be erroneous, though, and continue
+                        # backing off events in the key.
+                        pass
+                    elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
+                        self._tag_as_error(fname)
+                        # now that we have handled the bad entry, we'll want
+                        # to give the other events in this service key a chance,
+                        # so don't consider svc key as erroneous.
+                        err_svc_keys.remove(svc_key)
+                if svc_key in err_svc_keys:
+                    # if backoff-seconds have been exhausted, reuse the last one.
+                    backoff_index = min(
+                        cur_attempt,
+                        self.max_backoff_attempts) - 1
+                    cur_svc_key_next_retry[svc_key] = int(self.time.time()) + \
+                        self.backoff_secs[backoff_index]
+                    cur_svc_key_attempt[svc_key] = cur_attempt
+
+            now = self.time.time()
+            for fname in file_names:
+                _, _, svc_key = _get_event_metadata(fname)
+                if prev_svc_key_next_retry.get(svc_key, 0) > now:
+                    # not yet time to retry; copy over back-off data.
+                    cur_svc_key_attempt[svc_key] = \
+                        prev_svc_key_attempt.get(svc_key)
+                    cur_svc_key_next_retry[svc_key] = \
+                        prev_svc_key_next_retry.get(svc_key)
+                elif cur_svc_key_next_retry.get(svc_key, 0) <= now and \
+                        svc_key not in err_svc_keys:
+                    # nothing has gone wrong in this pass yet.
+                    fname_abs = self._abspath(fname)
+                    # TODO: handle missing file or other errors
+                    f = open(fname_abs)
+                    try:
+                        s = f.read()
+                    finally:
+                        f.close()
+
+                    # ensure that the event is not too large.
+                    if len(s) > self.max_event_bytes:
+                        self._tag_as_error(fname)
+                    else:
+                        consume_code = consume_func(s)
+
+                        if consume_code == EVENT_CONSUMED:
+                            # TODO a failure here means duplicate event sends
+                            os.remove(fname_abs)
+                        elif consume_code == EVENT_NOT_CONSUMED:
+                            pass
+                        elif consume_code == EVENT_STOP_ALL:
+                            # don't process any more events.
+                            break
+                        elif consume_code == EVENT_BAD_ENTRY:
+                            self._tag_as_error(fname)
+                        elif consume_code in [
+                            EVENT_BACKOFF_SVCKEY_BAD_ENTRY,
+                            EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+                        ]:
+                            handle_backoff()
+                        else:
+                            raise ValueError(
+                                "Unsupported dequeue consume code %d" %
+                                consume_code)
+
             try:
-                s = f.read()
-            finally:
-                f.close()
-
-            consume_code = consume_func(s)
-
-            if consume_code is EVENT_CONSUMED:
-                # TODO a failure here could lead to duplicate event sends...
-                os.remove(fname_abs)
-            elif consume_code is EVENT_BAD_ENTRY:
-                errname_abs = self._abspath(fname.replace("pdq_", "err_"))
-                os.rename(fname_abs, errname_abs)
+                # persist back-off info.
+                self.backoff_db.set(cur_backoff_data)
+            except:
+                logger.warning(
+                    "Unable to save queue-error back-off history",
+                    exc_info=True)
         finally:
             lock.release()
 
-    def cleanup(self, delete_before_sec=86400):
-        delete_before_time = (int(time.time()) - delete_before_sec) * 1000
+    def resurrect(self, service_key=None):
+        # move dead events of given service key back to queue.
+        errnames = self._queued_files("err_")
+        for errname in errnames:
+            if not service_key or \
+                    _get_event_metadata(errname)[2] == service_key:
+                self._untag_as_error(errname)
+
+    def cleanup(self, delete_before_sec):
+        delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
 
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
             for fname in fnames:
-                enqueue_time = None
                 try:
-                    enqueue_time = int(fname.split('.')[0].split('_')[1])
+                    _, enqueue_time, _ = _get_event_metadata(fname)
                 except:
                     # invalid file-name; we'll not include it in cleanup.
-                    # TODO use a logger.
-                    print "Cleanup: ignoring invalid file name %s" % fname
+                    logger.info(
+                        "Cleanup: ignoring invalid file name %s" % fname)
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
@@ -147,12 +260,52 @@ class PDQueue(object):
                 try:
                     os.remove(self._abspath(fname))
                 except IOError as e:
-                    # TODO use a logger or throw up.
-                    print "Could not clean up file %s: %s" % (fname, e)
+                    logger.warning(
+                        "Could not clean up file %s: %s" % (fname, str(e)))
 
         # clean up bad / temp files created before delete-before-time.
         _cleanup_files("err_")
         _cleanup_files("tmp_")
+
+    def get_status(self, service_key=None):
+        status = {}
+        for fname in self._queued_files():
+            svc_key = _get_event_metadata(fname)[2]
+            if not service_key or svc_key == service_key:
+                status[svc_key] = status.get(
+                    svc_key,
+                    {
+                        "pending": 0,
+                        "error": 0
+                    })
+                status[svc_key]["pending"] += 1
+        for errname in self._queued_files("err_"):
+            svc_key = _get_event_metadata(errname)[2]
+            if not service_key or svc_key == service_key:
+                status[svc_key] = status.get(svc_key, {
+                    "pending": 0,
+                    "error": 0
+                })
+                status[svc_key]["error"] += 1
+        return status
+
+    def _tag_as_error(self, fname):
+        errname = fname.replace("pdq_", "err_")
+        fname_abs = self._abspath(fname)
+        errname_abs = self._abspath(errname)
+        logger.info(
+            "Tagging as error: %s -> %s..." %
+            (fname, errname))
+        os.rename(fname_abs, errname_abs)
+
+    def _untag_as_error(self, errname):
+        fname = errname.replace("err_", "pdq_")
+        errname_abs = self._abspath(errname)
+        fname_abs = self._abspath(fname)
+        logger.info(
+            "Untagging as error: %s -> %s..." %
+            (errname, fname))
+        os.rename(errname_abs, fname_abs)
 
 
 def _open_creat_excl(fname_abs):
@@ -163,3 +316,7 @@ def _open_creat_excl(fname_abs):
             return None
         else:
             raise
+
+def _get_event_metadata(fname):
+    type, enqueue_time_str, service_key = fname.split('.')[0].split('_')
+    return type, int(enqueue_time_str), service_key

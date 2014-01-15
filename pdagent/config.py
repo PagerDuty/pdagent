@@ -5,8 +5,10 @@ import logging
 import os
 import re
 import sys
+import time
 
 from pdagent.confdirs import getconfdirs
+from pdagent.filelock import FileLock
 
 
 class AgentConfig:
@@ -15,6 +17,7 @@ class AgentConfig:
         self.dev_layout = dev_layout
         self.default_dirs = default_dirs
         self.main_config = main_config
+        self._queue = None
 
     def is_dev_layout(self):
         return self.dev_layout
@@ -28,6 +31,25 @@ class AgentConfig:
     def get_outqueue_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "outqueue")
 
+    def get_db_dir(self):
+        return os.path.join(self.default_dirs["data_dir"], "db")
+
+    def get_queue(self):
+        from pdagent.pdqueue import PDQueue
+        from pdagent.jsonstore import JsonStore
+        if not self._queue:
+            self._queue = PDQueue(
+                lock_class=FileLock,
+                queue_dir=self.default_dirs["outqueue_dir"],
+                time_calc=time,
+                max_event_bytes=self.main_config["max_event_bytes"],
+                backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
+                backoff_secs=[
+                    int(s.strip()) for s in
+                    self.main_config["backoff_secs"].split(",")
+                ]
+            )
+        return self._queue
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
@@ -36,7 +58,10 @@ _valid_log_levels = \
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
     "check_freq_sec": 60,
+    "send_event_timeout_sec": 30,
     "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
+    "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
+    "max_event_bytes": 4 * 1024 * 1024,  # 4MB limit on request data sent out.
     }
 
 
@@ -59,9 +84,10 @@ def load_agent_config():
     conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
 
     if not os.access(conf_file, os.R_OK):
-        print 'Unable to read the config file at ' + conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Unable to read the config file at: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Main config defaults
     cfg = dict(_CONFIG_DEFAULTS)
@@ -71,48 +97,52 @@ def load_agent_config():
         config = ConfigParser.SafeConfigParser()
         config.read(conf_file)
     except ConfigParser.Error, e:
-        print 'Error loading config:', e.message
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Error loading config: %s\nAgent will now quit"
+            % e.message
+            )
 
     # Convert Main section into dictionary entries
     if not config.has_section("Main"):
-        print "Config is missing [Main] section"
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Config is missing [Main] section\nAgent will now quit"
+            )
     for option in config.options("Main"):
         cfg[option] = config.get("Main", option)
 
     # Check for required keys
     if not "event_api_url" in cfg:
-        print "Config is missing 'event_api_url'"
-        print "Agent will now quit"
-        sys.exit(1)
+        raise SystemExit(
+            "Config is missing 'event_api_url'\nAgent will now quit"
+            )
 
     # Convert log level
     log_level = cfg["log_level"].upper()
     if log_level in _valid_log_levels:
         cfg["log_level"] = getattr(logging, log_level)
     else:
-        print 'Bad log_level in config file:', conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Bad log_level in config file: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Check that default config values have been changed (only core config)
     if cfg['event_api_url'] == 'http://example.pagerduty.com':
-        print 'You have not modified config file:', conf_file
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "You have not modified config file: %s\nAgent will now quit"
+            % conf_file
+            )
 
     # Check to make sure pd_url format is correct
     if re.match(
             'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
             cfg['event_api_url']
             ) == None:
-        print 'Your event_api_url is incorrect. It needs to be in the form' \
-            ' https://example.pagerduty.com'
-        print 'Agent will now quit'
-        sys.exit(1)
+        raise SystemExit(
+            "Your event_api_url is incorrect. It needs to be in the form" +
+            " https://example.pagerduty.com\n" +
+            "Agent will now quit"
+            )
 
     _agent_config = AgentConfig(dev_layout, default_dirs, cfg)
 
