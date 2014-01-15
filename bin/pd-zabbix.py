@@ -30,6 +30,7 @@ def _parse_zabbix_subject(subject_str):
     return subject_str
 
 def main():
+    import sys
     from pdagent.pdagentutil import queue_event
     agent_config = pdagent.config.load_agent_config()
 
