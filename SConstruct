@@ -104,11 +104,13 @@ def _generate_remote_test_runner_file(
     test_runner_file = os.path.join(tmp_dir, "run_tests")
 
     test_files = _get_file_paths_recursive(source_paths, test_filename_matcher)
+    test_files.sort()
     # these are under the remote project root dir on virtual boxes
     test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
     run_commands = ["e=0"]
     for test in test_run_paths:
+        run_commands.append("echo '\n=== %s'" % test)
         run_commands.append(" ".join([executable, test]))
         run_commands.append("e=$(( $e + $? ))")
     run_commands.append("exit $e")
