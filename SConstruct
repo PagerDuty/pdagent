@@ -109,12 +109,16 @@ def _generate_remote_test_runner_file(
     # these are under the remote project root dir on virtual boxes
     test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
-    run_commands = ["e=0"]
+    run_commands = ["aggr_e=0"]
     for test in test_run_paths:
-        run_commands.append("echo '\n=== %s'" % test)
+        # using printf because sh's echo in ubuntu1004 does not support
+        # interpreting backslash escapes.
+        run_commands.append("printf '\\n=== %s\\n' " + test)
         run_commands.append(" ".join([executable, test]))
-        run_commands.append("e=$(( $e + $? ))")
-    run_commands.append("exit $e")
+        run_commands.append("e=$?")
+        run_commands.append("printf '=== Exited with %d\\n' $e")
+        run_commands.append("aggr_e=$(( $aggr_e + $e ))")
+    run_commands.append("exit $aggr_e")
 
     _create_text_file(test_runner_file, run_commands)
 
