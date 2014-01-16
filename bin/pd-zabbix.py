@@ -32,7 +32,7 @@ def _parse_zabbix_subject(subject_str):
 def main():
     import sys
     from pdagent.pdagentutil import queue_event
-    agent_config = pdagent.config.load_agent_config()
+    from pdagent.config import load_agent_config
 
     # The first argument is the service key
     service_key = sys.argv[1]
@@ -54,7 +54,6 @@ def main():
     queue_event(
         agent_config.get_queue(),
         message_type, service_key, incident_key, description, details)
-        message_type, service_key, incident_key, description, details
 
 if __name__ == "__main__":
     try:
