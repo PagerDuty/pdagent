@@ -6,7 +6,18 @@ Vagrant setup notes for OS X 10.8 (Mountain Lion).
 
 ## Installation
 
-See instructions at http://www.vagrantup.com/
+1. Install Vagrant.  See instructions at http://www.vagrantup.com/
+
+2. Install Vagrant plugins:
+
+        vagrant plugin install vagrant-omnibus
+
+        gem install berkshelf
+        vagrant plugin install vagrant-berkshelf
+
+3. Install chef cookbooks:
+
+        berks install
 
 
 ## Managing VMs
@@ -47,5 +58,13 @@ You can manage the VMs using the Vagrant commands: `up`, `halt`, `reload`,
 You can ssh into a VM by using `vagrant ssh <machine-name>`. For example:
 
     ~/w/agent$ vagrant ssh agent-precise32
+
+
+
+## Vagrant cache
+
+Vagrant caches VM downloads in `~/.vagrant.d/boxes`.  These are reused when you
+destroy and rebuild a VM in the same project or in another project.  You may
+want to check for and clean out old downloads here to recover disk space.
 
 
