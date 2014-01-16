@@ -33,10 +33,10 @@ from urllib2 import HTTPError, URLError
 
 
 # Check Python version.
-if int(sys.version_info[1]) <= 3:
+if sys.version_info[0:2] not in ((2, 6), (2, 7)):
     raise SystemExit(
-        'You are using an outdated version of Python.' +
-        ' Please update to v2.4 or above (v3 is not supported).'
+        "Agent requires Python version 2.6 or 2.7.\n" +
+        "Agent will now quit"
         )
 
 # Check we're not running as root
