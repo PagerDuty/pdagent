@@ -82,7 +82,9 @@ def _create_deb_package(virts):
 
 
 def _create_rpm_package(virts):
-    # create a temporary file to cd to required directory and make rpm.
+    # Assuming that all requisite packages are available on virts.
+    # (see build-linux/howto.txt)
+    # Create a temporary file to cd to required directory and make rpm.
     make_file = os.path.join(tmp_dir, "make_rpm")
     _create_text_file(make_file, [
         'set -e',
