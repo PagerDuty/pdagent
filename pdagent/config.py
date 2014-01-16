@@ -110,12 +110,6 @@ def load_agent_config():
     for option in config.options("Main"):
         cfg[option] = config.get("Main", option)
 
-    # Check for required keys
-    if not "event_api_url" in cfg:
-        raise SystemExit(
-            "Config is missing 'event_api_url'\nAgent will now quit"
-            )
-
     # Convert log level
     log_level = cfg["log_level"].upper()
     if log_level in _valid_log_levels:
@@ -137,24 +131,6 @@ def load_agent_config():
             print 'Bad %s in config file: %s' % (key, conf_file)
             print 'Agent will now quit'
             sys.exit(1)
-
-    # Check that default config values have been changed (only core config)
-    if cfg['event_api_url'] == 'http://example.pagerduty.com':
-        raise SystemExit(
-            "You have not modified config file: %s\nAgent will now quit"
-            % conf_file
-            )
-
-    # Check to make sure pd_url format is correct
-    if re.match(
-            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
-            cfg['event_api_url']
-            ) == None:
-        raise SystemExit(
-            "Your event_api_url is incorrect. It needs to be in the form" +
-            " https://example.pagerduty.com\n" +
-            "Agent will now quit"
-            )
 
     _agent_config = AgentConfig(dev_layout, default_dirs, cfg)
 

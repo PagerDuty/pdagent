@@ -183,8 +183,6 @@ class agent(Daemon):
         main_logger.info('pd-agent started')  # TODO: log agent version
         main_logger.info('--')
 
-        main_logger.info('event_api_url: %s', mainConfig['event_api_url'])
-
         main_logger.info('PID file: %s', self.pidfile)
 
         main_logger.debug('Collecting basic system stats')
