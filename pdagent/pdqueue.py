@@ -149,6 +149,7 @@ class PDQueue(object):
             err_svc_keys = set()
 
             def handle_backoff():
+                logger.info("Backing off service key " + svc_key)
                 # don't process more events with same service key.
                 err_svc_keys.add(svc_key)
                 # has back-off threshold been reached?
@@ -161,6 +162,13 @@ class PDQueue(object):
                         # backing off events in the key.
                         pass
                     elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
+                        logger.info(
+                            (
+                                "Back-off limit reached for service key %s. " +
+                                "Assuming bad event."
+                            ) %
+                            svc_key
+                        )
                         self._tag_as_error(fname)
                         # now that we have handled the bad entry, we'll want
                         # to give the other events in this service key a chance,
@@ -171,8 +179,13 @@ class PDQueue(object):
                     backoff_index = min(
                         cur_attempt,
                         self.max_backoff_attempts) - 1
-                    cur_svc_key_next_retry[svc_key] = int(self.time.time()) + \
-                        self.backoff_secs[backoff_index]
+                    backoff = self.backoff_secs[backoff_index]
+                    logger.info(
+                        "Retrying events in service key %s after %d sec" %
+                        (svc_key, backoff)
+                    )
+                    cur_svc_key_next_retry[svc_key] = \
+                        int(self.time.time()) + backoff
                     cur_svc_key_attempt[svc_key] = cur_attempt
 
             now = self.time.time()
@@ -205,7 +218,12 @@ class PDQueue(object):
                             fname)
                         self._tag_as_error(fname)
                     else:
+                        logger.info("Processing event " + fname)
                         consume_code = consume_func(s)
+                        logger.info(
+                            "Consume code for event %s = %d" %
+                            (fname, consume_code)
+                        )
 
                         if consume_code == EVENT_CONSUMED:
                             # TODO a failure here means duplicate event sends
@@ -214,6 +232,9 @@ class PDQueue(object):
                             pass
                         elif consume_code == EVENT_STOP_ALL:
                             # don't process any more events.
+                            logger.info(
+                                "Not processing any more events this time"
+                            )
                             break
                         elif consume_code == EVENT_BAD_ENTRY:
                             self._tag_as_error(fname)
@@ -260,6 +281,7 @@ class PDQueue(object):
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
+                        logger.info("Cleanup: removing " + fname)
                         fnames.remove(fname)
             for fname in fnames:
                 try:
