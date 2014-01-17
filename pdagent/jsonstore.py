@@ -16,6 +16,12 @@ class JsonStore(object):
         self._backup_path = os.path.join(db_dir, "%s.bak" % db_name)
 
     def get(self):
+        """
+        Get existing data from the JSON in the db file.
+        Returns None if it cannot load the data for any reason.
+        This includes bad json, file does not exist or any other
+        error reading the file.
+        """
         fp = None
         try:
             fp = open(self._path, "r")
@@ -28,6 +34,12 @@ class JsonStore(object):
                 fp.close()
 
     def set(self, json_data):
+        """
+        Save given data into the db file in JSON format.
+        All errors are allowed through (ie not caught within).
+        This can be: json error, file permission error or any
+        other error writing the file.
+        """
         fp = open(self._backup_path, "w")
         try:
             json.dump(
