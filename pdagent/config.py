@@ -17,7 +17,6 @@ class AgentConfig:
         self.dev_layout = dev_layout
         self.default_dirs = default_dirs
         self.main_config = main_config
-        self._queue = None
 
     def is_dev_layout(self):
         return self.dev_layout
@@ -34,22 +33,24 @@ class AgentConfig:
     def get_db_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "db")
 
-    def get_queue(self):
+    def get_queue(self, dequeueable=False):
         from pdagent.pdqueue import PDQueue
-        from pdagent.jsonstore import JsonStore
-        if not self._queue:
-            self._queue = PDQueue(
-                lock_class=FileLock,
-                queue_dir=self.default_dirs["outqueue_dir"],
-                time_calc=time,
-                max_event_bytes=self.main_config["max_event_bytes"],
-                backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
-                backoff_secs=[
-                    int(s.strip()) for s in
-                    self.main_config["backoff_secs"].split(",")
-                ]
-            )
-        return self._queue
+        if dequeueable:
+            from pdagent.jsonstore import JsonStore
+            backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
+        else:
+            backoff_db = None
+        return PDQueue(
+            lock_class=FileLock,
+            queue_dir=self.default_dirs["outqueue_dir"],
+            time_calc=time,
+            max_event_bytes=self.main_config["max_event_bytes"],
+            backoff_db=backoff_db,
+            backoff_secs=[
+                int(s.strip()) for s in
+                self.main_config["backoff_secs"].split(",")
+            ]
+        )
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']

@@ -280,7 +280,7 @@ if __name__ == '__main__':
             )
 
     # queue to work on.
-    pdQueue = agentConfig.get_queue()
+    pdQueue = agentConfig.get_queue(dequeueable=True)
 
     # Daemon instance from agent class
     daemon = agent(pidFile)
