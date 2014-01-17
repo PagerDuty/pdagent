@@ -21,10 +21,10 @@ from urllib2 import HTTPError, URLError
 
 
 # Check Python version.
-if int(sys.version_info[1]) <= 3:
+if sys.version_info[0:2] not in ((2, 6), (2, 7)):
     raise SystemExit(
-        'You are using an outdated version of Python.' +
-        ' Please update to v2.4 or above (v3 is not supported).'
+        "Agent requires Python version 2.6 or 2.7.\n" +
+        "Agent will now quit"
         )
 
 # Check we're not running as root
@@ -245,17 +245,18 @@ if __name__ == '__main__':
     db_dir = conf_dirs["db_dir"]
 
     problemDirectories = _ensureWritableDirectories(
-        agentConfig.is_dev_layout(),  # don't create directories in production
+        agentConfig.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problemDirectories:
-        l = []
-        for d in problemDirectories:
-            l.append('Directory %s: is not writable' % d)
-        l.append('Agent may be running as the wrong user.')
-        l.append('Use: service pd-agent <command>')
-        l.append('Agent will now quit')
-        raise SystemExit("\n".join(l))
+        messages = [
+            "Directory %s: is not writable" % d
+            for d in problemDirectories
+            ]
+        messages.append('Agent may be running as the wrong user.')
+        messages.append('Use: service pd-agent <command>')
+        messages.append('Agent will now quit')
+        raise SystemExit("\n".join(messages))
 
     from pdagent.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."

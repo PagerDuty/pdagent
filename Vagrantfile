@@ -44,6 +44,11 @@ Vagrant.configure("2") do |conf_outer|
 
             if name.start_with? "agent-zabbix-"
 
+                # more mem for zabbix & mysql
+                config.vm.provider :virtualbox do |vbox|
+                    vbox.customize ["modifyvm", :id, "--memory", 1024]
+                end
+
                 # vagrant-omnibus will install chef
                 config.omnibus.chef_version = :latest
 
