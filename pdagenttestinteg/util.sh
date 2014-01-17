@@ -7,6 +7,15 @@ CHECK_FREQ_SEC=5
 # The service key to use for testing commands like pd-send.py etc.
 SVC_KEY=474248a48ee349aeb3f6c87a3ce779ff
 
+# return OS type of current system.
+os_type() {
+  if [ -e /etc/debian_version ]; then
+    echo "debian"
+  elif [ -e /etc/redhat-release ]; then
+    echo "redhat"
+  fi
+}
+
 # return pid if agent is running, or empty string if not running.
 agent_pid() {
   sudo service $AGENT_SVC_NAME status | egrep -o 'pid [0-9]+' | cut -d' ' -f2
