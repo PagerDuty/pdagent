@@ -33,9 +33,9 @@ class AgentConfig:
     def get_db_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "db")
 
-    def get_queue(self, dequeueable=False):
+    def get_queue(self, dequeue_enabled=False):
         from pdagent.pdqueue import PDQueue
-        if dequeueable:
+        if dequeue_enabled:
             from pdagent.jsonstore import JsonStore
             backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
         else:

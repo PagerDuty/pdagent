@@ -20,11 +20,12 @@ def create_packages(target, source, env):
 
     debian_vms = [v for v in virts if v.find("ubuntu") != -1]
     if debian_vms:
-        ret_code += _create_deb_package(debian_vms)
+        ret_code += _create_deb_package()
 
     redhat_vms = [v for v in virts if v.find("centos") != -1]
     if redhat_vms:
-        ret_code += _create_rpm_package(redhat_vms)
+        # create package on one of the virts.
+        ret_code += _create_rpm_package(redhat_vms[0])
 
     return ret_code
 
@@ -68,20 +69,20 @@ def run_unit_tests_local(target, source, env):
 def start_virtual_boxes(target, source, env):
     virts = env.get("virts")
     if not virts:
-        virts =  _get_virt_names()
+        virts =  _get_minimal_virt_names()
     start_cmd = ["vagrant", "up"]
     start_cmd.extend(virts)
     return subprocess.call(start_cmd)
 
 
-def _create_deb_package(virts):
+def _create_deb_package():
     # Assuming that all requisite packages are available.
     # (see build-linux/howto.txt)
     print "\nCreating .deb package..."
     return subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
 
 
-def _create_rpm_package(virts):
+def _create_rpm_package(virt):
     # Assuming that all requisite packages are available on virts.
     # (see build-linux/howto.txt)
     # Create a temporary file to cd to required directory and make rpm.
@@ -93,7 +94,7 @@ def _create_rpm_package(virts):
     ])
     make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .rpm package..."
-    return _run_on_virts("sh %s" % make_file_on_vm, virts)
+    return _run_on_virts("sh %s" % make_file_on_vm, [virt])
 
 
 def _generate_remote_test_runner_file(
@@ -165,7 +166,7 @@ def _get_arg_values(key, default=None):
     return values
 
 
-def _get_virt_names(running=False):
+def _get_minimal_virt_names(running=False):
     return [
         v.split()[0] for v in
         subprocess
@@ -179,7 +180,7 @@ def _get_virt_names(running=False):
 def _run_on_virts(remote_command, virts=None):
     exit_code = 0
     if not virts:
-        virts = _get_virt_names(running=True)
+        virts = _get_minimal_virt_names(running=True)
     for virt in virts:
         command = ["vagrant", "ssh", virt, "-c", remote_command]
         print "Running on %s..." % virt
