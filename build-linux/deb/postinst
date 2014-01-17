@@ -10,7 +10,7 @@ if [ "$1" = "configure" ]; then
 
     # Fix ownership of data and log dirs
     chown -R pdagent:pdagent /var/run/pdagent /var/lib/pdagent /var/log/pdagent
-    chmod 777 /var/lib/pdagent/db /var/lib/pdagent/outqueue
+    chmod 777 /var/lib/pdagent/outqueue
 
     # Compile module .py to .pyc
     if which update-python-modules >/dev/null 2>&1; then
@@ -21,12 +21,7 @@ if [ "$1" = "configure" ]; then
     update-rc.d -f pd-agent defaults
 
     # Restart daemon
-    #FIXME: daemon is broken
-    #if which invoke-rc.d >/dev/null 2>&1; then
-    #    invoke-rc.d pd-agent restart
-    #else
-    #    /etc/init.d/pd-agent restart
-    #fi
+    service pd-agent restart
 fi
 
 exit 0
