@@ -48,10 +48,7 @@ except ImportError:
 from pdagent.daemon import Daemon
 from pdagent.pdqueue import EmptyQueue
 from pdagent.backports.ssl_match_hostname import CertificateError
-from pdagent.constants import \
-    EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY,\
-    EVENT_BACKOFF_SVCKEY_BAD_ENTRY, EVENT_BACKOFF_SVCKEY_NOT_CONSUMED, \
-    EVENT_STOP_ALL, EVENTS_API_BASE
+from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 
 
 # Config handling
@@ -80,7 +77,7 @@ def send_event(json_event_str):
         main_logger.error(
             "Server certificate validation error while sending event:",
             exc_info=True)
-        return EVENT_STOP_ALL
+        return ConsumeEvent.STOP_ALL
     except URLError as e:
         if isinstance(e.reason, socket.timeout):
             main_logger.error("Timeout while sending event:", exc_info=True)
@@ -88,15 +85,15 @@ def send_event(json_event_str):
             # processing this service key or event. We'll retry this service key
             # a few more times, and then decide that this event is possibly a
             # bad entry.
-            return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
+            return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
             main_logger.error(
                 "Error establishing a connection for sending event:",
                 exc_info=True)
-            return EVENT_NOT_CONSUMED
+            return ConsumeEvent.NOT_CONSUMED
     except IOError:
         main_logger.error("Error while sending event:", exc_info=True)
-        return EVENT_NOT_CONSUMED
+        return ConsumeEvent.NOT_CONSUMED
 
     try:
         result = json.loads(result_str)
@@ -112,21 +109,21 @@ def send_event(json_event_str):
             (json_event_str, status_code, result_str))
 
     if status_code < 300:
-        return EVENT_CONSUMED
+        return ConsumeEvent.CONSUMED
     elif status_code == 403:
         # We are getting throttled! We'll retry this service key a few more
         # times, but never consider this event as erroneous.
-        return EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+        return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
     elif status_code >= 400 and status_code < 500:
-        return EVENT_BAD_ENTRY
+        return ConsumeEvent.BAD_ENTRY
     elif status_code >= 500 and status_code < 600:
         # Hmm. Could be server-side problem, or a bad entry.
         # We'll retry this service key a few times, and then decide that this
         # event is possibly a bad entry.
-        return EVENT_BACKOFF_SVCKEY_BAD_ENTRY
+        return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
     else:
         # anything 3xx and >= 5xx
-        return EVENT_NOT_CONSUMED
+        return ConsumeEvent.NOT_CONSUMED
 
 
 def tick(sc):

@@ -1,9 +1,7 @@
 import errno
 import os
 import logging
-from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
-    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
-    EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+from constants import ConsumeEvent
 
 
 logger = logging.getLogger(__name__)
@@ -47,13 +45,8 @@ class PDQueue(object):
             )
 
         self.max_event_bytes = max_event_bytes
-
-        # error-handling: back-off related stuff.
-        self.backoff_secs = backoff_secs
-        self.max_backoff_attempts = len(self.backoff_secs)
-        self.backoff_db = backoff_db
-        # the time calculator.
         self.time = time_calc
+        self.backoff_info = _BackoffInfo(backoff_db, backoff_secs, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -88,17 +81,14 @@ class PDQueue(object):
 
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
+        t_millisecs = int(self.time.time() * 1000)
         while True:
-            t_millisecs = int(self.time.time() * 1000)
-            fname = fname_fmt % t_millisecs
+            fname = fname_fmt % (t_millisecs + n)
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs)
             if fd is None:
                 n += 1
-                if n < 100:
-                    self.time.sleep(0.001)
-                    continue
-                else:
+                if n >= 100:
                     raise Exception(
                         "Too many retries! (Last attempted name: %s)"
                         % fname_abs
@@ -119,144 +109,102 @@ class PDQueue(object):
         lock.acquire()
 
         try:
-            prev_backoff_data = None
-            try:
-                prev_backoff_data = self.backoff_db.get()
-            except:
-                logger.warning(
-                    "Unable to load queue-error back-off history",
-                    exc_info=True)
-            if not prev_backoff_data:
-                # first time, or errors during db read...
-                prev_backoff_data = {
-                    'attempts': {},
-                    'next_retries': {}
-                }
-            cur_backoff_data = {
-                'attempts': {},
-                'next_retries': {}
-            }
-            prev_svc_key_attempt = prev_backoff_data['attempts']
-            prev_svc_key_next_retry = prev_backoff_data['next_retries']
-            cur_svc_key_attempt = cur_backoff_data['attempts']
-            cur_svc_key_next_retry = cur_backoff_data['next_retries']
-
             file_names = self._queued_files()
-
             if not len(file_names):
                 raise EmptyQueue
+
             file_names = filter_events_to_process_func(file_names)
+            if not len(file_names):
+                return
+
+            # reload back-off info, in case there are external changes to it.
+            now = self.time.time()
+            self.backoff_info.load(now)
             err_svc_keys = set()
 
-            def handle_backoff():
-                logger.info("Backing off service key " + svc_key)
-                # don't process more events with same service key.
-                err_svc_keys.add(svc_key)
-                # has back-off threshold been reached?
-                cur_attempt = prev_svc_key_attempt.get(svc_key, 0) + 1
-                if cur_attempt > self.max_backoff_attempts:
-                    if consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
-                        # consume function does not want us to do
-                        # anything with the event. We'll still consider this
-                        # service key to be erroneous, though, and continue
-                        # backing off events in the key.
-                        pass
-                    elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
-                        logger.info(
-                            (
-                                "Back-off limit reached for service key %s. " +
-                                "Assuming bad event."
-                            ) %
-                            svc_key
-                        )
-                        self._tag_as_error(fname)
-                        # now that we have handled the bad entry, we'll want
-                        # to give the other events in this service key a chance,
-                        # so don't consider svc key as erroneous.
-                        err_svc_keys.remove(svc_key)
-                if svc_key in err_svc_keys:
-                    # if backoff-seconds have been exhausted, reuse the last one.
-                    backoff_index = min(
-                        cur_attempt,
-                        self.max_backoff_attempts) - 1
-                    backoff = self.backoff_secs[backoff_index]
-                    logger.info(
-                        "Retrying events in service key %s after %d sec" %
-                        (svc_key, backoff)
-                    )
-                    cur_svc_key_next_retry[svc_key] = \
-                        int(self.time.time()) + backoff
-                    cur_svc_key_attempt[svc_key] = cur_attempt
-
-            now = self.time.time()
             for fname in file_names:
                 _, _, svc_key = _get_event_metadata(fname)
-                if prev_svc_key_next_retry.get(svc_key, 0) > now:
-                    # not yet time to retry; copy over back-off data.
-                    cur_svc_key_attempt[svc_key] = \
-                        prev_svc_key_attempt.get(svc_key)
-                    cur_svc_key_next_retry[svc_key] = \
-                        prev_svc_key_next_retry.get(svc_key)
-                elif cur_svc_key_next_retry.get(svc_key, 0) <= now and \
-                        svc_key not in err_svc_keys:
-                    # nothing has gone wrong in this pass yet.
-                    fname_abs = self._abspath(fname)
-                    # TODO: handle missing file or other errors
-                    f = open(fname_abs)
-                    try:
-                        s = f.read()
-                    finally:
-                        f.close()
+                if svc_key not in err_svc_keys and \
+                        self.backoff_info.get_current_retry_at(svc_key) <= now:
+                    # no back-off; nothing has gone wrong in this pass yet.
+                    if not self._process_event(
+                            fname, consume_func, svc_key, err_svc_keys):
+                        # no further processing must be done.
+                        logger.info("Not processing any more events this time")
+                        break
 
-                    # ensure that the event is not too large.
-                    if len(s) > self.max_event_bytes:
-                        logger.info(
-                            (
-                                "Not processing event %s " +
-                                "because it exceeds max-allowed size"
-                            ) %
-                            fname)
-                        self._tag_as_error(fname)
-                    else:
-                        logger.info("Processing event " + fname)
-                        consume_code = consume_func(s)
-                        logger.info(
-                            "Consume code for event %s = %d" %
-                            (fname, consume_code)
-                        )
-
-                        if consume_code == EVENT_CONSUMED:
-                            # TODO a failure here means duplicate event sends
-                            os.remove(fname_abs)
-                        elif consume_code == EVENT_NOT_CONSUMED:
-                            pass
-                        elif consume_code == EVENT_STOP_ALL:
-                            # don't process any more events.
-                            logger.info(
-                                "Not processing any more events this time"
-                            )
-                            break
-                        elif consume_code == EVENT_BAD_ENTRY:
-                            self._tag_as_error(fname)
-                        elif consume_code in [
-                            EVENT_BACKOFF_SVCKEY_BAD_ENTRY,
-                            EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
-                        ]:
-                            handle_backoff()
-                        else:
-                            raise ValueError(
-                                "Unsupported dequeue consume code %d" %
-                                consume_code)
-
-            try:
-                # persist back-off info.
-                self.backoff_db.set(cur_backoff_data)
-            except:
-                logger.warning(
-                    "Unable to save queue-error back-off history",
-                    exc_info=True)
+            self.backoff_info.store()
         finally:
             lock.release()
+
+    # Returns true if processing can continue, false if not.
+    def _process_event(self, fname, consume_func, svc_key, err_svc_keys):
+        # TODO: handle missing file or other errors
+        f = open(self._abspath(fname))
+        try:
+            data = f.read()
+        finally:
+            f.close()
+
+        # ensure that the event is not too large.
+        if len(data) > self.max_event_bytes:
+            logger.info(
+                "Not processing event %s -- it exceeds max-allowed size" %
+                fname)
+            self._tag_as_error(fname)
+            return True
+        else:
+            logger.info("Processing event " + fname)
+            return self._handle_consume_code(
+                consume_func(data), fname, svc_key, err_svc_keys)
+
+    # Returns true if processing can continue, false if not.
+    def _handle_consume_code(self, consume_code, fname, svc_key, err_svc_keys):
+        logger.info(
+            "Consume code for event %s = %d" %
+            (fname, consume_code)
+        )
+        if consume_code == ConsumeEvent.CONSUMED:
+            # TODO a failure here means duplicate event sends
+            os.remove(self._abspath(fname))
+        elif consume_code == ConsumeEvent.NOT_CONSUMED:
+            pass
+        elif consume_code == ConsumeEvent.STOP_ALL:
+            # stop processing any more events.
+            return False
+        elif consume_code == ConsumeEvent.BAD_ENTRY:
+            self._tag_as_error(fname)
+        elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
+            logger.info("Backing off service key " + svc_key)
+            if self.backoff_info.is_threshold_breached(svc_key):
+                # time for stricter action -- mark event as bad.
+                logger.info(
+                    (
+                        "Service key %s breached back-off limit." +
+                        " Assuming bad event."
+                    ) %
+                    svc_key)
+                self._tag_as_error(fname)
+                # now that we have handled the bad entry, we'll want to
+                # give the other events in this service key a chance, so
+                # don't consider key as erroneous.
+            else:
+                # don't process more events with same service key, and
+                # back off the service key.
+                err_svc_keys.add(svc_key)
+                self.backoff_info.increment(svc_key)
+        elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED:
+            # don't process more events with same service key.
+            err_svc_keys.add(svc_key)
+            # consume function does not want us to do anything with the
+            # event even when it is time for stricter action, so we'll
+            # just continue backing off events in the key.
+            self.backoff_info.increment(svc_key)
+        else:
+            raise ValueError(
+                "Unsupported dequeue consume code %d" %
+                consume_code)
+        return True
 
     def resurrect(self, service_key=None):
         # move dead events of given service key back to queue.
@@ -346,5 +294,88 @@ def _open_creat_excl(fname_abs):
             raise
 
 def _get_event_metadata(fname):
-    type, enqueue_time_str, service_key = fname.split('.')[0].split('_')
-    return type, int(enqueue_time_str), service_key
+    event_type, enqueue_time_str, service_key = fname.split('.')[0].split('_')
+    return event_type, int(enqueue_time_str), service_key
+
+
+class _BackoffInfo(object):
+    """
+    Loads, accesses, modifies and saves back-off info for service keys in queue.
+    """
+
+    def __init__(self, backoff_db, backoff_secs, time_calc):
+        self._db = backoff_db
+        self._backoff_secs = backoff_secs
+        self._max_backoff_attempts = len(backoff_secs)
+        self._time = time_calc
+        self._previous_attempts = {}
+        self._current_attempts = {}
+        self._current_retry_at = {}
+
+    # returns true if `current-attempts`, or `previous-attempts + 1`,
+    # results in a threshold breach.
+    def is_threshold_breached(self, svc_key):
+        cur_attempt = self._current_attempts.get(
+            svc_key,
+            self._previous_attempts.get(svc_key, 0) + 1)
+        return cur_attempt > self._max_backoff_attempts
+
+    # returns the current retry-at time for svc_key, or 0 if not available.
+    def get_current_retry_at(self, svc_key):
+        return self._current_retry_at.get(svc_key, 0)
+
+    # updates current attempt and retry data based on previous data.
+    def increment(self, svc_key):
+        cur_attempt = self._previous_attempts.get(svc_key, 0) + 1
+        # if backoff-seconds have been exhausted, reuse the last one.
+        backoff_index = min(cur_attempt, self._max_backoff_attempts) - 1
+        backoff = self._backoff_secs[backoff_index]
+        logger.info(
+            "Retrying events in service key %s after %d sec" %
+            (svc_key, backoff)
+        )
+
+        self._current_attempts[svc_key] = cur_attempt
+        self._current_retry_at[svc_key] = int(self._time.time()) + backoff
+
+    # loads data; copies over data that is still valid at time_now to current.
+    def load(self, time_now):
+        try:
+            previous = self._db.get()
+        except:
+            logger.warning(
+                "Unable to load service-key back-off history",
+                exc_info=True)
+            previous = None
+        if not previous:
+            # no db yet, or errors during db read
+            previous = {
+                'attempts': {},
+                'next_retries': {}
+            }
+
+        self._current_attempts = {}
+        self._current_retry_at = {}
+
+        # we'll still hold on to previous attempts data so we can use it to
+        # compute new current data if required later.
+        self._previous_attempts = previous['attempts']
+
+        # copy over all still-unexpired previous back-offs to current data.
+        for (svc_key, retry_at) in previous['next_retries'].iteritems():
+            if retry_at > time_now:
+                self._current_attempts[svc_key] = \
+                    self._previous_attempts.get(svc_key)
+                self._current_retry_at[svc_key] = retry_at
+
+    # persists current back-off info.
+    def store(self):
+        try:
+            self._db.set({
+                'attempts': self._current_attempts,
+                'next_retries': self._current_retry_at
+            })
+        except:
+            logger.warning(
+                "Unable to save service-key back-off history",
+                exc_info=True)
