@@ -81,17 +81,14 @@ class PDQueue(object):
 
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
+        t_millisecs = int(self.time.time() * 1000)
         while True:
-            t_millisecs = int(self.time.time() * 1000)
-            fname = fname_fmt % t_millisecs
+            fname = fname_fmt % (t_millisecs + n)
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs)
             if fd is None:
                 n += 1
-                if n < 100:
-                    self.time.sleep(0.001)
-                    continue
-                else:
+                if n >= 100:
                     raise Exception(
                         "Too many retries! (Last attempted name: %s)"
                         % fname_abs
