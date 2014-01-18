@@ -605,7 +605,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(expected_unremoved, actual_unremoved)
 
     def _assertBackoffData(self, q, data):
-        backup_data = q.backoff_db.get()
+        backup_data = q.backoff_info._db.get()
         attempts = {}
         retries = {}
 
