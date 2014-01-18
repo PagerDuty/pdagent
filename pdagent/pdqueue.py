@@ -1,9 +1,7 @@
 import errno
 import os
 import logging
-from constants import EVENT_CONSUMED, EVENT_NOT_CONSUMED, EVENT_BAD_ENTRY, \
-    EVENT_STOP_ALL, EVENT_BACKOFF_SVCKEY_BAD_ENTRY, \
-    EVENT_BACKOFF_SVCKEY_NOT_CONSUMED
+from constants import ConsumeEvent
 
 
 logger = logging.getLogger(__name__)
@@ -163,17 +161,17 @@ class PDQueue(object):
 
     # Returns true if processing can continue, false if not.
     def _handle_consume_code(self, consume_code, fname, svc_key, err_svc_keys):
-        if consume_code == EVENT_CONSUMED:
+        if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
             os.remove(self._abspath(fname))
-        elif consume_code == EVENT_NOT_CONSUMED:
+        elif consume_code == ConsumeEvent.NOT_CONSUMED:
             pass
-        elif consume_code == EVENT_STOP_ALL:
+        elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             return False
-        elif consume_code == EVENT_BAD_ENTRY:
+        elif consume_code == ConsumeEvent.BAD_ENTRY:
             self._tag_as_error(fname)
-        elif consume_code == EVENT_BACKOFF_SVCKEY_BAD_ENTRY:
+        elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             if self.backoff_info.is_threshold_breached(svc_key):
                 # time for stricter action -- mark event as bad.
                 self._tag_as_error(fname)
@@ -185,7 +183,7 @@ class PDQueue(object):
                 # back off the service key.
                 err_svc_keys.add(svc_key)
                 self.backoff_info.increment(svc_key)
-        elif consume_code == EVENT_BACKOFF_SVCKEY_NOT_CONSUMED:
+        elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED:
             # don't process more events with same service key.
             err_svc_keys.add(svc_key)
             # consume function does not want us to do anything with the
