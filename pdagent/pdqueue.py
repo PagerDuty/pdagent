@@ -249,15 +249,6 @@ class PDQueue(object):
                 status[svc_key]["error"] += 1
         return status
 
-    def _tag_as_error(self, fname):
-        errname = fname.replace("pdq_", "err_")
-        fname_abs = self._abspath(fname)
-        errname_abs = self._abspath(errname)
-        logger.info(
-            "Tagging as error: %s -> %s..." %
-            (fname, errname))
-        os.rename(fname_abs, errname_abs)
-
     # This function can move error files back into regular files, so ensure that
     # you have considered any concurrency-related consequences to other queue
     # operations before invoking this function.

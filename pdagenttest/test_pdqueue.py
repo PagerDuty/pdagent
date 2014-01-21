@@ -514,9 +514,9 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(q.enqueue("svckey2", "baz"))
         fnames.append(q.enqueue("svckey2", "boo"))
         fnames.append(q.enqueue("svckey3", "bam"))
-        q._tag_as_error(fnames[0])
-        q._tag_as_error(fnames[2])
-        q._tag_as_error(fnames[4])
+        q._unsafe_change_event_type(fnames[0], "pdq", "err")
+        q._unsafe_change_event_type(fnames[2], "pdq", "err")
+        q._unsafe_change_event_type(fnames[4], "pdq", "err")
 
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 3)
@@ -545,9 +545,9 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(q.enqueue("svckey2", "e4"))
         fnames.append(q.enqueue("svckey3", "e5"))
         fnames.append(q.enqueue("svckey3", "e6"))
-        q._tag_as_error(fnames[0])
-        q._tag_as_error(fnames[2])
-        q._tag_as_error(fnames[3])
+        q._unsafe_change_event_type(fnames[0], "pdq", "err")
+        q._unsafe_change_event_type(fnames[2], "pdq", "err")
+        q._unsafe_change_event_type(fnames[3], "pdq", "err")
 
         self.assertDictEqual(q.get_status("svckey1"), {
             "svckey1": {
