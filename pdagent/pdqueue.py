@@ -150,7 +150,7 @@ class PDQueue(object):
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
-            self._unsafe_change_event_type(fname, 'pdq', 'err')
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
         else:
             return self._handle_consume_code(
@@ -160,18 +160,18 @@ class PDQueue(object):
     def _handle_consume_code(self, consume_code, fname, svc_key, err_svc_keys):
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
-            self._unsafe_change_event_type(fname, 'pdq', 'suc')
+            self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
         elif consume_code == ConsumeEvent.NOT_CONSUMED:
             pass
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             return False
         elif consume_code == ConsumeEvent.BAD_ENTRY:
-            self._unsafe_change_event_type(fname, 'pdq', 'err')
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             if self.backoff_info.is_threshold_breached(svc_key):
                 # time for stricter action -- mark event as bad.
-                self._unsafe_change_event_type(fname, 'pdq', 'err')
+                self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
@@ -199,7 +199,7 @@ class PDQueue(object):
         for errname in errnames:
             if not service_key or \
                     _get_event_metadata(errname)[2] == service_key:
-                self._unsafe_change_event_type(errname, 'err', 'pdq')
+                self._unsafe_change_event_type(errname, 'err_', 'pdq_')
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
