@@ -57,7 +57,7 @@ except ImportError:
 
 
 # Custom modules
-from pdagent.daemon import Daemon
+from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdqueue import EmptyQueue
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
