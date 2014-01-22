@@ -5,7 +5,7 @@ OUTQUEUE_DIR=/var/lib/pdagent/outqueue
 AGENT_SVC_NAME=pd-agent
 CHECK_FREQ_SEC=5
 # The service key to use for testing commands like pd-send.py etc.
-SVC_KEY=CHANGEME
+SVC_KEY=474248a48ee349aeb3f6c87a3ce779ff
 
 # return OS type of current system.
 os_type() {
