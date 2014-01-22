@@ -69,7 +69,7 @@ mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
-    from pdagent import httpswithverify
+    from pdagent.thirdparty import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
