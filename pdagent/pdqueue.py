@@ -127,8 +127,13 @@ class PDQueue(object):
                 if svc_key not in err_svc_keys and \
                         self.backoff_info.get_current_retry_at(svc_key) <= now:
                     # no back-off; nothing has gone wrong in this pass yet.
-                    if not self._process_event(
-                            fname, consume_func, svc_key, err_svc_keys):
+                    try:
+                        if not self._process_event(
+                            fname, consume_func, svc_key
+                        ):
+                            # this service key is problematic.
+                            err_svc_keys.add(svc_key)
+                    except StopIteration:
                         # no further processing must be done.
                         break
 
@@ -136,8 +141,8 @@ class PDQueue(object):
         finally:
             lock.release()
 
-    # Returns true if processing can continue, false if not.
-    def _process_event(self, fname, consume_func, svc_key, err_svc_keys):
+    # Returns true if processing can continue for service key, false if not.
+    def _process_event(self, fname, consume_func, svc_key):
         # TODO: handle missing file or other errors
         f = open(self._abspath(fname))
         try:
@@ -152,22 +157,20 @@ class PDQueue(object):
                 fname)
             self._tag_as_error(fname)
             return True
-        else:
-            return self._handle_consume_code(
-                consume_func(data), fname, svc_key, err_svc_keys)
 
-    # Returns true if processing can continue, false if not.
-    def _handle_consume_code(self, consume_code, fname, svc_key, err_svc_keys):
+        consume_code = consume_func(data)
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
             os.remove(self._abspath(fname))
+            return True
         elif consume_code == ConsumeEvent.NOT_CONSUMED:
-            pass
+            return True
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
-            return False
+            raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
             self._tag_as_error(fname)
+            return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             if self.backoff_info.is_threshold_breached(svc_key):
                 # time for stricter action -- mark event as bad.
@@ -175,23 +178,17 @@ class PDQueue(object):
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
+                return True
             else:
-                # don't process more events with same service key, and
-                # back off the service key.
-                err_svc_keys.add(svc_key)
                 self.backoff_info.increment(svc_key)
+                return False
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED:
-            # don't process more events with same service key.
-            err_svc_keys.add(svc_key)
-            # consume function does not want us to do anything with the
-            # event even when it is time for stricter action, so we'll
-            # just continue backing off events in the key.
             self.backoff_info.increment(svc_key)
+            return False
         else:
             raise ValueError(
                 "Unsupported dequeue consume code %d" %
                 consume_code)
-        return True
 
     def resurrect(self, service_key=None):
         # move dead events of given service key back to queue.
