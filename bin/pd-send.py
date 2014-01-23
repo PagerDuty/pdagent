@@ -7,7 +7,7 @@
 #
 
 def build_queue_arg_parser(description):
-    from pdagent.argparse import ArgumentParser
+    from pdagent.thirdparty.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
     parser.add_argument("-k", "--service-key", dest="service_key", required=True,
             help="Service API Key")

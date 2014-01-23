@@ -4,7 +4,7 @@ import os
 import time
 import unittest
 
-from pdagent.filelock import FileLock, LockTimeoutException
+from pdagent.thirdparty.filelock import FileLock, LockTimeoutException
 
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))

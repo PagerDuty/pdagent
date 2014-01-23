@@ -57,9 +57,9 @@ except ImportError:
 
 
 # Custom modules
-from pdagent.daemon import Daemon
+from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdqueue import EmptyQueue
-from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 
 
@@ -69,7 +69,7 @@ mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
-    from pdagent import httpswithverify
+    from pdagent.thirdparty import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
@@ -269,7 +269,7 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.argparse import ArgumentParser
+    from pdagent.thirdparty.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."
     parser = ArgumentParser(description=description)
     parser.add_argument(
