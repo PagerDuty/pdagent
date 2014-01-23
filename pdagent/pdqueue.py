@@ -27,9 +27,9 @@ class PDQueue(object):
     - dequeue never block enqueue, and enqueue never blocks dequeue.
     """
 
-    def __init__(self,
-            queue_dir, lock_class, time_calc,
-            max_event_bytes,
+    def __init__(
+            self,
+            queue_dir, lock_class, time_calc, max_event_bytes,
             backoff_secs, backoff_db):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
