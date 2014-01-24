@@ -201,38 +201,37 @@ build               Runs unit tests on virtual machines, creates packages
 dist                Creates distributable artifacts for agent.
 package             Creates installable packages for supported OS
                     distributions.
-start-virt          Starts configured virtual machines, installing them
-                    first if required.
-                    Specific virtual machines can be started by providing
-                    them as arguments, multiple times if required.
-                    e.g.
-                    scons start-virt start-virt=agent-minimal-ubuntu1004
-test                Runs unit tests on all running virtual machines.
+test                Runs unit tests on specific virtual machines, bringing
+                    the virtual machine up if required.
+                    By default, runs on all virtual machines. Specific
+                    virtual machines can be provided using the `virt` option,
+                    multiple times if required.
                     By default, runs all tests in `pdagenttest` recursively.
                     (Test files should be named in the format `test_*.py`.)
                     Specific unit tests can be run by providing them as
-                    arguments to this option, multiple times if required.
-                    Both test files and test directories are supported.
+                    arguments to the `test` option, multiple times if
+                    required. Both test files and test directories are
+                    supported.
                     e.g.
-                    scons test test=pdagenttest/test_foo.py
-test-integration    Runs integration tests on all running virtual machines.
+                    scons test test=pdagenttest/test_foo.py \
+                               virt=agent-minimal-centos
+test-integration    Runs integration tests on specific virtual machines,
+                    bringing the virtual machine up if required.
+                    By default, runs on all virtual machines. Specific
+                    virtual machines can be provided using the `virt` option,
+                    multiple times if required.
                     By default, runs all tests in `pdagenttestinteg`
                     recursively. (Test files should be named in the format
-                    `test_*.sh`.)
-                    Like the 'test' command, specific tests can be run by
-                    providing them as arguments to this option, multiple
-                    times if required. Both test files and test directories
-                    are supported.
-test-local          Runs unit tests on the local machine.
-                    Please see 'test' command for more details.
-test-vm             Runs unit tests on the specified virtual machine,
-                    starting it if required.
-                    Virtual machines are specified by providing them as
-                    arguments, multiple times if required.
-                    Specific unit tests to run can be specified as `test`
-                    arguments if required.
+                    `test_*.sh`.) Specific tests can be run by providing them
+                    as arguments to the `test` option, multiple times if
+                    required. Both test files and test directories are
+                    supported.
                     e.g.
-                    scons test-vm test-vm=agent-minimal-ubuntu1004 test=test_foo.py
+                    scons test-integration test=pdagenttestinteg/test_foo.sh \
+                                           virt=agent-minimal-centos
+test-local          Runs unit tests on the local machine.
+                    Please see 'test' command for more details about using the
+                    `test` option to run specific unit tests.
 """)
 
 build_linux_dir = "build-linux"

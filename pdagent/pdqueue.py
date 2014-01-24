@@ -160,7 +160,9 @@ class PDQueue(object):
             self._tag_as_error(fname)
             return True
 
+        logger.info("Processing event " + fname)
         consume_code = consume_func(data)
+
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
             os.remove(self._abspath(fname))
