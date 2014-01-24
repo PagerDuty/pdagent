@@ -44,7 +44,7 @@ ip:127.0.0.1
 value:0
 event_id:126
 severity:High"
-  
+
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 1
 
   diff -q $OUTQUEUE_DIR/pdq_*.txt $(dirname $0)/test_60_zabbix.pdq2.txt
