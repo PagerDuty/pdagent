@@ -58,7 +58,7 @@ except ImportError:
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import EmptyQueue
+from pdagent.pdqueue import EmptyQueueError
 from pdagent.backports.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 
@@ -144,7 +144,7 @@ def tick(sc):
     main_logger.info("Flushing event queue")
     try:
         pdQueue.flush(send_event)
-    except EmptyQueue:
+    except EmptyQueueError:
         main_logger.info("Nothing to do - queue is empty!")
     except IOError:
         main_logger.error("I/O error while flushing queue:", exc_info=True)

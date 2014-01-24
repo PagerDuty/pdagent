@@ -6,7 +6,7 @@ from constants import ConsumeEvent
 
 logger = logging.getLogger(__name__)
 
-class EmptyQueue(Exception):
+class EmptyQueueError(Exception):
     pass
 
 
@@ -111,7 +111,7 @@ class PDQueue(object):
         try:
             file_names = self._queued_files()
             if not len(file_names):
-                raise EmptyQueue
+                raise EmptyQueueError
 
             file_names = filter_events_to_process_func(file_names)
             if not len(file_names):
