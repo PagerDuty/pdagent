@@ -181,6 +181,7 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
 # Override the generic daemon class to run our checks
 class agent(Daemon):
 
+    guid = None
     lastCleanupTimeSec = 0
 
     def run(self):
@@ -220,6 +221,10 @@ class agent(Daemon):
 
         main_logger.info('System: ' + str(systemStats))
 
+        agent.guid = get_or_make_guid()
+
+        main_logger.info('GUID: ' + agent.guid)
+
         main_logger.debug('Creating tick instance')
 
         # Schedule the tick
@@ -227,6 +232,49 @@ class agent(Daemon):
         s = sched.scheduler(time.time, time.sleep)
         tick(s)  # start immediately
         s.run()
+
+
+# read persisted, valid GUID, or generate (and persist) one.
+def get_or_make_guid():
+    import uuid
+    guid_file = os.path.join(
+        agentConfig.get_conf_dirs()['data_dir'],
+        "guid.txt")
+    fd = None
+    guid = None
+
+    try:
+        fd = open(guid_file, "r")
+        guid = str(uuid.UUID(fd.readline().strip()))
+    except IOError as e:
+        import errno
+        if e.errno != errno.ENOENT:
+            main_logger.warning(
+                'Could not read GUID from file %s' % guid_file,
+                exc_info=True)
+    except ValueError:
+        main_logger.warning(
+            'Invalid GUID in file %s' % guid_file,
+            exc_info=True)
+    finally:
+        if fd:
+            fd.close()
+
+    if not guid:
+        main_logger.info('Generating new GUID')
+        guid = str(uuid.uuid4())
+        fd = None
+        try:
+            fd = open(guid_file, "w")
+            fd.write(guid)
+        except IOError:
+            main_logger.warning(
+                'Could not write to GUID file %s' % guid_file,
+                exc_info=True)
+        finally:
+            if fd:
+                fd.close()
+    return guid
 
 
 def init_logging(log_dir):
