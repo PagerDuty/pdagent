@@ -17,6 +17,4 @@ python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
 chkconfig --add pd-agent
 
 # Restart daemon
-#FIXME: daemon is broken
-#/etc/init.d/pd-agent restart
-
+service pd-agent restart
