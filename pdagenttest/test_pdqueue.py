@@ -6,7 +6,7 @@ import time
 import unittest
 
 from pdagent.constants import ConsumeEvent
-from pdagent.pdqueue import PDQueue, EmptyQueue
+from pdagent.pdqueue import PDQueue, EmptyQueueError
 
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -119,7 +119,7 @@ class PDQueueTest(unittest.TestCase):
         # check queue is empty
         self.assertEquals(q._queued_files(), [])
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_dont_consume(self):
         # The item should stay in the queue if we don't consume it.
@@ -138,7 +138,7 @@ class PDQueueTest(unittest.TestCase):
         q.dequeue(consume_foo)
 
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
@@ -153,7 +153,7 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(len(q._queued_files("err_")), 1)
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_huge_event_not_processed(self):
         # The item should get tagged as error, and not be available for
@@ -247,7 +247,7 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_backoff_not_consumed(self):
         # The item and all other items for same service key must get backed off
@@ -339,7 +339,7 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_stop_processing(self):
         # No later event must be processed.
@@ -385,7 +385,7 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueue, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
@@ -413,7 +413,7 @@ class PDQueueTest(unittest.TestCase):
                     trace.append("C2")
                     return ConsumeEvent.CONSUMED
                 q.dequeue(consume)
-            except EmptyQueue:
+            except EmptyQueueError:
                 trace.append("q_EQ")
 
         thread_dequeue = Thread(target=dequeue)
@@ -470,7 +470,7 @@ class PDQueueTest(unittest.TestCase):
                 def consume2(s):
                     self.fail()  # consume2 shouldn't be called!
                 q2.dequeue(consume2)
-            except EmptyQueue:
+            except EmptyQueueError:
                 trace.append("q2_EQ")
 
         thread_dequeue2 = Thread(target=dequeue2)
