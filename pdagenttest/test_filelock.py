@@ -138,9 +138,7 @@ class FileLockTest(unittest.TestCase):
     def test_kill_releases_lock(self):
         # python being force killed will release the lock but leave the file
         self.assertTrue(
-            run_helper()
-            in
-            [
+            run_helper() in [
                 (0, 9),  # mac, centos
                 (128 + 9, 0),  # ubuntu
                 ]
