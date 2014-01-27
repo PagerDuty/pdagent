@@ -5,10 +5,10 @@ import time
 
 class RepeatingThread(Thread):
 
-    def __init__(self, sleep_secs, drift=True):
+    def __init__(self, sleep_secs, strict=False):
         Thread.__init__(self)
         self.set_sleep_secs(sleep_secs)
-        self._drift = drift
+        self._strict = strict
         self._stop = False
 
     def run(self):
@@ -18,13 +18,13 @@ class RepeatingThread(Thread):
             if t >= next_run_time:
                 self.tick()
                 t = time.time()
-                if self._drift:
-                    next_run_time = t + self._sleep_secs
-                else:
+                if self._strict:
                     next_run_time += self._sleep_secs
                     if next_run_time < t:
                         # drop extra missed ticks if we fall behind
                         next_run_time = t
+                else:
+                    next_run_time = t + self._sleep_secs
             else:
                 s = next_run_time - t
                 time.sleep(s if s < 1.0 else 1.0)

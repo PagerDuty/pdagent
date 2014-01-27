@@ -48,14 +48,14 @@ class RepeatingThreadTest(unittest.TestCase):
         finally:
             t.stop_and_join()
 
-    def test_drift(self):
+    def test_strict(self):
         l = []
 
         def f():
             l.append(42)
             time.sleep(0.5)
 
-        t = _start_repeating_thread(f, 1, True)
+        t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
             self.assertEquals(l, [42])
@@ -69,7 +69,7 @@ class RepeatingThreadTest(unittest.TestCase):
             t.stop_and_join()
 
         l = []
-        t = _start_repeating_thread(f, 1, False)
+        t = _start_repeating_thread(f, 1, True)
         try:
             time.sleep(0.1)
             self.assertEquals(l, [42])
@@ -113,7 +113,7 @@ class RepeatingThreadTest(unittest.TestCase):
         finally:
             t.stop_and_join()
 
-    def test_nodrift_drops_extra_runs(self):
+    def test_strict_drops_extra_runs(self):
         def f():
             l.append(1)
             if slow:
@@ -121,7 +121,7 @@ class RepeatingThreadTest(unittest.TestCase):
             l.append(2)
         l = []
         slow = True
-        t = _start_repeating_thread(f, 1, False)
+        t = _start_repeating_thread(f, 1, True)
         try:
             time.sleep(0.1)
             self.assertEquals(l, [1])
