@@ -113,6 +113,27 @@ class RepeatingThreadTest(unittest.TestCase):
         finally:
             t.stop_and_join()
 
+    def test_nodrift_drops_extra_runs(self):
+        def f():
+            l.append(1)
+            if slow:
+                time.sleep(3)
+            l.append(2)
+        l = []
+        slow = True
+        t = _start_repeating_thread(f, 1, False)
+        try:
+            time.sleep(0.1)
+            self.assertEquals(l, [1])
+            time.sleep(3.0)
+            self.assertEquals(l, [1, 2, 1])
+            slow = False
+            time.sleep(3.0)
+            # 6.1 seconds in we should have run 7 times but first 2 were slow
+            # we want to have run only once to catch up, not 5 times
+            self.assertEquals(l, [1, 2, 1, 2, 1, 2])
+        finally:
+            t.stop_and_join()
 
 if __name__ == "__main__":
     unittest.main()
