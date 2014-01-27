@@ -17,7 +17,6 @@ class AgentConfig:
         self.dev_layout = dev_layout
         self.default_dirs = default_dirs
         self.main_config = main_config
-        self._queue = None
 
     def is_dev_layout(self):
         return self.dev_layout
@@ -34,22 +33,24 @@ class AgentConfig:
     def get_db_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "db")
 
-    def get_queue(self):
+    def get_queue(self, dequeue_enabled=False):
         from pdagent.pdqueue import PDQueue
-        from pdagent.jsonstore import JsonStore
-        if not self._queue:
-            self._queue = PDQueue(
-                lock_class=FileLock,
-                queue_dir=self.default_dirs["outqueue_dir"],
-                time_calc=time,
-                max_event_bytes=self.main_config["max_event_bytes"],
-                backoff_db=JsonStore("backoff", self.default_dirs["db_dir"]),
-                backoff_secs=[
-                    int(s.strip()) for s in
-                    self.main_config["backoff_secs"].split(",")
-                ]
-            )
-        return self._queue
+        if dequeue_enabled:
+            from pdagent.jsonstore import JsonStore
+            backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
+        else:
+            backoff_db = None
+        return PDQueue(
+            lock_class=FileLock,
+            queue_dir=self.default_dirs["outqueue_dir"],
+            time_calc=time,
+            max_event_bytes=self.main_config["max_event_bytes"],
+            backoff_db=backoff_db,
+            backoff_secs=[
+                int(s.strip()) for s in
+                self.main_config["backoff_secs"].split(",")
+            ]
+        )
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
@@ -110,12 +111,6 @@ def load_agent_config():
     for option in config.options("Main"):
         cfg[option] = config.get("Main", option)
 
-    # Check for required keys
-    if not "event_api_url" in cfg:
-        raise SystemExit(
-            "Config is missing 'event_api_url'\nAgent will now quit"
-            )
-
     # Convert log level
     log_level = cfg["log_level"].upper()
     if log_level in _valid_log_levels:
@@ -126,23 +121,17 @@ def load_agent_config():
             % conf_file
             )
 
-    # Check that default config values have been changed (only core config)
-    if cfg['event_api_url'] == 'http://example.pagerduty.com':
-        raise SystemExit(
-            "You have not modified config file: %s\nAgent will now quit"
-            % conf_file
-            )
-
-    # Check to make sure pd_url format is correct
-    if re.match(
-            'http(s)?(\:\/\/)[a-zA-Z0-9_\-]+\.(pagerduty.com)',
-            cfg['event_api_url']
-            ) == None:
-        raise SystemExit(
-            "Your event_api_url is incorrect. It needs to be in the form" +
-            " https://example.pagerduty.com\n" +
-            "Agent will now quit"
-            )
+    # parse integer values.
+    for key in [
+        "check_freq_sec", "cleanup_freq_sec", "cleanup_before_sec",
+        "send_event_timeout_sec", "max_event_bytes"
+    ]:
+        try:
+            cfg[key] = int(cfg[key])
+        except ValueError:
+            print 'Bad %s in config file: %s' % (key, conf_file)
+            print 'Agent will now quit'
+            sys.exit(1)
 
     _agent_config = AgentConfig(dev_layout, default_dirs, cfg)
 

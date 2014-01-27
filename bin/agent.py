@@ -8,18 +8,6 @@
     See LICENSE.TXT for licensing details.
 '''
 
-
-### BEGIN INIT INFO
-# Provides:          pd-agent
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Start PagerDuty Agent at boot time
-# Description:       Enable PagerDuty Agent daemon process.
-### END INIT INFO
-
-
 # standard python modules
 import logging.handlers
 import os
@@ -192,8 +180,6 @@ class Agent(Daemon):
         main_logger.info('pd-agent started')  # TODO: log agent version
         main_logger.info('--')
 
-        main_logger.info('event_api_url: %s', mainConfig['event_api_url'])
-
         main_logger.info('PID file: %s', self.pidfile)
 
         main_logger.debug('Collecting basic system stats')
@@ -284,7 +270,7 @@ if __name__ == '__main__':
             )
 
     # queue to work on.
-    pdQueue = agentConfig.get_queue()
+    pdQueue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidFile)
