@@ -12,22 +12,24 @@ class RepeatingThread(Thread):
         self._stop = False
 
     def run(self):
-        next_run_time = time.time()
+        next_run_time = 0
         while not self._stop:
-            t = time.time()
-            if t >= next_run_time:
+            s = next_run_time - time.time()
+            if s <= 0:
                 self.tick()
-                t = time.time()
                 if self._strict:
                     next_run_time += self._sleep_secs
-                    if next_run_time < t:
+                    if next_run_time < time.time():
                         # drop extra missed ticks if we fall behind
-                        next_run_time = t
+                        next_run_time = time.time()
+                        # the above logic ruins clock alignment but it's
+                        # simpler than trying to do float modulo math :)
                 else:
-                    next_run_time = t + self._sleep_secs
+                    next_run_time = time.time() + self._sleep_secs
+            elif s < 1.0:
+                time.sleep(s)
             else:
-                s = next_run_time - t
-                time.sleep(s if s < 1.0 else 1.0)
+                time.sleep(1.0)
 
     def set_sleep_secs(self, sleep_secs):
         assert sleep_secs >= 1.0
