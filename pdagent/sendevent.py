@@ -18,17 +18,21 @@ logger = logging.getLogger(__name__)
 
 class SendEventThread(RepeatingThread):
 
-    def __init__(self, mainConfig, pdQueue, lastCleanupTimeSec):
-        RepeatingThread.__init__(self, mainConfig['check_freq_sec'])
-        self.mainConfig = mainConfig
-        self.pdQueue = pdQueue
-        self.lastCleanupTimeSec = lastCleanupTimeSec
+    def __init__(
+            self, pd_queue, check_freq_sec,
+            cleanup_freq_sec, cleanup_before_sec
+            ):
+        RepeatingThread.__init__(self, check_freq_sec)
+        self.pd_queue = pd_queue
+        self.cleanup_freq_sec = cleanup_freq_sec
+        self.cleanup_before_sec = cleanup_before_sec
+        self.last_cleanup_time = 0
 
     def tick(self):
         # flush the event queue.
         logger.info("Flushing event queue")
         try:
-            self.pdQueue.flush(self.send_event)
+            self.pd_queue.flush(self.send_event)
         except EmptyQueueError:
             logger.info("Nothing to do - queue is empty!")
         except IOError:
@@ -37,13 +41,13 @@ class SendEventThread(RepeatingThread):
             logger.error("Error while flushing queue:", exc_info=True)
 
         # clean up if required.
-        secondsSinceCleanup = int(time.time()) - self.lastCleanupTimeSec
-        if secondsSinceCleanup >= self.mainConfig['cleanup_freq_sec']:
+        secs_since_cleanup = int(time.time()) - self.last_cleanup_time
+        if secs_since_cleanup >= self.cleanup_freq_sec:
             try:
-                self.pdQueue.cleanup(self.mainConfig['cleanup_before_sec'])
+                self.pd_queue.cleanup(self.cleanup_before_sec)
             except:
                 logger.error("Error while cleaning up queue:", exc_info=True)
-            self.lastCleanupTimeSec = int(time.time())
+            self.last_cleanup_time = int(time.time())
 
     def send_event(self, json_event_str):
         request = urllib2.Request(EVENTS_API_BASE)

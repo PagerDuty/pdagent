@@ -99,8 +99,13 @@ class Agent(Daemon):
         # Schedule the tick
         main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
 
+        check_freq_sec = mainConfig['check_freq_sec']
+        cleanup_freq_sec = mainConfig['cleanup_freq_sec']
+        cleanup_before_sec = mainConfig['cleanup_before_sec']
+
         send_thread = SendEventThread(
-            mainConfig, pdQueue, Agent.lastCleanupTimeSec
+            pdQueue, check_freq_sec,
+            cleanup_freq_sec, cleanup_before_sec
             )
         send_thread.run()
 
