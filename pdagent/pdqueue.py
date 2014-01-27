@@ -251,7 +251,7 @@ class PDQueue(object):
     # you have considered any concurrency-related consequences to other queue
     # operations before invoking this function.
     def _unsafe_change_event_type(self, event_name, frm, to):
-        new_event_name = event_name.replace(frm + '_', to + '_')
+        new_event_name = event_name.replace(frm, to)
         logger.info("Changing %s -> %s..." % (event_name, new_event_name))
         old_abs = self._abspath(event_name)
         new_abs = self._abspath(new_event_name)
