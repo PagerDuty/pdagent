@@ -27,12 +27,7 @@ vms = {
 
 Vagrant.configure("2") do |conf_outer|
 
-    vm_num = 0
-
     vms.each do |name, conf|
-
-        vm_num += 1
-        vm_num_snapshot = vm_num # snapshot the value in this scope
 
         conf_outer.vm.define name do |config|
 
@@ -53,12 +48,6 @@ Vagrant.configure("2") do |conf_outer|
                 config.omnibus.chef_version = :latest
 
                 server_ip = "127.0.0.1"
-
-                #config.vm.forward_port 80, (8080 + vm_num_snapshot)
-
-                ## CentOS64 box has iptables blocking all traffic - allow http
-                #config.vm.provision "shell",
-                #    inline: "sudo iptables -I INPUT 2 -p tcp --dport 80 -j ACCEPT"
 
                 config.vm.provision :chef_solo do |chef|
                     chef.json = {
