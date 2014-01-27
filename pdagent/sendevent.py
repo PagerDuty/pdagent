@@ -71,9 +71,9 @@ class SendEventThread(RepeatingThread):
             if isinstance(e.reason, socket.timeout):
                 logger.error("Timeout while sending event:", exc_info=True)
                 # This could be real issue with PD, or just some anomaly in
-                # processing this service key or event. We'll retry this service key
-                # a few more times, and then decide that this event is possibly a
-                # bad entry.
+                # processing this service key or event. We'll retry this
+                # service key a few more times, and then decide that this
+                # event is possibly a bad entry.
                 return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
             else:
                 logger.error(
@@ -107,8 +107,8 @@ class SendEventThread(RepeatingThread):
             return ConsumeEvent.BAD_ENTRY
         elif status_code >= 500 and status_code < 600:
             # Hmm. Could be server-side problem, or a bad entry.
-            # We'll retry this service key a few times, and then decide that this
-            # event is possibly a bad entry.
+            # We'll retry this service key a few times, and then decide that
+            # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
             # anything 3xx and >= 5xx
