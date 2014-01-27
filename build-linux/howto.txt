@@ -5,9 +5,9 @@ These instructions assume you're running this on a Mac with Vagrant installed,
 and that the project directory ends up mounted in the VM at `/vagrant`. (this
 should happen automatically)
 
-## Debian
+## Ubuntu
 
-Dev Setup: (one-time)
+Dev Setup: (one-time for your development Mac)
 
     gem install fpm
 
@@ -18,7 +18,7 @@ Building the .deb:
 
 Install & test the .deb:
 
-    vagrant ssh agent-lucid32 # or agent-precise32
+    vagrant ssh agent-minimal-ubuntu1004 # or agent-minimal-ubuntu1204
  
     sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
 
@@ -33,18 +33,19 @@ Uninstall & test cleanup:
     # rerun the test commands to ensure files are gone
 
 
-## Redhat/CentOS
+## CentOS / RHEL
 
-Dev Setup: (one-time)
+Dev Setup: (one-time for the CentOS VM)
 
-    vagrant ssh agent-centos64
-    sudo yum install rpm-build
-    sudo yum install ruby-devel
+    vagrant up agent-minimal-centos65
+    vagrant ssh agent-minimal-centos65
+
+    sudo yum install rpm-build ruby-devel rubygems
     sudo gem install fpm
 
 Building the .rpm:
 
-    vagrant ssh agent-centos64
+    vagrant ssh agent-minimal-centos65
 
     cd
     rm -fr agent
@@ -56,7 +57,7 @@ Install & test the .rpm:
 
     sudo rpm -i target/pdagent-0.1-1.noarch.rpm
 
-    /etc/rc.d/pd-agent status
+    service pd-agent status
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 

@@ -155,7 +155,7 @@ def _get_virt_names():
         subprocess \
         .check_output(["vagrant", "status"]) \
         .splitlines() \
-        if v.find(" running (") >= 0]
+        if (v.startswith("agent-minimal-") and v.find(" running (") >= 0)]
 
 
 def _run_on_virts(remote_command, virts=[]):
@@ -187,7 +187,7 @@ start-virt          Starts configured virtual machines, installing them
                     Specific virtual machines can be started by providing
                     them as arguments, multiple times if required.
                     e.g.
-                    scons start-virt start-virt=agent-lucid32
+                    scons start-virt start-virt=agent-minimal-ubuntu1004
 test                Runs unit tests on all running virtual machines.
                     By default, runs all tests in `pdagenttest` recursively.
                     (Test files should be named in the format `test_*.py`.)
@@ -213,7 +213,7 @@ test-vm             Runs unit tests on the specified virtual machine,
                     Specific unit tests to run can be specified as `test`
                     arguments if required.
                     e.g.
-                    scons test-vm test-vm=agent-lucid32 test=test_foo.py
+                    scons test-vm test-vm=agent-minimal-ubuntu1004 test=test_foo.py
 """)
 
 target_dir = "target"

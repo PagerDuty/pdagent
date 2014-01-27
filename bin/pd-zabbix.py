@@ -30,7 +30,9 @@ def _parse_zabbix_subject(subject_str):
     return subject_str
 
 def main():
-    from pdagent.pdagentutil import send_event
+    import sys
+    from pdagent.pdagentutil import queue_event
+    from pdagent.config import load_agent_config
 
     # The first argument is the service key
     service_key = sys.argv[1]
@@ -48,11 +50,18 @@ def main():
     # The description that is rendered in PagerDuty and also sent as SMS and phone alert
     description = "%s : %s for %s" % (details["name"], details["status"], details["hostname"])
 
-    send_event(message_type, service_key, incident_key, description, details)
+    agent_config = load_agent_config()
+    queue_event(
+        agent_config.get_queue(),
+        message_type, service_key, incident_key, description, details)
 
 if __name__ == "__main__":
-    import sys
-    from os.path import abspath, dirname, join
-    proj_dir = dirname(dirname(abspath(__file__)))
-    sys.path.append(proj_dir)
+    try:
+        import pdagent.config
+    except ImportError:
+        # Fix up for dev layout
+        import sys
+        from os.path import realpath, dirname
+        sys.path.append(dirname(dirname(realpath(__file__))))
+        import pdagent.config
     main()
