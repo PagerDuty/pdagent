@@ -156,13 +156,13 @@ class PDQueue(object):
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
-            self._tag_as_error(fname)
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
 
         consume_code = consume_func(data)
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
-            os.remove(self._abspath(fname))
+            self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
             return True
         elif consume_code == ConsumeEvent.NOT_CONSUMED:
             return True
@@ -170,12 +170,12 @@ class PDQueue(object):
             # stop processing any more events.
             raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
-            self._tag_as_error(fname)
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             if self.backoff_info.is_threshold_breached(svc_key):
                 # time for stricter action -- mark event as bad.
-                self._tag_as_error(fname)
+                self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
@@ -197,7 +197,7 @@ class PDQueue(object):
         for errname in errnames:
             if not service_key or \
                     _get_event_metadata(errname)[2] == service_key:
-                self._unsafe_untag_as_error(errname)
+                self._unsafe_change_event_type(errname, 'err_', 'pdq_')
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
@@ -222,9 +222,10 @@ class PDQueue(object):
                     logger.warning(
                         "Could not clean up file %s: %s" % (fname, str(e)))
 
-        # clean up bad / temp files created before delete-before-time.
+        # clean up bad / temp / success files created before delete-before-time.
         _cleanup_files("err_")
         _cleanup_files("tmp_")
+        _cleanup_files("suc_")
 
     def get_status(self, service_key=None):
         status = {}
@@ -246,26 +247,15 @@ class PDQueue(object):
                 status[svc_key]["error"] += 1
         return status
 
-    def _tag_as_error(self, fname):
-        errname = fname.replace("pdq_", "err_")
-        fname_abs = self._abspath(fname)
-        errname_abs = self._abspath(errname)
-        logger.info(
-            "Tagging as error: %s -> %s..." %
-            (fname, errname))
-        os.rename(fname_abs, errname_abs)
-
-    # This function moves error files back into regular files, so ensure that
+    # This function can move error files back into regular files, so ensure that
     # you have considered any concurrency-related consequences to other queue
     # operations before invoking this function.
-    def _unsafe_untag_as_error(self, errname):
-        fname = errname.replace("err_", "pdq_")
-        errname_abs = self._abspath(errname)
-        fname_abs = self._abspath(fname)
-        logger.info(
-            "Untagging as error: %s -> %s..." %
-            (errname, fname))
-        os.rename(errname_abs, fname_abs)
+    def _unsafe_change_event_type(self, event_name, frm, to):
+        new_event_name = event_name.replace(frm, to)
+        logger.info("Changing %s -> %s..." % (event_name, new_event_name))
+        old_abs = self._abspath(event_name)
+        new_abs = self._abspath(new_event_name)
+        os.rename(old_abs, new_abs)
 
 
 def _open_creat_excl(fname_abs):
