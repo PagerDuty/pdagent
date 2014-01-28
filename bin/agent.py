@@ -65,8 +65,6 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
 # Override the generic daemon class to run our checks
 class Agent(Daemon):
 
-    lastCleanupTimeSec = 0
-
     def run(self):
         global log_dir, main_logger
         init_logging(log_dir)
