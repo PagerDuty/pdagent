@@ -108,6 +108,7 @@ class Agent(Daemon):
         cleanup_freq_sec = mainConfig['cleanup_freq_sec']
         cleanup_before_sec = mainConfig['cleanup_before_sec']
 
+        start_ok = True
         send_thread = None
 
         signal.signal(signal.SIGTERM, _sig_term_handler)
@@ -119,11 +120,11 @@ class Agent(Daemon):
                 )
             send_thread.start()
         except:
-            send_thread = None
+            start_ok = False
             main_logger.error("Error starting send thread", exc_info=True)
 
         try:
-            if send_thread:
+            if start_ok:
                 while not stop_signal:
                     time.sleep(1.0)
         except:
