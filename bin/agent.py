@@ -48,7 +48,7 @@ except ImportError:
 from pdagent.daemon import Daemon
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.backports.ssl_match_hostname import CertificateError
-from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
+from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE
 
 
 # Config handling
@@ -126,12 +126,46 @@ def send_event(json_event_str):
         return ConsumeEvent.NOT_CONSUMED
 
 
-def tick(sc):
+def phone_home(guid, system_stats=None):
+    queue_stats = pdQueue.get_status(throttle_info=True)
+    events = queue_stats.get("events", None)
+    if events:
+        # aggregate the event info.
+        pending = 0
+        success = 0
+        error = 0
+        for stat in events.itervalues():
+            pending += stat.get("pending", 0)
+            success += stat.get("success", 0)
+            error += stat.get("error", 0)
+        queue_stats["events"] = {
+            "pending": pending,
+            "success": success,
+            "error": error
+        }
+
+    phone_home_data = {
+        "agent_id": guid,
+        "agent_version": AGENT_VERSION,
+        "agent_stats": queue_stats
+    }
+    if system_stats:
+        phone_home_data['system_info'] = system_stats
+
+    # TODO send to phone-home endpoint.
     global main_logger
+    main_logger.info("phone-home-data=" + str(phone_home_data))
+
+
+def tick(sc, guid, system_stats=None):
+    global main_logger
+
     # flush the event queue.
     main_logger.info("Flushing event queue")
+    queue_processed = False
     try:
         pdQueue.flush(send_event)
+        queue_processed = True
     except EmptyQueueError:
         main_logger.info("Nothing to do - queue is empty!")
     except IOError:
@@ -140,36 +174,45 @@ def tick(sc):
         main_logger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
-    secondsSinceCleanup = int(time.time()) - Agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
+    seconds_since_cleanup = int(time.time()) - Agent.lastCleanupTimeSec
+    if seconds_since_cleanup >= mainConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
             main_logger.error("Error while cleaning up queue:", exc_info=True)
         Agent.lastCleanupTimeSec = int(time.time())
 
+    # send phone home information if required.
+    # TODO decide about threads for all these features.
+    if queue_processed or system_stats:
+        try:
+            # phone home, sending out system info the first time.
+            phone_home(guid, system_stats)
+        except:
+            main_logger.error("Error while phoning home:", exc_info=True)
+
     # schedule next tick.
-    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
+    # note: system_stats is not required after first tick.
+    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc, guid))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
-    problemDirectories = []
+    problem_directories = []
     for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
             except OSError:
                 pass  # handled in the check immediately below
-        if os.access(directory, os.W_OK) == False:
-            problemDirectories.append(directory)
+        if not os.access(directory, os.W_OK):
+            problem_directories.append(directory)
 
-    return problemDirectories
+    return problem_directories
 
 
 # Override the generic daemon class to run our checks
 class Agent(Daemon):
 
-    guid = None
     lastCleanupTimeSec = 0
 
     def run(self):
@@ -187,7 +230,7 @@ class Agent(Daemon):
 
         # Get some basic system stats to post back for development/testing
         import platform
-        systemStats = {
+        system_stats = {
             'machine': platform.machine(),
             'platform': sys.platform,
             'processor': platform.processor(),
@@ -195,20 +238,19 @@ class Agent(Daemon):
             }
 
         if sys.platform == 'linux2':
-            systemStats['platform_version'] = platform.dist()
+            system_stats['platform_version'] = platform.dist()
 
-        main_logger.info('System: ' + str(systemStats))
+        main_logger.info('System: ' + str(system_stats))
 
-        agent.guid = get_or_make_guid()
-
-        main_logger.info('GUID: ' + agent.guid)
+        guid = get_or_make_guid()
+        main_logger.info('GUID: ' + guid)
 
         main_logger.debug('Creating tick instance')
 
         # Schedule the tick
         main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
-        tick(s)  # start immediately
+        tick(s, guid, system_stats)  # start immediately
         s.run()
 
 
@@ -281,14 +323,14 @@ if __name__ == '__main__':
     outqueue_dir = conf_dirs["outqueue_dir"]
     db_dir = conf_dirs["db_dir"]
 
-    problemDirectories = _ensureWritableDirectories(
+    problem_directories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
-    if problemDirectories:
+    if problem_directories:
         messages = [
             "Directory %s: is not writable" % d
-            for d in problemDirectories
+            for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
         messages.append('Use: service pd-agent <command>')
