@@ -573,7 +573,7 @@ class PDQueueTest(unittest.TestCase):
             "events": {}
         })
 
-        self.assertEqual(q.get_status(), {
+        expected_stats = {
             "service_keys": 4,
             "events": {
                 "svckey1": {
@@ -589,26 +589,11 @@ class PDQueueTest(unittest.TestCase):
                     "pending": 0, "success": 2, "error": 0
                 }
             }
-        })
+        }
+        self.assertEqual(q.get_status(), expected_stats)
 
-        self.assertEqual(q.get_status(throttle_info=True), {
-            "service_keys": 4,
-            "throttled_keys": 1,
-            "events": {
-                "svckey1": {
-                    "pending": 1, "success": 1, "error": 1
-                },
-                "svckey2": {
-                    "pending": 0, "success": 0, "error": 2
-                },
-                "svckey3": {
-                    "pending": 2, "success": 0, "error": 0
-                },
-                "svckey4": {
-                    "pending": 0, "success": 2, "error": 0
-                }
-            }
-        })
+        expected_stats["throttled_keys"] = 1
+        self.assertEqual(q.get_status(throttle_info=True), expected_stats)
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
