@@ -595,6 +595,22 @@ class PDQueueTest(unittest.TestCase):
         expected_stats["throttled_keys"] = 1
         self.assertEqual(q.get_status(throttle_info=True), expected_stats)
 
+        expected_aggr_stats = {
+            "service_keys": 4,
+            "events": {
+                "pending": 3,
+                "success": 3,
+                "error": 3
+            }
+        }
+        self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
+
+        expected_aggr_stats["throttled_keys"] = 1
+        self.assertEqual(
+            q.get_status(throttle_info=True, aggregated=True),
+            expected_aggr_stats
+        )
+
     def test_cleanup(self):
         # simulate enqueues done a while ago.
         q = self.newQueue()

@@ -128,28 +128,11 @@ def send_event(json_event_str):
 
 
 def phone_home(guid, system_stats=None):
-    queue_stats = pdQueue.get_status(throttle_info=True)
-    events = queue_stats.get("events", None)
-    if events:
-        # aggregate the event info.
-        pending = 0
-        success = 0
-        error = 0
-        for stat in events.itervalues():
-            pending += stat.get("pending", 0)
-            success += stat.get("success", 0)
-            error += stat.get("error", 0)
-        queue_stats["events"] = {
-            "pending": pending,
-            "success": success,
-            "error": error
-        }
-
     # TODO finalize keys.
     phone_home_data = {
         "agent_id": guid,
         "agent_version": AGENT_VERSION,
-        "agent_stats": queue_stats
+        "agent_stats": pdQueue.get_status(throttle_info=True, aggregated=True)
     }
     if system_stats:
         phone_home_data['system_info'] = system_stats
