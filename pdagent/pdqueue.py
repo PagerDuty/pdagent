@@ -238,25 +238,44 @@ class PDQueue(object):
         _cleanup_files("tmp_")
         _cleanup_files("suc_")
 
-    def get_status(self, service_key=None):
-        status = {}
-        empty_stats = {
+    def get_status(self, service_key=None, throttle_info=False):
+        event_stats = {}
+        empty_event_stats = {
             "pending": 0,
+            "success": 0,
             "error": 0
         }
-        for fname in self._queued_files():
-            svc_key = _get_event_metadata(fname)[2]
+        svc_keys = set()
+
+        for fname in self._queued_files(""):
+            ftype, _, svc_key = _get_event_metadata(fname)
             if not service_key or svc_key == service_key:
-                if not status.get(svc_key):
-                    status[svc_key] = dict(empty_stats)
-                status[svc_key]["pending"] += 1
-        for errname in self._queued_files("err_"):
-            svc_key = _get_event_metadata(errname)[2]
-            if not service_key or svc_key == service_key:
-                if not status.get(svc_key):
-                    status[svc_key] = dict(empty_stats)
-                status[svc_key]["error"] += 1
-        return status
+                svc_keys.add(svc_key)
+                if not event_stats.get(svc_key):
+                    event_stats[svc_key] = dict(empty_event_stats)
+                if ftype == "pdq":
+                    event_stats[svc_key]["pending"] += 1
+                elif ftype == "suc":
+                    event_stats[svc_key]["success"] += 1
+                elif ftype == "err":
+                    event_stats[svc_key]["error"] += 1
+
+        stats = {
+            "service_keys": len(svc_keys),
+            "events": event_stats
+        }
+
+        # if throttle info is required, compute stats from pre-loaded info.
+        if throttle_info and self.backoff_info._current_retry_at:
+            throttled_keys = set()
+            now = int(self.time.time())
+            for key, retry_at in \
+                    self.backoff_info._current_retry_at.iteritems():
+                if (not service_key or key == service_key) and retry_at > now:
+                    throttled_keys.add(key)
+            stats["throttled_keys"] = len(throttled_keys)
+
+        return stats
 
     # This function can move error files back into regular files, so ensure that
     # you have considered any concurrency-related consequences to other queue
