@@ -6,8 +6,8 @@ import time
 from urllib2 import HTTPError, URLError
 import urllib2
 
-from pdagent import httpswithverify
-from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.thirdparty import httpswithverify
+from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.pdthread import RepeatingThread

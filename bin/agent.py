@@ -41,7 +41,7 @@ except ImportError:
 
 
 # Custom modules
-from pdagent.daemon import Daemon
+from pdagent.thirdparty.daemon import Daemon
 from pdagent.sendevent import SendEventThread
 
 
@@ -180,7 +180,7 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.argparse import ArgumentParser
+    from pdagent.thirdparty.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."
     parser = ArgumentParser(description=description)
     parser.add_argument(
