@@ -38,7 +38,7 @@ def queue_event(
         queue,
         event_type, service_key, incident_key, description, details
         ):
-    if not incident_key and event_type is "trigger":
+    if not incident_key and event_type == "trigger":
         import uuid
         incident_key = "pdagent-%s" % str(uuid.uuid4())
     event = _build_event_json_str(
