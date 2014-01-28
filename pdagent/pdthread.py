@@ -6,7 +6,7 @@ import time
 class RepeatingThread(Thread):
 
     def __init__(self, sleep_secs, strict=False):
-        Thread.__init__(self)
+        Thread.__init__(self, name=self.__class__.__name__)
         self.set_sleep_secs(sleep_secs)
         self._strict = strict
         self._stop = False

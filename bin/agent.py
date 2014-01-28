@@ -82,7 +82,7 @@ class Agent(Daemon):
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
 
-        main_logger.warn('--- pdagentd started')
+        main_logger.warn('*** pdagentd started')
         # TODO: log pid, agent version
 
         main_logger.info('PID file: %s', self.pidfile)
@@ -135,7 +135,7 @@ class Agent(Daemon):
         except:
             main_logger.error("Error stopping send thread", exc_info=True)
 
-        main_logger.warn('--- pdagentd exiting!')
+        main_logger.warn('*** pdagentd exiting!')
         sys.exit(0)
 
 
@@ -146,7 +146,7 @@ def init_logging(log_dir):
         logFile, maxBytes=10485760, backupCount=5
         )
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s %(levelname)-7s %(threadName)-20s %(name)-20s %(message)s"
         )
     handler.setFormatter(formatter)
 

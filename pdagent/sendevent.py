@@ -27,6 +27,9 @@ class SendEventThread(RepeatingThread):
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
         self.last_cleanup_time = 0
+        logger.info(
+            "SendEventThread created with check_freq_sec=%s" % check_freq_sec
+            )
 
     def tick(self):
         # flush the event queue.
