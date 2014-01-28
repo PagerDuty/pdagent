@@ -45,10 +45,10 @@ except ImportError:
 
 
 # Custom modules
-from pdagent import httpswithverify
-from pdagent.daemon import Daemon
+from pdagent.thirdparty import httpswithverify
+from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdqueue import EmptyQueueError
-from pdagent.backports.ssl_match_hostname import CertificateError
+from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE, \
     PHONE_HOME_URI
 
@@ -340,7 +340,7 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.argparse import ArgumentParser
+    from pdagent.thirdparty.argparse import ArgumentParser
     description = "PagerDuty Agent daemon process."
     parser = ArgumentParser(description=description)
     parser.add_argument(
