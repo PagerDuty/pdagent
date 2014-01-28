@@ -12,6 +12,8 @@
 import logging.handlers
 import os
 import sys
+import signal
+import time
 
 
 # Check Python version.
@@ -62,6 +64,16 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
     return problemDirectories
 
 
+stop_signal = False
+
+
+def _sig_term_handler(signum, frame):
+    global stop_signal
+    if not stop_signal:
+        main_logger.info('Stopping due to signal #: %s' % signum)
+        stop_signal = True
+
+
 # Override the generic daemon class to run our checks
 class Agent(Daemon):
 
@@ -70,9 +82,8 @@ class Agent(Daemon):
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
 
-        main_logger.info('--')
-        main_logger.info('pd-agent started')  # TODO: log agent version
-        main_logger.info('--')
+        main_logger.warn('--- pdagentd started')
+        # TODO: log pid, agent version
 
         main_logger.info('PID file: %s', self.pidfile)
 
@@ -92,20 +103,40 @@ class Agent(Daemon):
 
         main_logger.info('System: ' + str(systemStats))
 
-        main_logger.debug('Creating tick instance')
-
-        # Schedule the tick
-        main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
-
+        # Send event thread
         check_freq_sec = mainConfig['check_freq_sec']
         cleanup_freq_sec = mainConfig['cleanup_freq_sec']
         cleanup_before_sec = mainConfig['cleanup_before_sec']
 
-        send_thread = SendEventThread(
-            pdQueue, check_freq_sec,
-            cleanup_freq_sec, cleanup_before_sec
-            )
-        send_thread.run()
+        send_thread = None
+
+        signal.signal(signal.SIGTERM, _sig_term_handler)
+
+        try:
+            send_thread = SendEventThread(
+                pdQueue, check_freq_sec,
+                cleanup_freq_sec, cleanup_before_sec
+                )
+            send_thread.start()
+        except:
+            send_thread = None
+            main_logger.error("Error starting send thread", exc_info=True)
+
+        try:
+            if send_thread:
+                while not stop_signal:
+                    time.sleep(1.0)
+        except:
+            main_logger.error("Error while sleeping", exc_info=True)
+
+        try:
+            if send_thread:
+                send_thread.stop_and_join()
+        except:
+            main_logger.error("Error stopping send thread", exc_info=True)
+
+        main_logger.warn('--- pdagentd exiting!')
+        sys.exit(0)
 
 
 def init_logging(log_dir):
