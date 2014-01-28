@@ -11,13 +11,9 @@
 # standard python modules
 import logging.handlers
 import os
-import sched
 import sys
+import signal
 import time
-import json
-import socket
-import urllib2
-from urllib2 import HTTPError, URLError
 
 
 # Check Python version.
@@ -46,110 +42,12 @@ except ImportError:
 
 # Custom modules
 from pdagent.daemon import Daemon
-from pdagent.pdqueue import EmptyQueueError
-from pdagent.backports.ssl_match_hostname import CertificateError
-from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
+from pdagent.sendevent import SendEventThread
 
 
 # Config handling
 agentConfig = pdagent.config.load_agent_config()
 mainConfig = agentConfig.get_main_config()
-
-
-def send_event(json_event_str):
-    from pdagent import httpswithverify
-    request = urllib2.Request(EVENTS_API_BASE)
-    request.add_header("Content-type", "application/json")
-    request.add_data(json_event_str)
-
-    status_code, result_str = None, None
-    try:
-        response = httpswithverify.urlopen(
-            request,
-            timeout=mainConfig["send_event_timeout_sec"])
-        status_code = response.getcode()
-        result_str = response.read()
-    except HTTPError as e:
-        # the http error is structured similar to an http response.
-        status_code = e.getcode()
-        result_str = e.read()
-    except CertificateError:
-        main_logger.error(
-            "Server certificate validation error while sending event:",
-            exc_info=True)
-        return ConsumeEvent.STOP_ALL
-    except URLError as e:
-        if isinstance(e.reason, socket.timeout):
-            main_logger.error("Timeout while sending event:", exc_info=True)
-            # This could be real issue with PD, or just some anomaly in
-            # processing this service key or event. We'll retry this service key
-            # a few more times, and then decide that this event is possibly a
-            # bad entry.
-            return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
-        else:
-            main_logger.error(
-                "Error establishing a connection for sending event:",
-                exc_info=True)
-            return ConsumeEvent.NOT_CONSUMED
-    except IOError:
-        main_logger.error("Error while sending event:", exc_info=True)
-        return ConsumeEvent.NOT_CONSUMED
-
-    try:
-        result = json.loads(result_str)
-    except:
-        main_logger.warning(
-            "Error reading response data while sending event:",
-            exc_info=True)
-        result = {}
-    if result.get("status") == "success":
-        main_logger.info("incident_key =", result.get("incident_key"))
-    else:
-        main_logger.error("Error sending event %s; Error code: %d, Reason: %s" %
-            (json_event_str, status_code, result_str))
-
-    if status_code < 300:
-        return ConsumeEvent.CONSUMED
-    elif status_code == 403:
-        # We are getting throttled! We'll retry this service key a few more
-        # times, but never consider this event as erroneous.
-        return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
-    elif status_code >= 400 and status_code < 500:
-        return ConsumeEvent.BAD_ENTRY
-    elif status_code >= 500 and status_code < 600:
-        # Hmm. Could be server-side problem, or a bad entry.
-        # We'll retry this service key a few times, and then decide that this
-        # event is possibly a bad entry.
-        return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
-    else:
-        # anything 3xx and >= 5xx
-        return ConsumeEvent.NOT_CONSUMED
-
-
-def tick(sc):
-    global main_logger
-    # flush the event queue.
-    main_logger.info("Flushing event queue")
-    try:
-        pdQueue.flush(send_event)
-    except EmptyQueueError:
-        main_logger.info("Nothing to do - queue is empty!")
-    except IOError:
-        main_logger.error("I/O error while flushing queue:", exc_info=True)
-    except:
-        main_logger.error("Error while flushing queue:", exc_info=True)
-
-    # clean up if required.
-    secondsSinceCleanup = int(time.time()) - Agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
-        try:
-            pdQueue.cleanup(mainConfig['cleanup_before_sec'])
-        except:
-            main_logger.error("Error while cleaning up queue:", exc_info=True)
-        Agent.lastCleanupTimeSec = int(time.time())
-
-    # schedule next tick.
-    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -166,19 +64,26 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
     return problemDirectories
 
 
+stop_signal = False
+
+
+def _sig_term_handler(signum, frame):
+    global stop_signal
+    if not stop_signal:
+        main_logger.info('Stopping due to signal #: %s' % signum)
+        stop_signal = True
+
+
 # Override the generic daemon class to run our checks
 class Agent(Daemon):
-
-    lastCleanupTimeSec = 0
 
     def run(self):
         global log_dir, main_logger
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
 
-        main_logger.info('--')
-        main_logger.info('pd-agent started')  # TODO: log agent version
-        main_logger.info('--')
+        main_logger.warn('*** pdagentd started')
+        # TODO: log pid, agent version
 
         main_logger.info('PID file: %s', self.pidfile)
 
@@ -198,13 +103,41 @@ class Agent(Daemon):
 
         main_logger.info('System: ' + str(systemStats))
 
-        main_logger.debug('Creating tick instance')
+        # Send event thread
+        check_freq_sec = mainConfig['check_freq_sec']
+        cleanup_freq_sec = mainConfig['cleanup_freq_sec']
+        cleanup_before_sec = mainConfig['cleanup_before_sec']
 
-        # Schedule the tick
-        main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
-        s = sched.scheduler(time.time, time.sleep)
-        tick(s)  # start immediately
-        s.run()
+        start_ok = True
+        send_thread = None
+
+        signal.signal(signal.SIGTERM, _sig_term_handler)
+
+        try:
+            send_thread = SendEventThread(
+                pdQueue, check_freq_sec,
+                cleanup_freq_sec, cleanup_before_sec
+                )
+            send_thread.start()
+        except:
+            start_ok = False
+            main_logger.error("Error starting send thread", exc_info=True)
+
+        try:
+            if start_ok:
+                while not stop_signal:
+                    time.sleep(1.0)
+        except:
+            main_logger.error("Error while sleeping", exc_info=True)
+
+        try:
+            if send_thread:
+                send_thread.stop_and_join()
+        except:
+            main_logger.error("Error stopping send thread", exc_info=True)
+
+        main_logger.warn('*** pdagentd exiting!')
+        sys.exit(0)
 
 
 def init_logging(log_dir):
@@ -214,7 +147,7 @@ def init_logging(log_dir):
         logFile, maxBytes=10485760, backupCount=5
         )
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s %(levelname)-7s %(threadName)-20s %(name)-20s %(message)s"
         )
     handler.setFormatter(formatter)
 
