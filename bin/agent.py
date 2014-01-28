@@ -45,10 +45,12 @@ except ImportError:
 
 
 # Custom modules
+from pdagent import httpswithverify
 from pdagent.daemon import Daemon
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.backports.ssl_match_hostname import CertificateError
-from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE
+from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE, \
+    PHONE_HOME_URI
 
 
 # Config handling
@@ -57,7 +59,6 @@ mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
-    from pdagent import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
@@ -144,6 +145,7 @@ def phone_home(guid, system_stats=None):
             "error": error
         }
 
+    # TODO finalize keys.
     phone_home_data = {
         "agent_id": guid,
         "agent_version": AGENT_VERSION,
@@ -152,9 +154,27 @@ def phone_home(guid, system_stats=None):
     if system_stats:
         phone_home_data['system_info'] = system_stats
 
-    # TODO send to phone-home endpoint.
-    global main_logger
-    main_logger.info("phone-home-data=" + str(phone_home_data))
+    request = urllib2.Request(PHONE_HOME_URI)
+    request.add_header("Content-type", "application/json")
+    request.add_data(json.dumps(phone_home_data))
+    try:
+        response = httpswithverify.urlopen(request)
+        result_str = response.read()
+    except:
+        main_logger.error("Error while phoning home:", exc_info=True)
+        result_str = None
+
+    if result_str:
+        try:
+            result = json.loads(result_str)
+        except:
+            main_logger.warning(
+                "Error reading phone-home response data:",
+                exc_info=True)
+            result = {}
+
+        # TODO store heartbeat frequency.
+        result.get("heartbeat_frequency_sec")
 
 
 def tick(sc, guid, system_stats=None):
