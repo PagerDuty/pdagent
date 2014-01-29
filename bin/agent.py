@@ -51,17 +51,17 @@ mainConfig = agentConfig.get_main_config()
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
-    problemDirectories = []
+    problem_directories = []
     for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
             except OSError:
                 pass  # handled in the check immediately below
-        if os.access(directory, os.W_OK) == False:
-            problemDirectories.append(directory)
+        if not os.access(directory, os.W_OK):
+            problem_directories.append(directory)
 
-    return problemDirectories
+    return problem_directories
 
 
 stop_signal = False
@@ -91,7 +91,7 @@ class Agent(Daemon):
 
         # Get some basic system stats to post back for development/testing
         import platform
-        systemStats = {
+        system_stats = {
             'machine': platform.machine(),
             'platform': sys.platform,
             'processor': platform.processor(),
@@ -99,9 +99,12 @@ class Agent(Daemon):
             }
 
         if sys.platform == 'linux2':
-            systemStats['platform_version'] = platform.dist()
+            system_stats['platform_version'] = platform.dist()
 
-        main_logger.info('System: ' + str(systemStats))
+        main_logger.info('System: ' + str(system_stats))
+
+        guid = get_or_make_guid()
+        main_logger.info('GUID: ' + guid)
 
         # Send event thread
         check_freq_sec = mainConfig['check_freq_sec']
@@ -116,7 +119,9 @@ class Agent(Daemon):
         try:
             send_thread = SendEventThread(
                 pdQueue, check_freq_sec,
-                cleanup_freq_sec, cleanup_before_sec
+                cleanup_freq_sec, cleanup_before_sec,
+                guid,
+                system_stats
                 )
             send_thread.start()
         except:
@@ -138,6 +143,49 @@ class Agent(Daemon):
 
         main_logger.warn('*** pdagentd exiting!')
         sys.exit(0)
+
+
+# read persisted, valid GUID, or generate (and persist) one.
+def get_or_make_guid():
+    import uuid
+    guid_file = os.path.join(
+        agentConfig.get_conf_dirs()['data_dir'],
+        "guid.txt")
+    fd = None
+    guid = None
+
+    try:
+        fd = open(guid_file, "r")
+        guid = str(uuid.UUID(fd.readline().strip()))
+    except IOError as e:
+        import errno
+        if e.errno != errno.ENOENT:
+            main_logger.warning(
+                'Could not read GUID from file %s' % guid_file,
+                exc_info=True)
+    except ValueError:
+        main_logger.warning(
+            'Invalid GUID in file %s' % guid_file,
+            exc_info=True)
+    finally:
+        if fd:
+            fd.close()
+
+    if not guid:
+        main_logger.info('Generating new GUID')
+        guid = str(uuid.uuid4())
+        fd = None
+        try:
+            fd = open(guid_file, "w")
+            fd.write(guid)
+        except IOError:
+            main_logger.warning(
+                'Could not write to GUID file %s' % guid_file,
+                exc_info=True)
+        finally:
+            if fd:
+                fd.close()
+    return guid
 
 
 def init_logging(log_dir):
@@ -166,14 +214,14 @@ if __name__ == '__main__':
     outqueue_dir = conf_dirs["outqueue_dir"]
     db_dir = conf_dirs["db_dir"]
 
-    problemDirectories = _ensureWritableDirectories(
+    problem_directories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
-    if problemDirectories:
+    if problem_directories:
         messages = [
             "Directory %s: is not writable" % d
-            for d in problemDirectories
+            for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
         messages.append('Use: service pd-agent <command>')

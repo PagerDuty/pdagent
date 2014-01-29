@@ -26,3 +26,6 @@ python -c "import pdagent; print pdagent.__file__"
 
 # check that agent has started up.
 test -n "$(agent_pid)"
+
+# check that there is a guid file created.
+test -e $DATA_DIR/guid.txt
