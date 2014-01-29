@@ -25,16 +25,17 @@ def main():
     status = get_status(
         load_agent_config().get_queue(),
         args.service_key)  # 'None' for all-keys.
-    if not status:
+    if not status.get("service_keys"):
         print "Nothing to report."
     else:
-        fmt = "%-35s%10s%10s"
-        print fmt % ("Service Key", "Pending", "In Error")
-        print (fmt % ("", "", "")).replace(" ", "=")
-        for (svc_key, state) in status.iteritems():
+        fmt = "%-35s%10s%10s%10s"
+        print fmt % ("Service Key", "Pending", "Success", "In Error")
+        print (fmt % ("", "", "", "")).replace(" ", "=")
+        for (svc_key, state) in status.get("events", {}).iteritems():
             print fmt % (
                 svc_key,
                 state.get("pending", 0),
+                state.get("success", 0),
                 state.get("error", 0))
 
 

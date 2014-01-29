@@ -45,10 +45,12 @@ except ImportError:
 
 
 # Custom modules
+from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
-from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
+from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE, \
+    PHONE_HOME_URI
 
 
 # Config handling
@@ -57,7 +59,6 @@ mainConfig = agentConfig.get_main_config()
 
 
 def send_event(json_event_str):
-    from pdagent.thirdparty import httpswithverify
     request = urllib2.Request(EVENTS_API_BASE)
     request.add_header("Content-type", "application/json")
     request.add_data(json_event_str)
@@ -126,12 +127,48 @@ def send_event(json_event_str):
         return ConsumeEvent.NOT_CONSUMED
 
 
-def tick(sc):
+def phone_home(guid, system_stats=None):
+    # TODO finalize keys.
+    phone_home_data = {
+        "agent_id": guid,
+        "agent_version": AGENT_VERSION,
+        "agent_stats": pdQueue.get_status(throttle_info=True, aggregated=True)
+    }
+    if system_stats:
+        phone_home_data['system_info'] = system_stats
+
+    request = urllib2.Request(PHONE_HOME_URI)
+    request.add_header("Content-type", "application/json")
+    request.add_data(json.dumps(phone_home_data))
+    try:
+        response = httpswithverify.urlopen(request)
+        result_str = response.read()
+    except:
+        main_logger.error("Error while phoning home:", exc_info=True)
+        result_str = None
+
+    if result_str:
+        try:
+            result = json.loads(result_str)
+        except:
+            main_logger.warning(
+                "Error reading phone-home response data:",
+                exc_info=True)
+            result = {}
+
+        # TODO store heartbeat frequency.
+        result.get("heartbeat_frequency_sec")
+
+
+def tick(sc, guid, system_stats=None):
     global main_logger
+
     # flush the event queue.
     main_logger.info("Flushing event queue")
+    queue_processed = False
     try:
         pdQueue.flush(send_event)
+        queue_processed = True
     except EmptyQueueError:
         main_logger.info("Nothing to do - queue is empty!")
     except IOError:
@@ -140,30 +177,40 @@ def tick(sc):
         main_logger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
-    secondsSinceCleanup = int(time.time()) - Agent.lastCleanupTimeSec
-    if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
+    seconds_since_cleanup = int(time.time()) - Agent.lastCleanupTimeSec
+    if seconds_since_cleanup >= mainConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
             main_logger.error("Error while cleaning up queue:", exc_info=True)
         Agent.lastCleanupTimeSec = int(time.time())
 
+    # send phone home information if required.
+    # TODO decide about threads for all these features.
+    if queue_processed or system_stats:
+        try:
+            # phone home, sending out system info the first time.
+            phone_home(guid, system_stats)
+        except:
+            main_logger.error("Error while phoning home:", exc_info=True)
+
     # schedule next tick.
-    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
+    # note: system_stats is not required after first tick.
+    sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc, guid))
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
-    problemDirectories = []
+    problem_directories = []
     for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
             try:
                 os.mkdir(directory)
             except OSError:
                 pass  # handled in the check immediately below
-        if os.access(directory, os.W_OK) == False:
-            problemDirectories.append(directory)
+        if not os.access(directory, os.W_OK):
+            problem_directories.append(directory)
 
-    return problemDirectories
+    return problem_directories
 
 
 # Override the generic daemon class to run our checks
@@ -186,7 +233,7 @@ class Agent(Daemon):
 
         # Get some basic system stats to post back for development/testing
         import platform
-        systemStats = {
+        system_stats = {
             'machine': platform.machine(),
             'platform': sys.platform,
             'processor': platform.processor(),
@@ -194,17 +241,63 @@ class Agent(Daemon):
             }
 
         if sys.platform == 'linux2':
-            systemStats['platform_version'] = platform.dist()
+            system_stats['platform_version'] = platform.dist()
 
-        main_logger.info('System: ' + str(systemStats))
+        main_logger.info('System: ' + str(system_stats))
+
+        guid = get_or_make_guid()
+        main_logger.info('GUID: ' + guid)
 
         main_logger.debug('Creating tick instance')
 
         # Schedule the tick
         main_logger.info('check_freq_sec: %s', mainConfig['check_freq_sec'])
         s = sched.scheduler(time.time, time.sleep)
-        tick(s)  # start immediately
+        tick(s, guid, system_stats)  # start immediately
         s.run()
+
+
+# read persisted, valid GUID, or generate (and persist) one.
+def get_or_make_guid():
+    import uuid
+    guid_file = os.path.join(
+        agentConfig.get_conf_dirs()['data_dir'],
+        "guid.txt")
+    fd = None
+    guid = None
+
+    try:
+        fd = open(guid_file, "r")
+        guid = str(uuid.UUID(fd.readline().strip()))
+    except IOError as e:
+        import errno
+        if e.errno != errno.ENOENT:
+            main_logger.warning(
+                'Could not read GUID from file %s' % guid_file,
+                exc_info=True)
+    except ValueError:
+        main_logger.warning(
+            'Invalid GUID in file %s' % guid_file,
+            exc_info=True)
+    finally:
+        if fd:
+            fd.close()
+
+    if not guid:
+        main_logger.info('Generating new GUID')
+        guid = str(uuid.uuid4())
+        fd = None
+        try:
+            fd = open(guid_file, "w")
+            fd.write(guid)
+        except IOError:
+            main_logger.warning(
+                'Could not write to GUID file %s' % guid_file,
+                exc_info=True)
+        finally:
+            if fd:
+                fd.close()
+    return guid
 
 
 def init_logging(log_dir):
@@ -233,14 +326,14 @@ if __name__ == '__main__':
     outqueue_dir = conf_dirs["outqueue_dir"]
     db_dir = conf_dirs["db_dir"]
 
-    problemDirectories = _ensureWritableDirectories(
+    problem_directories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
-    if problemDirectories:
+    if problem_directories:
         messages = [
             "Directory %s: is not writable" % d
-            for d in problemDirectories
+            for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
         messages.append('Use: service pd-agent <command>')

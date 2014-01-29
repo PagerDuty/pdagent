@@ -539,39 +539,77 @@ class PDQueueTest(unittest.TestCase):
     def test_status(self):
         q = self.newQueue()
         fnames = []
-        fnames.append(q.enqueue("svckey1", "e1"))
-        fnames.append(q.enqueue("svckey1", "e2"))
-        fnames.append(q.enqueue("svckey2", "e3"))
-        fnames.append(q.enqueue("svckey2", "e4"))
-        fnames.append(q.enqueue("svckey3", "e5"))
-        fnames.append(q.enqueue("svckey3", "e6"))
+        fnames.append(q.enqueue("svckey1", "e11"))
+        fnames.append(q.enqueue("svckey1", "e12"))
+        fnames.append(q.enqueue("svckey1", "e13"))
+        fnames.append(q.enqueue("svckey2", "e21"))
+        fnames.append(q.enqueue("svckey2", "e22"))
+        fnames.append(q.enqueue("svckey3", "e31"))
+        fnames.append(q.enqueue("svckey3", "e32"))
+        fnames.append(q.enqueue("svckey4", "e41"))
+        fnames.append(q.enqueue("svckey4", "e42"))
         q._unsafe_change_event_type(fnames[0], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[2], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[2], "pdq_", "suc_")
         q._unsafe_change_event_type(fnames[3], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[4], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[7], "pdq_", "suc_")
+        q._unsafe_change_event_type(fnames[8], "pdq_", "suc_")
+
+        q.backoff_info.increment("svckey2")
 
         self.assertEqual(q.get_status("svckey1"), {
-            "svckey1": {
-                "pending": 1,
-                "error": 1
+            "service_keys": 1,
+            "events": {
+                "svckey1": {
+                    "pending": 1,
+                    "error": 1,
+                    "success": 1
+                }
             }
         })
 
-        self.assertEquals(len(q.get_status("non_existent_key")), 0)
-
-        self.assertEqual(q.get_status(), {
-            "svckey1": {
-                "pending": 1,
-                "error": 1
-            },
-            "svckey2": {
-                "pending": 0,
-                "error": 2
-            },
-            "svckey3": {
-                "pending": 2,
-                "error": 0
-            }
+        self.assertEqual(q.get_status("non_existent_key"), {
+            "service_keys": 0,
+            "events": {}
         })
+
+        expected_stats = {
+            "service_keys": 4,
+            "events": {
+                "svckey1": {
+                    "pending": 1, "success": 1, "error": 1
+                },
+                "svckey2": {
+                    "pending": 0, "success": 0, "error": 2
+                },
+                "svckey3": {
+                    "pending": 2, "success": 0, "error": 0
+                },
+                "svckey4": {
+                    "pending": 0, "success": 2, "error": 0
+                }
+            }
+        }
+        self.assertEqual(q.get_status(), expected_stats)
+
+        expected_stats["throttled_keys"] = 1
+        self.assertEqual(q.get_status(throttle_info=True), expected_stats)
+
+        expected_aggr_stats = {
+            "service_keys": 4,
+            "events": {
+                "pending": 3,
+                "success": 3,
+                "error": 3
+            }
+        }
+        self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
+
+        expected_aggr_stats["throttled_keys"] = 1
+        self.assertEqual(
+            q.get_status(throttle_info=True, aggregated=True),
+            expected_aggr_stats
+        )
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
