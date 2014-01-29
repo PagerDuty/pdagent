@@ -24,10 +24,6 @@ class PhoneHomeThread(RepeatingThread):
         self.pd_queue = pd_queue
         self.guid = guid
         self.system_info = system_info
-        logger.info(
-            "PhoneHomeThread created with heartbeat_frequency_sec=%s" \
-                % heartbeat_frequency_sec
-            )
 
     def tick(self):
         # phone home, sending out system info the first time.

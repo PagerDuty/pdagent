@@ -65,9 +65,6 @@ class SendEventThread(RepeatingThread):
         self.guid = guid
         self.system_stats = system_stats
         self.last_cleanup_time = 0
-        logger.info(
-            "SendEventThread created with check_freq_sec=%s" % check_freq_sec
-            )
 
     def tick(self):
         # flush the event queue.

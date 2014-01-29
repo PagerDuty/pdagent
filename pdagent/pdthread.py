@@ -1,15 +1,23 @@
 
+import logging
 from threading import Thread
 import time
+
+
+logger = logging.getLogger(__name__)
 
 
 class RepeatingThread(Thread):
 
     def __init__(self, sleep_secs, strict=False):
         Thread.__init__(self, name=self.__class__.__name__)
-        self.set_sleep_secs(sleep_secs)
+        assert sleep_secs >= 1.0
+        self._sleep_secs = sleep_secs
         self._strict = strict
         self._stop = False
+        logger.info(
+            "%s created with sleep_secs=%s" % (self.getName(), sleep_secs)
+            )
 
     def run(self):
         next_run_time = 0
