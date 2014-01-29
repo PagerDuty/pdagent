@@ -97,7 +97,7 @@ class SendEventThread(RepeatingThread):
         if queue_processed or self.system_stats:
             try:
                 # phone home, sending out system info the first time.
-                phone_home(self.guid, self.system_stats)
+                phone_home(self.pd_queue, self.guid, self.system_stats)
                 # system stats not sent out after first time
                 self.system_stats = None
             except:
