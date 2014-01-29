@@ -29,6 +29,7 @@ class RepeatingThread(Thread):
             elif s < 1.0:
                 time.sleep(s)
             else:
+                # Sleep for only 1 sec to allow graceful stop
                 time.sleep(1.0)
 
     def set_sleep_secs(self, sleep_secs):
