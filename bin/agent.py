@@ -11,8 +11,8 @@
 # standard python modules
 import logging.handlers
 import os
-import sys
 import signal
+import sys
 import time
 
 
@@ -42,6 +42,7 @@ except ImportError:
 
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
+from pdagent.phonehome import PhoneHomeThread
 from pdagent.sendevent import SendEventThread
 
 
@@ -106,13 +107,14 @@ class Agent(Daemon):
         guid = get_or_make_guid()
         main_logger.info('GUID: ' + guid)
 
-        # Send event thread
+        # Send event thread config
         check_freq_sec = mainConfig['check_freq_sec']
         cleanup_freq_sec = mainConfig['cleanup_freq_sec']
         cleanup_before_sec = mainConfig['cleanup_before_sec']
 
         start_ok = True
         send_thread = None
+        phone_thread = None
 
         signal.signal(signal.SIGTERM, _sig_term_handler)
 
@@ -129,11 +131,34 @@ class Agent(Daemon):
             main_logger.error("Error starting send thread", exc_info=True)
 
         try:
+            heartbeat_frequency_sec = 60  # FIXME
+            phone_thread = PhoneHomeThread(
+                heartbeat_frequency_sec,
+                pdQueue,
+                guid,
+                system_stats
+                )
+            phone_thread.start()
+        except:
+            start_ok = False
+            main_logger.error(
+                "Error starting phone home thread", exc_info=True
+                )
+
+        try:
             if start_ok:
                 while not stop_signal:
                     time.sleep(1.0)
         except:
             main_logger.error("Error while sleeping", exc_info=True)
+
+        try:
+            if phone_thread:
+                phone_thread.stop_and_join()
+        except:
+            main_logger.error(
+                "Error stopping phone home thread", exc_info=True
+                )
 
         try:
             if send_thread:
