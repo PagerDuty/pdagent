@@ -121,6 +121,13 @@ class PDQueueTest(unittest.TestCase):
         self.assertRaises(
             EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
+        # verify that queued files are now success files.
+        success_contents = [
+            open(q._abspath(f)).read()
+            for f in q._queued_files("suc")
+        ]
+        self.assertEquals(success_contents, ["foo", "bar", "baz"])
+
     def test_dont_consume(self):
         # The item should stay in the queue if we don't consume it.
         q = self.newQueue()
@@ -507,9 +514,9 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(q.enqueue("svckey2", "baz"))
         fnames.append(q.enqueue("svckey2", "boo"))
         fnames.append(q.enqueue("svckey3", "bam"))
-        q._tag_as_error(fnames[0])
-        q._tag_as_error(fnames[2])
-        q._tag_as_error(fnames[4])
+        q._unsafe_change_event_type(fnames[0], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[2], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[4], "pdq_", "err_")
 
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 3)
@@ -532,39 +539,77 @@ class PDQueueTest(unittest.TestCase):
     def test_status(self):
         q = self.newQueue()
         fnames = []
-        fnames.append(q.enqueue("svckey1", "e1"))
-        fnames.append(q.enqueue("svckey1", "e2"))
-        fnames.append(q.enqueue("svckey2", "e3"))
-        fnames.append(q.enqueue("svckey2", "e4"))
-        fnames.append(q.enqueue("svckey3", "e5"))
-        fnames.append(q.enqueue("svckey3", "e6"))
-        q._tag_as_error(fnames[0])
-        q._tag_as_error(fnames[2])
-        q._tag_as_error(fnames[3])
+        fnames.append(q.enqueue("svckey1", "e11"))
+        fnames.append(q.enqueue("svckey1", "e12"))
+        fnames.append(q.enqueue("svckey1", "e13"))
+        fnames.append(q.enqueue("svckey2", "e21"))
+        fnames.append(q.enqueue("svckey2", "e22"))
+        fnames.append(q.enqueue("svckey3", "e31"))
+        fnames.append(q.enqueue("svckey3", "e32"))
+        fnames.append(q.enqueue("svckey4", "e41"))
+        fnames.append(q.enqueue("svckey4", "e42"))
+        q._unsafe_change_event_type(fnames[0], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[2], "pdq_", "suc_")
+        q._unsafe_change_event_type(fnames[3], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[4], "pdq_", "err_")
+        q._unsafe_change_event_type(fnames[7], "pdq_", "suc_")
+        q._unsafe_change_event_type(fnames[8], "pdq_", "suc_")
+
+        q.backoff_info.increment("svckey2")
 
         self.assertEqual(q.get_status("svckey1"), {
-            "svckey1": {
-                "pending": 1,
-                "error": 1
+            "service_keys": 1,
+            "events": {
+                "svckey1": {
+                    "pending": 1,
+                    "error": 1,
+                    "success": 1
+                }
             }
         })
 
-        self.assertEquals(len(q.get_status("non_existent_key")), 0)
-
-        self.assertEqual(q.get_status(), {
-            "svckey1": {
-                "pending": 1,
-                "error": 1
-            },
-            "svckey2": {
-                "pending": 0,
-                "error": 2
-            },
-            "svckey3": {
-                "pending": 2,
-                "error": 0
-            }
+        self.assertEqual(q.get_status("non_existent_key"), {
+            "service_keys": 0,
+            "events": {}
         })
+
+        expected_stats = {
+            "service_keys": 4,
+            "events": {
+                "svckey1": {
+                    "pending": 1, "success": 1, "error": 1
+                },
+                "svckey2": {
+                    "pending": 0, "success": 0, "error": 2
+                },
+                "svckey3": {
+                    "pending": 2, "success": 0, "error": 0
+                },
+                "svckey4": {
+                    "pending": 0, "success": 2, "error": 0
+                }
+            }
+        }
+        self.assertEqual(q.get_status(), expected_stats)
+
+        expected_stats["throttled_keys"] = 1
+        self.assertEqual(q.get_status(throttle_info=True), expected_stats)
+
+        expected_aggr_stats = {
+            "service_keys": 4,
+            "events": {
+                "pending": 3,
+                "success": 3,
+                "error": 3
+            }
+        }
+        self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
+
+        expected_aggr_stats["throttled_keys"] = 1
+        self.assertEqual(
+            q.get_status(throttle_info=True, aggregated=True),
+            expected_aggr_stats
+        )
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
@@ -584,16 +629,19 @@ class PDQueueTest(unittest.TestCase):
         q1 = enqueue_before(2000)
         t1 = enqueue_before(2100, prefix="tmp")
         e1 = enqueue_before(2200, prefix="err")
+        s2 = enqueue_before(2300, prefix="suc")
         q2 = enqueue_before(1000)
         t2 = enqueue_before(1100, prefix="tmp")
+        s2 = enqueue_before(1150, prefix="suc")
         e2 = enqueue_before(1200, prefix="err")
 
         q.cleanup(1500)
-        # old err+tmp files are removed; old queue entries are not.
-        expected_unremoved = [q1, q2, t2, e2]
+        # old err+tmp+suc files are removed; old queue entries are not.
+        expected_unremoved = [q1, q2, t2, e2, s2]
         actual_unremoved = q._queued_files()
         actual_unremoved.extend(q._queued_files("tmp"))
         actual_unremoved.extend(q._queued_files("err"))
+        actual_unremoved.extend(q._queued_files("suc"))
         self.assertEquals(expected_unremoved, actual_unremoved)
 
         # create an invalid file too, just to complicate things.
@@ -605,6 +653,7 @@ class PDQueueTest(unittest.TestCase):
         actual_unremoved = q._queued_files()
         actual_unremoved.extend(q._queued_files("tmp"))
         actual_unremoved.extend(q._queued_files("err"))
+        actual_unremoved.extend(q._queued_files("suc"))
         self.assertEquals(expected_unremoved, actual_unremoved)
 
     def _assertBackoffData(self, q, data):

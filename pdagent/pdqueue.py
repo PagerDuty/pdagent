@@ -157,7 +157,7 @@ class PDQueue(object):
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
-            self._tag_as_error(fname)
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
 
         logger.info("Processing event " + fname)
@@ -165,7 +165,7 @@ class PDQueue(object):
 
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
-            os.remove(self._abspath(fname))
+            self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
             return True
         elif consume_code == ConsumeEvent.NOT_CONSUMED:
             return True
@@ -173,7 +173,7 @@ class PDQueue(object):
             # stop processing any more events.
             raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
-            self._tag_as_error(fname)
+            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             logger.info("Backing off service key " + svc_key)
@@ -185,7 +185,7 @@ class PDQueue(object):
                         " Assuming bad event."
                     ) %
                     svc_key)
-                self._tag_as_error(fname)
+                self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
@@ -207,7 +207,7 @@ class PDQueue(object):
         for errname in errnames:
             if not service_key or \
                     _get_event_metadata(errname)[2] == service_key:
-                self._unsafe_untag_as_error(errname)
+                self._unsafe_change_event_type(errname, 'err_', 'pdq_')
 
     def cleanup(self, delete_before_sec):
         delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
@@ -233,50 +233,69 @@ class PDQueue(object):
                     logger.warning(
                         "Could not clean up file %s: %s" % (fname, str(e)))
 
-        # clean up bad / temp files created before delete-before-time.
+        # clean up bad / temp / success files created before delete-before-time.
         _cleanup_files("err_")
         _cleanup_files("tmp_")
+        _cleanup_files("suc_")
 
-    def get_status(self, service_key=None):
-        status = {}
-        empty_stats = {
+    def get_status(
+        self, service_key=None, aggregated=False, throttle_info=False
+    ):
+        empty_event_stats = {
             "pending": 0,
+            "success": 0,
             "error": 0
         }
-        for fname in self._queued_files():
-            svc_key = _get_event_metadata(fname)[2]
+        if aggregated:
+            event_stats = empty_event_stats
+        else:
+            # stats per service-key
+            event_stats = {}
+        svc_keys = set()
+
+        for fname in self._queued_files(""):
+            ftype, _, svc_key = _get_event_metadata(fname)
             if not service_key or svc_key == service_key:
-                if not status.get(svc_key):
-                    status[svc_key] = dict(empty_stats)
-                status[svc_key]["pending"] += 1
-        for errname in self._queued_files("err_"):
-            svc_key = _get_event_metadata(errname)[2]
-            if not service_key or svc_key == service_key:
-                if not status.get(svc_key):
-                    status[svc_key] = dict(empty_stats)
-                status[svc_key]["error"] += 1
+                svc_keys.add(svc_key)
+                if aggregated:
+                    stats = event_stats
+                else:
+                    if not event_stats.get(svc_key):
+                        event_stats[svc_key] = dict(empty_event_stats)
+                    stats = event_stats[svc_key]
+                if ftype == "pdq":
+                    stats["pending"] += 1
+                elif ftype == "suc":
+                    stats["success"] += 1
+                elif ftype == "err":
+                    stats["error"] += 1
+
+        status = {
+            "service_keys": len(svc_keys),
+            "events": event_stats
+        }
+
+        # if throttle info is required, compute from pre-loaded info.
+        if throttle_info and self.backoff_info._current_retry_at:
+            throttled_keys = set()
+            now = int(self.time.time())
+            for key, retry_at in \
+                    self.backoff_info._current_retry_at.iteritems():
+                if (not service_key or key == service_key) and retry_at > now:
+                    throttled_keys.add(key)
+            status["throttled_keys"] = len(throttled_keys)
+
         return status
 
-    def _tag_as_error(self, fname):
-        errname = fname.replace("pdq_", "err_")
-        fname_abs = self._abspath(fname)
-        errname_abs = self._abspath(errname)
-        logger.info(
-            "Tagging as error: %s -> %s..." %
-            (fname, errname))
-        os.rename(fname_abs, errname_abs)
-
-    # This function moves error files back into regular files, so ensure that
+    # This function can move error files back into regular files, so ensure that
     # you have considered any concurrency-related consequences to other queue
     # operations before invoking this function.
-    def _unsafe_untag_as_error(self, errname):
-        fname = errname.replace("err_", "pdq_")
-        errname_abs = self._abspath(errname)
-        fname_abs = self._abspath(fname)
-        logger.info(
-            "Untagging as error: %s -> %s..." %
-            (errname, fname))
-        os.rename(errname_abs, fname_abs)
+    def _unsafe_change_event_type(self, event_name, frm, to):
+        new_event_name = event_name.replace(frm, to)
+        logger.info("Changing %s -> %s..." % (event_name, new_event_name))
+        old_abs = self._abspath(event_name)
+        new_abs = self._abspath(new_event_name)
+        os.rename(old_abs, new_abs)
 
 
 def _open_creat_excl(fname_abs):
