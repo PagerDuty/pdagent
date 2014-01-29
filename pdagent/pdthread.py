@@ -18,12 +18,12 @@ class RepeatingThread(Thread):
             if s <= 0:
                 self.tick()
                 if self._strict:
-                    next_run_time += self._sleep_secs
-                    if next_run_time < time.time():
-                        # drop extra missed ticks if we fall behind
-                        next_run_time = time.time()
-                        # the above logic ruins clock alignment but it's
-                        # simpler than trying to do float modulo math :)
+                    # drop extra missed ticks if we fall behind
+                    next_run_time = max(
+                        next_run_time + self._sleep_secs, time.time()
+                        )
+                    # the above logic ruins clock alignment but it's
+                    # simpler than trying to do float modulo math :)
                 else:
                     next_run_time = time.time() + self._sleep_secs
             elif s < 1.0:
