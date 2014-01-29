@@ -82,7 +82,7 @@ class Agent(Daemon):
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
 
-        main_logger.warn('*** pdagentd started')
+        main_logger.info('*** pdagentd started')
         # TODO: log pid, agent version
 
         main_logger.info('PID file: %s', self.pidfile)
@@ -141,7 +141,7 @@ class Agent(Daemon):
         except:
             main_logger.error("Error stopping send thread", exc_info=True)
 
-        main_logger.warn('*** pdagentd exiting!')
+        main_logger.info('*** pdagentd exiting!')
         sys.exit(0)
 
 
