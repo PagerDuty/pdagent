@@ -1,0 +1,1 @@
+{"description":"Zabbix server has just been restarted : PROBLEM for Zabbix server","details":{"event_id":"70","hostname":"Zabbix server","id":"13502","ip":"127.0.0.1","name":"Zabbix server has just been restarted","severity":"High","status":"PROBLEM","value":"1"},"event_type":"trigger","incident_key":"13502-Zabbix server","service_key":"DUMMY_SERVICE_KEY"}
