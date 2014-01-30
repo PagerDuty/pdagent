@@ -8,8 +8,7 @@ import urllib2
 
 from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
-from pdagent.constants import AGENT_VERSION, ConsumeEvent, EVENTS_API_BASE, \
-    PHONE_HOME_URI
+from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.pdthread import RepeatingThread
 
