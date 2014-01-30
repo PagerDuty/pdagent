@@ -114,13 +114,14 @@ class Agent(Daemon):
 
             main_logger.debug('Collecting basic system stats')
 
-            # Get some basic system stats to post back for development/testing
+            # Get some basic system stats to post back in phone-home
             import platform
+            import socket
             system_stats = {
-                'machine': platform.machine(),
-                'platform': sys.platform,
-                'processor': platform.processor(),
-                'python_version': platform.python_version()
+                'platform_name': sys.platform,
+                'python_version': platform.python_version(),
+                'host_name': socket.getfqdn()  # to show in stats-based alerts.
+                # TODO ip address?
                 }
 
             if sys.platform == 'linux2':

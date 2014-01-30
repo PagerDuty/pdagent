@@ -35,8 +35,8 @@ def main():
             print fmt % (
                 svc_key,
                 state.get("pending", 0),
-                state.get("success", 0),
-                state.get("error", 0))
+                state.get("succeeded", 0),
+                state.get("failed", 0))
 
 
 if __name__ == "__main__":

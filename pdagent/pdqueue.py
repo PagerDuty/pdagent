@@ -243,8 +243,8 @@ class PDQueue(object):
     ):
         empty_event_stats = {
             "pending": 0,
-            "success": 0,
-            "error": 0
+            "succeeded": 0,
+            "failed": 0
         }
         if aggregated:
             event_stats = empty_event_stats
@@ -266,14 +266,21 @@ class PDQueue(object):
                 if ftype == "pdq":
                     stats["pending"] += 1
                 elif ftype == "suc":
-                    stats["success"] += 1
+                    stats["succeeded"] += 1
                 elif ftype == "err":
-                    stats["error"] += 1
+                    stats["failed"] += 1
 
         status = {
             "service_keys": len(svc_keys),
-            "events": event_stats
         }
+        if aggregated:
+            status.update({
+                "events_pending": event_stats["pending"],
+                "events_succeeded": event_stats["succeeded"],
+                "events_failed": event_stats["failed"]
+            })
+        else:
+            status["events"] = event_stats
 
         # if throttle info is required, compute from pre-loaded info.
         if throttle_info and self.backoff_info._current_retry_at:
@@ -284,7 +291,7 @@ class PDQueue(object):
                 if (not service_key or (key == service_key)) and \
                         retry_at > now:
                     throttled_keys.add(key)
-            status["throttled_keys"] = len(throttled_keys)
+            status["service_keys_throttled"] = len(throttled_keys)
 
         return status
 
