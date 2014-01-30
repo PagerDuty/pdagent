@@ -22,15 +22,11 @@ class SendEventThread(RepeatingThread):
     def __init__(
             self, pd_queue, check_freq_sec,
             cleanup_freq_sec, cleanup_before_sec,
-            guid,
-            system_stats,
             ):
         RepeatingThread.__init__(self, check_freq_sec)
         self.pd_queue = pd_queue
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
-        self.guid = guid
-        self.system_stats = system_stats
         self.last_cleanup_time = 0
 
     def tick(self):
