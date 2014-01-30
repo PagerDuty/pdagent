@@ -37,10 +37,8 @@ class PhoneHomeThread(RepeatingThread):
                     throttle_info=True, aggregated=True
                     ),
             }
-            if self.system_stats:
+            if self.system_info:
                 phone_home_data['system_info'] = self.system_info
-                # system info not sent out after first time
-                self.system_info = None
 
             request = urllib2.Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")
