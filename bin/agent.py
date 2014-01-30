@@ -153,7 +153,9 @@ class Agent(Daemon):
                 main_logger.error("Error starting send thread", exc_info=True)
 
             try:
-                heartbeat_frequency_sec = 60  # FIXME
+                # we'll phone-home daily, although that will change if server
+                # indicates a different frequency.
+                heartbeat_frequency_sec = 60 * 60 * 24
                 phone_thread = PhoneHomeThread(
                     heartbeat_frequency_sec,
                     pdQueue,

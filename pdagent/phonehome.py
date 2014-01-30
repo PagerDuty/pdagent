@@ -29,7 +29,6 @@ class PhoneHomeThread(RepeatingThread):
         # phone home, sending out system info the first time.
         logger.debug("Phoning home")
         try:
-            # TODO finalize keys.
             phone_home_data = {
                 "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
@@ -38,7 +37,7 @@ class PhoneHomeThread(RepeatingThread):
                     ),
             }
             if self.system_info:
-                phone_home_data['system_info'] = self.system_info
+                phone_home_data["system_info"] = self.system_info
 
             request = urllib2.Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")

@@ -255,7 +255,7 @@ class PDQueue(object):
 
         for fname in self._queued_files(""):
             ftype, _, svc_key = _get_event_metadata(fname)
-            if not service_key or svc_key == service_key:
+            if not service_key or (svc_key == service_key):
                 svc_keys.add(svc_key)
                 if aggregated:
                     stats = event_stats
@@ -283,6 +283,7 @@ class PDQueue(object):
             status["events"] = event_stats
 
         # if throttle info is required, compute from pre-loaded info.
+        # (we don't want to reload info if queue processing is underway.)
         if throttle_info and self.backoff_info._current_retry_at:
             throttled_keys = set()
             now = int(self.time.time())
