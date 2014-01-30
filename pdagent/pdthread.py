@@ -42,7 +42,11 @@ class RepeatingThread(Thread):
 
     def set_sleep_secs(self, sleep_secs):
         assert sleep_secs >= 1.0
-        self._sleep_secs = sleep_secs
+        if sleep_secs != self._sleep_secs:
+            self._sleep_secs = sleep_secs
+            logger.info(
+                "%s changed sleep_secs to %s" % (self.getName(), sleep_secs)
+            )
 
     def stop(self):
         self._stop = True

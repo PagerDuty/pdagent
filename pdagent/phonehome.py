@@ -56,11 +56,13 @@ class PhoneHomeThread(RepeatingThread):
                 except:
                     logger.warning(
                         "Error reading phone-home response data:",
-                        exc_info=True)
+                        exc_info=True
+                        )
                     result = {}
 
-                # TODO store heartbeat frequency.
-                result.get("heartbeat_frequency_sec")
+                new_heartbeat_freq = result.get("heartbeat_frequency_sec")
+                if new_heartbeat_freq:
+                    self.set_sleep_secs(new_heartbeat_freq)
 
         except:
             logger.error("Error while phoning home:", exc_info=True)
