@@ -224,7 +224,6 @@ class PDQueue(object):
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
-                        logger.info("Cleanup: removing " + fname)
                         fnames.remove(fname)
             for fname in fnames:
                 try:
@@ -253,22 +252,21 @@ class PDQueue(object):
             event_stats = {}
         svc_keys = set()
 
-        for fname in self._queued_files(""):
-            ftype, _, svc_key = _get_event_metadata(fname)
-            if not service_key or (svc_key == service_key):
-                svc_keys.add(svc_key)
+        def add_stat(queue_file_prefix, stat_type):
+            for fname in self._queued_files(queue_file_prefix):
+                ftype, _, svc_key = _get_event_metadata(fname)
+                if not service_key or (svc_key == service_key):
+                    svc_keys.add(svc_key)
                 if aggregated:
                     stats = event_stats
                 else:
                     if not event_stats.get(svc_key):
                         event_stats[svc_key] = dict(empty_event_stats)
                     stats = event_stats[svc_key]
-                if ftype == "pdq":
-                    stats["pending"] += 1
-                elif ftype == "suc":
-                    stats["succeeded"] += 1
-                elif ftype == "err":
-                    stats["failed"] += 1
+                stats[stat_type] += 1
+        add_stat("pdq_", "pending")
+        add_stat("suc_", "succeeded")
+        add_stat("err_", "failed")
 
         status = {
             "service_keys": len(svc_keys),
