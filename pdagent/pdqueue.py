@@ -254,16 +254,16 @@ class PDQueue(object):
 
         def add_stat(queue_file_prefix, stat_type):
             for fname in self._queued_files(queue_file_prefix):
-                ftype, _, svc_key = _get_event_metadata(fname)
+                _, _, svc_key = _get_event_metadata(fname)
                 if not service_key or (svc_key == service_key):
                     svc_keys.add(svc_key)
-                if aggregated:
-                    stats = event_stats
-                else:
-                    if not event_stats.get(svc_key):
-                        event_stats[svc_key] = dict(empty_event_stats)
-                    stats = event_stats[svc_key]
-                stats[stat_type] += 1
+                    if aggregated:
+                        stats = event_stats
+                    else:
+                        if not event_stats.get(svc_key):
+                            event_stats[svc_key] = dict(empty_event_stats)
+                        stats = event_stats[svc_key]
+                    stats[stat_type] += 1
         add_stat("pdq_", "pending")
         add_stat("suc_", "succeeded")
         add_stat("err_", "failed")
