@@ -26,10 +26,9 @@ class PhoneHomeThread(RepeatingThread):
         self.system_info = system_info
 
     def tick(self):
-        # phone home, sending out system info the first time.
-        logger.debug("Phoning home")
+        logger.info("Phoning home")
         try:
-            phone_home_data = {
+            phone_home_json = {
                 "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
                 "agent_stats": self.pd_queue.get_status(
@@ -37,11 +36,14 @@ class PhoneHomeThread(RepeatingThread):
                     ),
             }
             if self.system_info:
-                phone_home_data["system_info"] = self.system_info
+                phone_home_json["system_info"] = self.system_info
 
             request = urllib2.Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")
-            request.add_data(json.dumps(phone_home_data))
+            phone_home_data = json.dumps(phone_home_json)
+            request.add_data(phone_home_data)
+
+            logger.debug("Phone-home stats: %s" % phone_home_data)
             try:
                 response = httpswithverify.urlopen(request)
                 result_str = response.read()
