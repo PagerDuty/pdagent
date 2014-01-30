@@ -21,10 +21,12 @@ class SendEventThread(RepeatingThread):
 
     def __init__(
             self, pd_queue, check_freq_sec,
+            send_event_timeout_sec,
             cleanup_freq_sec, cleanup_before_sec,
             ):
         RepeatingThread.__init__(self, check_freq_sec)
         self.pd_queue = pd_queue
+        self.send_event_timeout_sec = send_event_timeout_sec
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
         self.last_cleanup_time = 0
@@ -59,7 +61,7 @@ class SendEventThread(RepeatingThread):
         try:
             response = httpswithverify.urlopen(
                 request,
-                timeout=self.mainConfig["send_event_timeout_sec"]
+                timeout=self.send_event_timeout_sec
                 )
             status_code = response.getcode()
             result_str = response.read()
