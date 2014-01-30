@@ -104,8 +104,8 @@ class Agent(Daemon):
 
         main_logger.info('System: ' + str(system_stats))
 
-        guid = get_or_make_guid()
-        main_logger.info('GUID: ' + guid)
+        agent_id = get_or_make_agent_id()
+        main_logger.info('Agent ID: ' + agent_id)
 
         # Send event thread config
         check_freq_sec = mainConfig['check_freq_sec']
@@ -135,7 +135,7 @@ class Agent(Daemon):
             phone_thread = PhoneHomeThread(
                 heartbeat_frequency_sec,
                 pdQueue,
-                guid,
+                agent_id,
                 system_stats
                 )
             phone_thread.start()
@@ -170,47 +170,47 @@ class Agent(Daemon):
         sys.exit(0)
 
 
-# read persisted, valid GUID, or generate (and persist) one.
-def get_or_make_guid():
+# read persisted, valid agent ID, or generate (and persist) one.
+def get_or_make_agent_id():
     import uuid
-    guid_file = os.path.join(
+    agent_id_file = os.path.join(
         agentConfig.get_conf_dirs()['data_dir'],
-        "guid.txt")
+        "agent_id.txt")
     fd = None
-    guid = None
+    agent_id = None
 
     try:
-        fd = open(guid_file, "r")
-        guid = str(uuid.UUID(fd.readline().strip()))
+        fd = open(agent_id_file, "r")
+        agent_id = str(uuid.UUID(fd.readline().strip()))
     except IOError as e:
         import errno
         if e.errno != errno.ENOENT:
             main_logger.warning(
-                'Could not read GUID from file %s' % guid_file,
+                'Could not read agent ID from file %s' % agent_id_file,
                 exc_info=True)
     except ValueError:
         main_logger.warning(
-            'Invalid GUID in file %s' % guid_file,
+            'Invalid agent ID in file %s' % agent_id_file,
             exc_info=True)
     finally:
         if fd:
             fd.close()
 
-    if not guid:
-        main_logger.info('Generating new GUID')
-        guid = str(uuid.uuid4())
+    if not agent_id:
+        main_logger.info('Generating new agent ID')
+        agent_id = str(uuid.uuid4())
         fd = None
         try:
-            fd = open(guid_file, "w")
-            fd.write(guid)
+            fd = open(agent_id_file, "w")
+            fd.write(agent_id)
         except IOError:
             main_logger.warning(
-                'Could not write to GUID file %s' % guid_file,
+                'Could not write to agent ID file %s' % agent_id_file,
                 exc_info=True)
         finally:
             if fd:
                 fd.close()
-    return guid
+    return agent_id
 
 
 def init_logging(log_dir):

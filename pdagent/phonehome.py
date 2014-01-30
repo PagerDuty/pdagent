@@ -17,12 +17,12 @@ class PhoneHomeThread(RepeatingThread):
             self,
             heartbeat_frequency_sec,
             pd_queue,
-            guid,
+            agent_id,
             system_info
             ):
         RepeatingThread.__init__(self, heartbeat_frequency_sec)
         self.pd_queue = pd_queue
-        self.guid = guid
+        self.agent_id = agent_id
         self.system_info = system_info
 
     def tick(self):
@@ -31,7 +31,7 @@ class PhoneHomeThread(RepeatingThread):
         try:
             # TODO finalize keys.
             phone_home_data = {
-                "agent_id": self.guid,
+                "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
                 "agent_stats": self.pd_queue.get_status(
                     throttle_info=True, aggregated=True
