@@ -61,7 +61,7 @@ class PhoneHomeThread(RepeatingThread):
                         )
                     result = {}
 
-                new_heartbeat_freq = result.get("heartbeat_frequency_sec")
+                new_heartbeat_freq = result.get("next_checkin_interval_seconds")
                 if new_heartbeat_freq:
                     self.set_sleep_secs(new_heartbeat_freq)
 
