@@ -17,39 +17,6 @@ from pdagent.pdthread import RepeatingThread
 logger = logging.getLogger(__name__)
 
 
-def phone_home(pd_queue, guid, system_stats=None):
-    # TODO finalize keys.
-    phone_home_data = {
-        "agent_id": guid,
-        "agent_version": AGENT_VERSION,
-        "agent_stats": pd_queue.get_status(throttle_info=True, aggregated=True)
-    }
-    if system_stats:
-        phone_home_data['system_info'] = system_stats
-
-    request = urllib2.Request(PHONE_HOME_URI)
-    request.add_header("Content-type", "application/json")
-    request.add_data(json.dumps(phone_home_data))
-    try:
-        response = httpswithverify.urlopen(request)
-        result_str = response.read()
-    except:
-        logger.error("Error while phoning home:", exc_info=True)
-        result_str = None
-
-    if result_str:
-        try:
-            result = json.loads(result_str)
-        except:
-            logger.warning(
-                "Error reading phone-home response data:",
-                exc_info=True)
-            result = {}
-
-        # TODO store heartbeat frequency.
-        result.get("heartbeat_frequency_sec")
-
-
 class SendEventThread(RepeatingThread):
 
     def __init__(
@@ -69,10 +36,8 @@ class SendEventThread(RepeatingThread):
     def tick(self):
         # flush the event queue.
         logger.info("Flushing event queue")
-        queue_processed = False
         try:
             self.pd_queue.flush(self.send_event)
-            queue_processed = True
         except EmptyQueueError:
             logger.info("Nothing to do - queue is empty!")
         except IOError:
@@ -88,17 +53,6 @@ class SendEventThread(RepeatingThread):
             except:
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())
-
-        # send phone home information if required.
-        # TODO decide about threads for all these features.
-        if queue_processed or self.system_stats:
-            try:
-                # phone home, sending out system info the first time.
-                phone_home(self.pd_queue, self.guid, self.system_stats)
-                # system stats not sent out after first time
-                self.system_stats = None
-            except:
-                logger.error("Error while phoning home:", exc_info=True)
 
     def send_event(self, json_event_str):
         request = urllib2.Request(EVENTS_API_BASE)
