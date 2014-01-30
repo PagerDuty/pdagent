@@ -84,133 +84,144 @@ class Agent(Daemon):
         main_logger = logging.getLogger('main')
 
         main_logger.info('*** pdagentd started')
-        # TODO: log pid, agent version
-
-        main_logger.info('PID file: %s', self.pidfile)
-
-        main_logger.debug('Collecting basic system stats')
-
-        # Get some basic system stats to post back for development/testing
-        import platform
-        system_stats = {
-            'machine': platform.machine(),
-            'platform': sys.platform,
-            'processor': platform.processor(),
-            'python_version': platform.python_version()
-            }
-
-        if sys.platform == 'linux2':
-            system_stats['platform_version'] = platform.dist()
-
-        main_logger.info('System: ' + str(system_stats))
-
-        guid = get_or_make_guid()
-        main_logger.info('GUID: ' + guid)
-
-        # Send event thread config
-        check_freq_sec = mainConfig['check_freq_sec']
-        cleanup_freq_sec = mainConfig['cleanup_freq_sec']
-        cleanup_before_sec = mainConfig['cleanup_before_sec']
-
-        start_ok = True
-        send_thread = None
-        phone_thread = None
-
-        signal.signal(signal.SIGTERM, _sig_term_handler)
 
         try:
-            send_thread = SendEventThread(
-                pdQueue, check_freq_sec,
-                cleanup_freq_sec, cleanup_before_sec,
-                guid,
-                system_stats
+            from pdagent.constants import AGENT_VERSION
+
+            main_logger.info('PID file: %s', self.pidfile)
+
+            main_logger.info('Agent version: %s', AGENT_VERSION)
+
+            agent_id_file = os.path.join(
+                agentConfig.get_conf_dirs()['data_dir'],
+                "agent_id.txt")
+            try:
+                agent_id = get_or_make_agent_id(agent_id_file)
+            except IOError:
+                main_logger.fatal(
+                    'Could not read from / write to agent ID file %s' %
+                    agent_id_file,
+                    exc_info=True
                 )
-            send_thread.start()
-        except:
-            start_ok = False
-            main_logger.error("Error starting send thread", exc_info=True)
-
-        try:
-            heartbeat_frequency_sec = 60  # FIXME
-            phone_thread = PhoneHomeThread(
-                heartbeat_frequency_sec,
-                pdQueue,
-                guid,
-                system_stats
+                raise SystemExit
+            except ValueError:
+                main_logger.fatal(
+                    'Invalid value in agent ID file %s' % agent_id_file,
+                    exc_info=True
                 )
-            phone_thread.start()
-        except:
-            start_ok = False
-            main_logger.error(
-                "Error starting phone home thread", exc_info=True
-                )
+                raise SystemExit
+            main_logger.info('Agent ID: ' + agent_id)
 
-        try:
-            if start_ok:
-                while not stop_signal:
-                    time.sleep(1.0)
-        except:
-            main_logger.error("Error while sleeping", exc_info=True)
+            main_logger.debug('Collecting basic system stats')
 
-        try:
-            if phone_thread:
-                phone_thread.stop_and_join()
-        except:
-            main_logger.error(
-                "Error stopping phone home thread", exc_info=True
-                )
+            # Get some basic system stats to post back for development/testing
+            import platform
+            system_stats = {
+                'machine': platform.machine(),
+                'platform': sys.platform,
+                'processor': platform.processor(),
+                'python_version': platform.python_version()
+                }
 
-        try:
-            if send_thread:
-                send_thread.stop_and_join()
-        except:
-            main_logger.error("Error stopping send thread", exc_info=True)
+            if sys.platform == 'linux2':
+                system_stats['platform_version'] = platform.dist()
 
-        main_logger.info('*** pdagentd exiting!')
-        sys.exit(0)
+            main_logger.info('System: ' + str(system_stats))
+
+            # Send event thread config
+            check_freq_sec = mainConfig['check_freq_sec']
+            send_event_timeout_sec = mainConfig['send_event_timeout_sec']
+            cleanup_freq_sec = mainConfig['cleanup_freq_sec']
+            cleanup_before_sec = mainConfig['cleanup_before_sec']
+
+            start_ok = True
+            send_thread = None
+            phone_thread = None
+
+            signal.signal(signal.SIGTERM, _sig_term_handler)
+
+            try:
+                send_thread = SendEventThread(
+                    pdQueue, check_freq_sec,
+                    send_event_timeout_sec,
+                    cleanup_freq_sec, cleanup_before_sec
+                    )
+                send_thread.start()
+            except:
+                start_ok = False
+                main_logger.error("Error starting send thread", exc_info=True)
+
+            try:
+                heartbeat_frequency_sec = 60  # FIXME
+                phone_thread = PhoneHomeThread(
+                    heartbeat_frequency_sec,
+                    pdQueue,
+                    agent_id,
+                    system_stats
+                    )
+                phone_thread.start()
+            except:
+                start_ok = False
+                main_logger.error(
+                    "Error starting phone home thread", exc_info=True
+                    )
+
+            try:
+                if start_ok:
+                    while not stop_signal:
+                        time.sleep(1.0)
+            except:
+                main_logger.error("Error while sleeping", exc_info=True)
+
+            try:
+                if phone_thread:
+                    phone_thread.stop_and_join()
+            except:
+                main_logger.error(
+                    "Error stopping phone home thread", exc_info=True
+                    )
+
+            try:
+                if send_thread:
+                    send_thread.stop_and_join()
+            except:
+                main_logger.error("Error stopping send thread", exc_info=True)
+
+            main_logger.info('*** pdagentd exiting!')
+            sys.exit(0)
+        except SystemExit:
+            main_logger.error('*** pdagentd exiting because of errors!')
+            sys.exit(1)
 
 
-# read persisted, valid GUID, or generate (and persist) one.
-def get_or_make_guid():
+# read persisted, valid agent ID, or generate (and persist) one.
+def get_or_make_agent_id(agent_id_file):
     import uuid
-    guid_file = os.path.join(
-        agentConfig.get_conf_dirs()['data_dir'],
-        "guid.txt")
     fd = None
-    guid = None
+    agent_id = None
 
     try:
-        fd = open(guid_file, "r")
-        guid = str(uuid.UUID(fd.readline().strip()))
+        fd = open(agent_id_file, "r")
+        agent_id = str(uuid.UUID(fd.readline().strip()))
     except IOError as e:
         import errno
         if e.errno != errno.ENOENT:
-            main_logger.warning(
-                'Could not read GUID from file %s' % guid_file,
-                exc_info=True)
-    except ValueError:
-        main_logger.warning(
-            'Invalid GUID in file %s' % guid_file,
-            exc_info=True)
+            raise
     finally:
         if fd:
             fd.close()
 
-    if not guid:
-        main_logger.info('Generating new GUID')
-        guid = str(uuid.uuid4())
+    if not agent_id:
+        main_logger.info('Generating new agent ID')
+        agent_id = str(uuid.uuid4())
         fd = None
         try:
-            fd = open(guid_file, "w")
-            fd.write(guid)
-        except IOError:
-            main_logger.warning(
-                'Could not write to GUID file %s' % guid_file,
-                exc_info=True)
+            fd = open(agent_id_file, "w")
+            fd.write(agent_id)
         finally:
             if fd:
                 fd.close()
-    return guid
+    return agent_id
 
 
 def init_logging(log_dir):

@@ -17,12 +17,12 @@ class PhoneHomeThread(RepeatingThread):
             self,
             heartbeat_frequency_sec,
             pd_queue,
-            guid,
+            agent_id,
             system_info
             ):
         RepeatingThread.__init__(self, heartbeat_frequency_sec)
         self.pd_queue = pd_queue
-        self.guid = guid
+        self.agent_id = agent_id
         self.system_info = system_info
 
     def tick(self):
@@ -31,16 +31,14 @@ class PhoneHomeThread(RepeatingThread):
         try:
             # TODO finalize keys.
             phone_home_data = {
-                "agent_id": self.guid,
+                "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
                 "agent_stats": self.pd_queue.get_status(
                     throttle_info=True, aggregated=True
                     ),
             }
-            if self.system_stats:
+            if self.system_info:
                 phone_home_data['system_info'] = self.system_info
-                # system info not sent out after first time
-                self.system_info = None
 
             request = urllib2.Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")
@@ -58,11 +56,13 @@ class PhoneHomeThread(RepeatingThread):
                 except:
                     logger.warning(
                         "Error reading phone-home response data:",
-                        exc_info=True)
+                        exc_info=True
+                        )
                     result = {}
 
-                # TODO store heartbeat frequency.
-                result.get("heartbeat_frequency_sec")
+                new_heartbeat_freq = result.get("heartbeat_frequency_sec")
+                if new_heartbeat_freq:
+                    self.set_sleep_secs(new_heartbeat_freq)
 
         except:
             logger.error("Error while phoning home:", exc_info=True)

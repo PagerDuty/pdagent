@@ -281,7 +281,8 @@ class PDQueue(object):
             now = int(self.time.time())
             for key, retry_at in \
                     self.backoff_info._current_retry_at.iteritems():
-                if (not service_key or key == service_key) and retry_at > now:
+                if (not service_key or (key == service_key)) and \
+                        retry_at > now:
                     throttled_keys.add(key)
             status["throttled_keys"] = len(throttled_keys)
 
