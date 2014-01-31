@@ -24,7 +24,7 @@ class RepeatingThread(Thread):
 
     def __init__(self, delay_secs, is_absolute):
         """
-        Configure the repeating thread.
+        Create a RepeatingThread with given settings.
 
         delay_secs = the interval between calls to tick()
         is_absolute = whether interval is "absolute" or "relative"
@@ -55,6 +55,10 @@ class RepeatingThread(Thread):
             "%s created with delay_secs=%s" % (self.getName(), delay_secs)
             )
 
+    def tick(self):
+        "You must override this method. It will be called repeatedly"
+        raise NotImplementedError
+
     def run(self):
         next_run_time = 0
         while not self._stop:
@@ -77,6 +81,12 @@ class RepeatingThread(Thread):
                 time.sleep(1.0)
 
     def set_delay_secs(self, delay_secs):
+        """
+        Change the interval.
+
+        Currently, this value is used just after the end of a call to tick()
+        so it will not change a sleep interval that's already in progress.
+        """
         assert delay_secs >= 1.0
         if delay_secs != self._delay_secs:
             self._delay_secs = delay_secs
@@ -85,12 +95,18 @@ class RepeatingThread(Thread):
             )
 
     def stop(self):
+        """
+        Ask the thread to stop.
+
+        This call does NOT block. If the thread is in the sleeping interval it
+        checks for this stop signal every 1 second.  If the thread is in the
+        call to tick() it will only stop after tick() is complete.  (You can
+        check self._stop in tick() if you wish to support stopping there)
+        """
         self._stop = True
 
     def stop_and_join(self):
+        "Helper function - equivalent to calling stop() and then join()"
         self.stop()
         self.join()
 
-    def tick(self):
-        "You must override this method. It will be called repeatedly"
-        raise NotImplementedError
