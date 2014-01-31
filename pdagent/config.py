@@ -7,7 +7,7 @@ import sys
 import time
 
 from pdagent.confdirs import getconfdirs
-from pdagent.filelock import FileLock
+from pdagent.thirdparty.filelock import FileLock
 
 
 class AgentConfig:
