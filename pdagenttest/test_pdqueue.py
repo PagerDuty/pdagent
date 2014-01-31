@@ -550,16 +550,16 @@ class PDQueueTest(unittest.TestCase):
         q._unsafe_change_event_type(fnames[2], "pdq_", "err_")
         q._unsafe_change_event_type(fnames[3], "pdq_", "err_")
 
-        self.assertDictEqual(q.get_status("svckey1"), {
+        self.assertEqual(q.get_status("svckey1"), {
             "svckey1": {
                 "pending": 1,
                 "error": 1
             }
         })
 
-        self.assertDictEqual(q.get_status("non_existent_key"), {})
+        self.assertEquals(len(q.get_status("non_existent_key")), 0)
 
-        self.assertDictEqual(q.get_status(), {
+        self.assertEqual(q.get_status(), {
             "svckey1": {
                 "pending": 1,
                 "error": 1
@@ -630,7 +630,7 @@ class PDQueueTest(unittest.TestCase):
                 retries[svc_key] = int(
                     q.time.time() + BACKOFF_SECS[backoff_index])
 
-        self.assertDictEqual(backup_data, {
+        self.assertEqual(backup_data, {
             "attempts": attempts,
             "next_retries": retries
         })

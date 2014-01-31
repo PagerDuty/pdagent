@@ -136,6 +136,7 @@ class PDQueue(object):
                             err_svc_keys.add(svc_key)
                     except StopIteration:
                         # no further processing must be done.
+                        logger.info("Not processing any more events this time")
                         break
 
             self.backoff_info.store()
@@ -159,7 +160,9 @@ class PDQueue(object):
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
 
+        logger.info("Processing event " + fname)
         consume_code = consume_func(data)
+
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends
             self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
@@ -173,8 +176,15 @@ class PDQueue(object):
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
+            logger.info("Backing off service key " + svc_key)
             if self.backoff_info.is_threshold_breached(svc_key):
                 # time for stricter action -- mark event as bad.
+                logger.info(
+                    (
+                        "Service key %s breached back-off limit." +
+                        " Assuming bad event."
+                    ) %
+                    svc_key)
                 self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
@@ -214,6 +224,7 @@ class PDQueue(object):
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
+                        logger.info("Cleanup: removing " + fname)
                         fnames.remove(fname)
             for fname in fnames:
                 try:
@@ -305,10 +316,14 @@ class _BackoffInfo(object):
         cur_attempt = self._previous_attempts.get(svc_key, 0) + 1
         # if backoff-seconds have been exhausted, reuse the last one.
         backoff_index = min(cur_attempt, self._max_backoff_attempts) - 1
-        retry_at = int(self._time.time()) + self._backoff_secs[backoff_index]
+        backoff = self._backoff_secs[backoff_index]
+        logger.info(
+            "Retrying events in service key %s after %d sec" %
+            (svc_key, backoff)
+        )
 
         self._current_attempts[svc_key] = cur_attempt
-        self._current_retry_at[svc_key] = retry_at
+        self._current_retry_at[svc_key] = int(self._time.time()) + backoff
 
     # loads data; copies over data that is still valid at time_now to current.
     def load(self, time_now):
