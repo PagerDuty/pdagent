@@ -125,9 +125,9 @@ def load_agent_config():
 
     # parse integer values.
     for key in [
-        "check_freq_sec", "cleanup_freq_sec", "cleanup_before_sec",
-        "send_event_timeout_sec", "max_event_bytes"
-    ]:
+            "check_freq_sec", "cleanup_freq_sec", "cleanup_before_sec",
+            "send_event_timeout_sec", "max_event_bytes"
+            ]:
         try:
             cfg[key] = int(cfg[key])
         except ValueError:
