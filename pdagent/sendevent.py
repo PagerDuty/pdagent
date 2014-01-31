@@ -86,7 +86,7 @@ class SendEventThread(RepeatingThread):
                     "Error establishing a connection for sending event:",
                     exc_info=True)
                 return ConsumeEvent.NOT_CONSUMED
-        except IOError:
+        except Exception:
             logger.error("Error while sending event:", exc_info=True)
             return ConsumeEvent.NOT_CONSUMED
 
