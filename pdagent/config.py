@@ -38,18 +38,20 @@ class AgentConfig:
         if dequeue_enabled:
             from pdagent.jsonstore import JsonStore
             backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
+            backoff_secs = [
+                int(s.strip()) for s in
+                self.main_config["backoff_secs"].split(",")
+            ]
         else:
             backoff_db = None
+            backoff_secs = None
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
             max_event_bytes=self.main_config["max_event_bytes"],
             backoff_db=backoff_db,
-            backoff_secs=[
-                int(s.strip()) for s in
-                self.main_config["backoff_secs"].split(",")
-            ]
+            backoff_secs=backoff_secs
         )
 
 _valid_log_levels = \
