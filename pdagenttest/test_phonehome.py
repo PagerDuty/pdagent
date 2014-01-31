@@ -56,9 +56,9 @@ class MockResponse:
         return self.data
 
 
-class PhonehomeTest(unittest.TestCase):
+class PhoneHomeTest(unittest.TestCase):
 
-    def newPhonehomeThread(self):
+    def newPhoneHomeThread(self):
         ph = PhoneHomeThread(
             RESPONSE_FREQUENCY_SEC + 10,  # something different from response.
             MockQueue(),
@@ -67,9 +67,9 @@ class PhonehomeTest(unittest.TestCase):
         ph.api_communicator = MockHttpsCommunicator()
         return ph
 
-    def test_phonehome_data(self):
+    def test_data(self):
         from pdagent.constants import AGENT_VERSION
-        ph = self.newPhonehomeThread()
+        ph = self.newPhoneHomeThread()
 
         ph.tick()
         self.assertEqual(
@@ -81,9 +81,9 @@ class PhonehomeTest(unittest.TestCase):
                 "agent_stats": ph.pd_queue.status
             })
 
-    def test_phonehome_no_sys_info(self):
+    def test_no_sys_info(self):
         from pdagent.constants import AGENT_VERSION
-        ph = self.newPhonehomeThread()
+        ph = self.newPhoneHomeThread()
         ph.system_info = None
 
         ph.tick()
@@ -95,9 +95,9 @@ class PhonehomeTest(unittest.TestCase):
                 "agent_stats": ph.pd_queue.status
             })
 
-    def test_phonehome_no_queue_stats(self):
+    def test_no_queue_stats(self):
         from pdagent.constants import AGENT_VERSION
-        ph = self.newPhonehomeThread()
+        ph = self.newPhoneHomeThread()
 
         ph.pd_queue.status = None
 
@@ -110,8 +110,8 @@ class PhonehomeTest(unittest.TestCase):
                 "system_info": SYSTEM_INFO,
             })
 
-    def test_phonehome_new_frequency(self):
-        ph = self.newPhonehomeThread()
+    def test_new_frequency(self):
+        ph = self.newPhoneHomeThread()
         ph.api_communicator.set_response(
             MockResponse(
                 data=json.dumps({
@@ -122,8 +122,8 @@ class PhonehomeTest(unittest.TestCase):
         ph.tick()
         self.assertEquals(RESPONSE_FREQUENCY_SEC, ph._sleep_secs)
 
-    def test_phonehome_communication_error(self):
-        ph = self.newPhonehomeThread()
+    def test_communication_error(self):
+        ph = self.newPhoneHomeThread()
 
         def err_func(url, **kwargs):
             raise Exception
@@ -132,8 +132,8 @@ class PhonehomeTest(unittest.TestCase):
         ph.tick()
         # no errors here means communication errors were handled.
 
-    def test_phonehome_bad_response_data(self):
-        ph = self.newPhonehomeThread()
+    def test_bad_response_data(self):
+        ph = self.newPhoneHomeThread()
         ph.api_communicator.set_response(MockResponse(data="bad"))
         ph.tick()
         # no errors here means bad response data was handled.
