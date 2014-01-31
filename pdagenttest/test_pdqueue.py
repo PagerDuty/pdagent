@@ -515,9 +515,8 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(q.enqueue("svckey2", "baz"))
         fnames.append(q.enqueue("svckey2", "boo"))
         fnames.append(q.enqueue("svckey3", "bam"))
-        q._unsafe_change_event_type(fnames[0], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[2], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[4], "pdq_", "err_")
+        for i in [0, 2, 4]:
+            q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
 
         self.assertEquals(len(q._queued_files()), 2)
         self.assertEquals(len(q._queued_files("err_")), 3)
@@ -539,23 +538,21 @@ class PDQueueTest(unittest.TestCase):
 
     def test_status(self):
         q = self.newQueue()
+        events = ["e11", "e12", "e13", "e21", "e22", "e31", "e32", "e41", "e42"]
         fnames = []
-        fnames.append(q.enqueue("svckey1", "e11"))
-        fnames.append(q.enqueue("svckey1", "e12"))
-        fnames.append(q.enqueue("svckey1", "e13"))
-        fnames.append(q.enqueue("svckey2", "e21"))
-        fnames.append(q.enqueue("svckey2", "e22"))
-        fnames.append(q.enqueue("svckey3", "e31"))
-        fnames.append(q.enqueue("svckey3", "e32"))
-        fnames.append(q.enqueue("svckey4", "e41"))
-        fnames.append(q.enqueue("svckey4", "e42"))
-        q._unsafe_change_event_type(fnames[0], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[2], "pdq_", "suc_")
-        q._unsafe_change_event_type(fnames[3], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[4], "pdq_", "err_")
-        q._unsafe_change_event_type(fnames[7], "pdq_", "suc_")
-        q._unsafe_change_event_type(fnames[8], "pdq_", "suc_")
+        for e in events:
+            # events are in the form e<svckey#><event#>
+            k = e[1]
+            fnames.append(q.enqueue("svckey%s" % k, e))
+        # 1 error for svckey1; 2 for svckey2
+        for i in [0, 3, 4]:
+            q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
+        # 1 success for svckey1; 2 for svckey4
+        for i in [2, 7, 8]:
+            q._unsafe_change_event_type(fnames[i], "pdq_", "suc_")
+        # that leaves 1 pending for svckey1; 2 for svckey3
 
+        # also, let's throttle svckey2.
         q.backoff_info.increment("svckey2")
 
         self.assertEqual(q.get_status("svckey1"), {
