@@ -61,7 +61,7 @@ class PhoneHomeTest(unittest.TestCase):
             MockQueue(),
             AGENT_ID,
             SYSTEM_INFO)
-        ph.api_communicator = MockHttpsCommunicator()
+        ph._api_communicator = MockHttpsCommunicator()
         return ph
 
     def test_data(self):
@@ -70,7 +70,7 @@ class PhoneHomeTest(unittest.TestCase):
 
         ph.tick()
         self.assertEqual(
-            json.loads(ph.api_communicator.request.get_data()),
+            json.loads(ph._api_communicator.request.get_data()),
             {
                 "agent_id": AGENT_ID,
                 "agent_version": AGENT_VERSION,
@@ -85,7 +85,7 @@ class PhoneHomeTest(unittest.TestCase):
 
         ph.tick()
         self.assertEqual(
-            json.loads(ph.api_communicator.request.get_data()),
+            json.loads(ph._api_communicator.request.get_data()),
             {
                 "agent_id": AGENT_ID,
                 "agent_version": AGENT_VERSION,
@@ -100,7 +100,7 @@ class PhoneHomeTest(unittest.TestCase):
 
         ph.tick()
         self.assertEqual(
-            json.loads(ph.api_communicator.request.get_data()),
+            json.loads(ph._api_communicator.request.get_data()),
             {
                 "agent_id": AGENT_ID,
                 "agent_version": AGENT_VERSION,
@@ -109,7 +109,7 @@ class PhoneHomeTest(unittest.TestCase):
 
     def test_new_frequency(self):
         ph = self.newPhoneHomeThread()
-        ph.api_communicator.response = MockResponse(
+        ph._api_communicator.response = MockResponse(
             data=json.dumps({
                 "next_checkin_interval_seconds": RESPONSE_FREQUENCY_SEC
                 })
@@ -123,13 +123,13 @@ class PhoneHomeTest(unittest.TestCase):
         def err_func(url, **kwargs):
             raise Exception
 
-        ph.api_communicator.urlopen = err_func
+        ph._api_communicator.urlopen = err_func
         ph.tick()
         # no errors here means communication errors were handled.
 
     def test_bad_response_data(self):
         ph = self.newPhoneHomeThread()
-        ph.api_communicator.response = MockResponse(data="bad")
+        ph._api_communicator.response = MockResponse(data="bad")
         ph.tick()
         # no errors here means bad response data was handled.
 
