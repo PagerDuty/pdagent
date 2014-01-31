@@ -3,10 +3,9 @@
 set -e
 
 case "$*" in
-    0)
+    0)  # remove-only; not upgrade.
         # Stop daemon
-        # FIXME: daemon is broken
-        #/etc/init.d/pd-agent stop
+        service pd-agent stop
 
         # Unregister daemon
         chkconfig --del pd-agent

@@ -8,18 +8,6 @@
     See LICENSE.TXT for licensing details.
 '''
 
-
-### BEGIN INIT INFO
-# Provides:          pd-agent
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Start PagerDuty Agent at boot time
-# Description:       Enable PagerDuty Agent daemon process.
-### END INIT INFO
-
-
 # standard python modules
 import logging.handlers
 import os
@@ -58,7 +46,7 @@ except ImportError:
 
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
-from pdagent.pdqueue import EmptyQueue
+from pdagent.pdqueue import EmptyQueueError
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 
@@ -144,7 +132,7 @@ def tick(sc):
     main_logger.info("Flushing event queue")
     try:
         pdQueue.flush(send_event)
-    except EmptyQueue:
+    except EmptyQueueError:
         main_logger.info("Nothing to do - queue is empty!")
     except IOError:
         main_logger.error("I/O error while flushing queue:", exc_info=True)
@@ -152,13 +140,13 @@ def tick(sc):
         main_logger.error("Error while flushing queue:", exc_info=True)
 
     # clean up if required.
-    secondsSinceCleanup = int(time.time()) - agent.lastCleanupTimeSec
+    secondsSinceCleanup = int(time.time()) - Agent.lastCleanupTimeSec
     if secondsSinceCleanup >= mainConfig['cleanup_freq_sec']:
         try:
             pdQueue.cleanup(mainConfig['cleanup_before_sec'])
         except:
             main_logger.error("Error while cleaning up queue:", exc_info=True)
-        agent.lastCleanupTimeSec = int(time.time())
+        Agent.lastCleanupTimeSec = int(time.time())
 
     # schedule next tick.
     sc.enter(mainConfig['check_freq_sec'], 1, tick, (sc,))
@@ -179,7 +167,7 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
 
 
 # Override the generic daemon class to run our checks
-class agent(Daemon):
+class Agent(Daemon):
 
     lastCleanupTimeSec = 0
 
@@ -192,8 +180,6 @@ class agent(Daemon):
         main_logger.info('pd-agent started')  # TODO: log agent version
         main_logger.info('--')
 
-        main_logger.info('event_api_url: %s', mainConfig['event_api_url'])
-
         main_logger.info('PID file: %s', self.pidfile)
 
         main_logger.debug('Collecting basic system stats')
@@ -204,19 +190,11 @@ class agent(Daemon):
             'machine': platform.machine(),
             'platform': sys.platform,
             'processor': platform.processor(),
-            'pythonV': platform.python_version()
+            'python_version': platform.python_version()
             }
 
         if sys.platform == 'linux2':
-            systemStats['nixV'] = platform.dist()
-
-        elif sys.platform == 'darwin':
-            systemStats['macV'] = platform.mac_ver()
-
-        elif sys.platform.find('freebsd') != -1:
-            version = platform.uname()[2]
-            # no codename for FreeBSD
-            systemStats['fbsdV'] = ('freebsd', version, '')
+            systemStats['platform_version'] = platform.dist()
 
         main_logger.info('System: ' + str(systemStats))
 
@@ -292,10 +270,10 @@ if __name__ == '__main__':
             )
 
     # queue to work on.
-    pdQueue = agentConfig.get_queue()
+    pdQueue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
-    daemon = agent(pidFile)
+    daemon = Agent(pidFile)
 
     # Helper method for some control options
     def _getDaemonPID():

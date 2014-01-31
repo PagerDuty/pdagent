@@ -2,14 +2,9 @@
 
 set -e
 
-if [ "$1" = "remove" ]; then
+if [ "$1" = "remove" ]; then  # remove-only; not upgrade.
     # Stop daemon
-    #FIXME: daemon is broken
-    #if which invoke-rc.d >/dev/null 2>&1; then
-    #    invoke-rc.d pd-agent stop || true
-    #else
-    #    /etc/init.d/pd-agent stop || true
-    #fi
+    service pd-agent stop
 
     # Unregister daemon
     update-rc.d -f pd-agent remove
