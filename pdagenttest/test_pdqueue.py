@@ -563,8 +563,8 @@ class PDQueueTest(unittest.TestCase):
             "events": {
                 "svckey1": {
                     "pending": 1,
-                    "error": 1,
-                    "success": 1
+                    "failed": 1,
+                    "succeeded": 1
                 }
             }
         })
@@ -578,35 +578,33 @@ class PDQueueTest(unittest.TestCase):
             "service_keys": 4,
             "events": {
                 "svckey1": {
-                    "pending": 1, "success": 1, "error": 1
+                    "pending": 1, "succeeded": 1, "failed": 1
                 },
                 "svckey2": {
-                    "pending": 0, "success": 0, "error": 2
+                    "pending": 0, "succeeded": 0, "failed": 2
                 },
                 "svckey3": {
-                    "pending": 2, "success": 0, "error": 0
+                    "pending": 2, "succeeded": 0, "failed": 0
                 },
                 "svckey4": {
-                    "pending": 0, "success": 2, "error": 0
+                    "pending": 0, "succeeded": 2, "failed": 0
                 }
             }
         }
         self.assertEqual(q.get_status(), expected_stats)
 
-        expected_stats["throttled_keys"] = 1
+        expected_stats["service_keys_throttled"] = 1
         self.assertEqual(q.get_status(throttle_info=True), expected_stats)
 
         expected_aggr_stats = {
             "service_keys": 4,
-            "events": {
-                "pending": 3,
-                "success": 3,
-                "error": 3
-            }
+            "events_pending": 3,
+            "events_succeeded": 3,
+            "events_failed": 3
         }
         self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
 
-        expected_aggr_stats["throttled_keys"] = 1
+        expected_aggr_stats["service_keys_throttled"] = 1
         self.assertEqual(
             q.get_status(throttle_info=True, aggregated=True),
             expected_aggr_stats

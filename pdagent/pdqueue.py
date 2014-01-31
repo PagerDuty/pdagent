@@ -224,7 +224,6 @@ class PDQueue(object):
                     fnames.remove(fname)
                 else:
                     if enqueue_time >= delete_before_time:
-                        logger.info("Cleanup: removing " + fname)
                         fnames.remove(fname)
             for fname in fnames:
                 try:
@@ -243,8 +242,8 @@ class PDQueue(object):
     ):
         empty_event_stats = {
             "pending": 0,
-            "success": 0,
-            "error": 0
+            "succeeded": 0,
+            "failed": 0
         }
         if aggregated:
             event_stats = empty_event_stats
@@ -253,29 +252,36 @@ class PDQueue(object):
             event_stats = {}
         svc_keys = set()
 
-        for fname in self._queued_files(""):
-            ftype, _, svc_key = _get_event_metadata(fname)
-            if not service_key or svc_key == service_key:
-                svc_keys.add(svc_key)
-                if aggregated:
-                    stats = event_stats
-                else:
-                    if not event_stats.get(svc_key):
-                        event_stats[svc_key] = dict(empty_event_stats)
-                    stats = event_stats[svc_key]
-                if ftype == "pdq":
-                    stats["pending"] += 1
-                elif ftype == "suc":
-                    stats["success"] += 1
-                elif ftype == "err":
-                    stats["error"] += 1
+        def add_stat(queue_file_prefix, stat_type):
+            for fname in self._queued_files(queue_file_prefix):
+                _, _, svc_key = _get_event_metadata(fname)
+                if not service_key or (svc_key == service_key):
+                    svc_keys.add(svc_key)
+                    if aggregated:
+                        stats = event_stats
+                    else:
+                        if not event_stats.get(svc_key):
+                            event_stats[svc_key] = dict(empty_event_stats)
+                        stats = event_stats[svc_key]
+                    stats[stat_type] += 1
+        add_stat("pdq_", "pending")
+        add_stat("suc_", "succeeded")
+        add_stat("err_", "failed")
 
         status = {
             "service_keys": len(svc_keys),
-            "events": event_stats
         }
+        if aggregated:
+            status.update({
+                "events_pending": event_stats["pending"],
+                "events_succeeded": event_stats["succeeded"],
+                "events_failed": event_stats["failed"]
+            })
+        else:
+            status["events"] = event_stats
 
         # if throttle info is required, compute from pre-loaded info.
+        # (we don't want to reload info if queue processing is underway.)
         if throttle_info and self.backoff_info._current_retry_at:
             throttled_keys = set()
             now = int(self.time.time())
@@ -284,7 +290,7 @@ class PDQueue(object):
                 if (not service_key or (key == service_key)) and \
                         retry_at > now:
                     throttled_keys.add(key)
-            status["throttled_keys"] = len(throttled_keys)
+            status["service_keys_throttled"] = len(throttled_keys)
 
         return status
 

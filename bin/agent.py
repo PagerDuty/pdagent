@@ -114,13 +114,14 @@ class Agent(Daemon):
 
             main_logger.debug('Collecting basic system stats')
 
-            # Get some basic system stats to post back for development/testing
+            # Get some basic system stats to post back in phone-home
             import platform
+            import socket
             system_stats = {
-                'machine': platform.machine(),
-                'platform': sys.platform,
-                'processor': platform.processor(),
-                'python_version': platform.python_version()
+                'platform_name': sys.platform,
+                'python_version': platform.python_version(),
+                'host_name': socket.getfqdn()  # to show in stats-based alerts.
+                # TODO ip address?
                 }
 
             if sys.platform == 'linux2':
@@ -152,7 +153,9 @@ class Agent(Daemon):
                 main_logger.error("Error starting send thread", exc_info=True)
 
             try:
-                heartbeat_frequency_sec = 60  # FIXME
+                # we'll phone-home daily, although that will change if server
+                # indicates a different frequency.
+                heartbeat_frequency_sec = 60 * 60 * 24
                 phone_thread = PhoneHomeThread(
                     heartbeat_frequency_sec,
                     pdQueue,
@@ -192,7 +195,7 @@ class Agent(Daemon):
             sys.exit(1)
         else:
             main_logger.info('*** pdagentd exiting normally!')
-            sys.exit(0)
+        sys.exit(0)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
