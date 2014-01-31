@@ -122,10 +122,11 @@ class PDQueueTest(unittest.TestCase):
             EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
 
         # verify that queued files are now success files.
-        success_contents = [
-            open(q._abspath(f)).read()
-            for f in q._queued_files("suc")
-        ]
+        success_contents = []
+        for f in q._queued_files("suc"):
+            fd = open(q._abspath(f))
+            success_contents.append(fd.read())
+            fd.close()
         self.assertEquals(success_contents, ["foo", "bar", "baz"])
 
     def test_dont_consume(self):
