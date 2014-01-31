@@ -19,9 +19,6 @@ class MockHttpsCommunicator:
         self.request = None
         self.response = None
 
-    def set_response(self, response):
-        self.response = response
-
     def urlopen(self, request):
         self.request = request
         return self.response
@@ -112,13 +109,11 @@ class PhoneHomeTest(unittest.TestCase):
 
     def test_new_frequency(self):
         ph = self.newPhoneHomeThread()
-        ph.api_communicator.set_response(
-            MockResponse(
-                data=json.dumps({
-                    "next_checkin_interval_seconds": RESPONSE_FREQUENCY_SEC
+        ph.api_communicator.response = MockResponse(
+            data=json.dumps({
+                "next_checkin_interval_seconds": RESPONSE_FREQUENCY_SEC
                 })
             )
-        )
         ph.tick()
         self.assertEquals(RESPONSE_FREQUENCY_SEC, ph._sleep_secs)
 
@@ -134,7 +129,7 @@ class PhoneHomeTest(unittest.TestCase):
 
     def test_bad_response_data(self):
         ph = self.newPhoneHomeThread()
-        ph.api_communicator.set_response(MockResponse(data="bad"))
+        ph.api_communicator.response = MockResponse(data="bad")
         ph.tick()
         # no errors here means bad response data was handled.
 
