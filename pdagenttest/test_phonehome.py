@@ -2,6 +2,7 @@
 import json
 import unittest
 
+from pdagent.constants import AGENT_VERSION
 from pdagent.phonehome import PhoneHomeThread
 
 
@@ -65,7 +66,6 @@ class PhoneHomeTest(unittest.TestCase):
         return ph
 
     def test_data(self):
-        from pdagent.constants import AGENT_VERSION
         ph = self.newPhoneHomeThread()
 
         ph.tick()
@@ -79,7 +79,6 @@ class PhoneHomeTest(unittest.TestCase):
             })
 
     def test_no_sys_info(self):
-        from pdagent.constants import AGENT_VERSION
         ph = self.newPhoneHomeThread()
         ph.system_info = None
 
@@ -93,7 +92,6 @@ class PhoneHomeTest(unittest.TestCase):
             })
 
     def test_no_queue_stats(self):
-        from pdagent.constants import AGENT_VERSION
         ph = self.newPhoneHomeThread()
 
         ph.pd_queue.status = None
