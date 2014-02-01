@@ -12,6 +12,8 @@
 
 /.vagrant/
 
+/target/
+
 /build-linux/data/
 /build-linux/target/
 

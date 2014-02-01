@@ -190,11 +190,12 @@ class Agent(Daemon):
             except:
                 main_logger.error("Error stopping send thread", exc_info=True)
 
-            main_logger.info('*** pdagentd exiting!')
         except SystemExit:
             main_logger.error('*** pdagentd exiting because of errors!')
             sys.exit(1)
-        sys.exit(0)
+        else:
+            main_logger.info('*** pdagentd exiting normally!')
+            sys.exit(0)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
