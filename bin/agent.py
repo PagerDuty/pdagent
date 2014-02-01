@@ -195,7 +195,7 @@ class Agent(Daemon):
             sys.exit(1)
         else:
             main_logger.info('*** pdagentd exiting normally!')
-        sys.exit(0)
+            sys.exit(0)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
