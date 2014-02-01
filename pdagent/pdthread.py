@@ -91,7 +91,7 @@ class RepeatingThread(Thread):
         if delay_secs != self._delay_secs:
             self._delay_secs = delay_secs
             logger.info(
-                "%s changed sleep_secs to %s" % (self.getName(), delay_secs)
+                "%s changed delay_secs to %s" % (self.getName(), delay_secs)
             )
 
     def stop(self):
