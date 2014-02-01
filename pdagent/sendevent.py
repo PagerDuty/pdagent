@@ -29,7 +29,7 @@ class SendEventThread(RepeatingThread):
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
         self.last_cleanup_time = 0
-        self._api_communicator = httpswithverify  # to ease unit testing.
+        self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
         # flush the event queue.
@@ -58,7 +58,7 @@ class SendEventThread(RepeatingThread):
         request.add_data(json_event_str)
 
         try:
-            response = self._api_communicator.urlopen(
+            response = self._urllib2.urlopen(
                 request,
                 timeout=self.send_event_timeout_sec
                 )

@@ -17,7 +17,7 @@ CLEANUP_AGE_SEC = 120
 INCIDENT_KEY = "123"
 
 
-class MockCommunicator:
+class MockUrlLib:
 
     def __init__(self):
         self.request = None
@@ -79,15 +79,13 @@ class SendEventTest(unittest.TestCase):
             CLEANUP_FREQUENCY_SEC,
             CLEANUP_AGE_SEC
         )
-        s._api_communicator = MockCommunicator()
+        s._urllib2 = MockUrlLib()
         return s
 
     def test_send_and_cleanup(self):
         s = self.newSendEventThread()
-        s._api_communicator.response = MockResponse()
-
+        s._urllib2.response = MockResponse()
         s.tick()
-
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
 
@@ -96,30 +94,24 @@ class SendEventTest(unittest.TestCase):
     # --------------------------------------------------------------------------
 
     def test_empty_queue(self):
-        s = self.newSendEventThread()
-
         def empty_queue_flush(**args):
             from pdagent.pdqueue import EmptyQueueError
             raise EmptyQueueError
 
+        s = self.newSendEventThread()
         s.pd_queue.flush = empty_queue_flush
-
         s.tick()
-
         self.assertTrue(s.pd_queue.consume_code is None)
         # empty-queue handled, and cleanup is still invoked.
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def test_queue_errors(self):
-        s = self.newSendEventThread()
-
         def erroneous_queue_flush(**args):
             raise Exception
 
+        s = self.newSendEventThread()
         s.pd_queue.flush = erroneous_queue_flush
-
         s.tick()
-
         self.assertTrue(s.pd_queue.consume_code is None)
         # queue error handled; cleanup is still invoked.
         self.assertTrue(s.pd_queue.cleaned_up)
@@ -128,30 +120,25 @@ class SendEventTest(unittest.TestCase):
         import time
 
         s = self.newSendEventThread()
-        s._api_communicator.response = MockResponse()
+        s._urllib2.response = MockResponse()
         s.last_cleanup_time = int(time.time()) - 1
-
         s.tick()
-
         # queue is flushed normally...
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         # ... and cleanup is not invoked because it is not time for it.
         self.assertFalse(s.pd_queue.cleaned_up)
 
     def test_cleanup_errors(self):
-        s = self.newSendEventThread()
-        s._api_communicator.response = MockResponse()
-
         def erroneous_cleanup(**args):
             raise Exception
 
+        s = self.newSendEventThread()
+        s._urllib2.response = MockResponse()
         s.pd_queue.cleanup = erroneous_cleanup
-
         s.tick()
-
         # queue is flushed normally...
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
-        # ... and cleanup errors have been handled since we are .
+        # ... and cleanup errors have been handled.
 
     # --------------------------------------------------------------------------
     # test behaviour for events-API endpoint-related errors.
@@ -161,13 +148,11 @@ class SendEventTest(unittest.TestCase):
     # --------------------------------------------------------------------------
 
     def test_url_connection_error(self):
-        s = self.newSendEventThread()
-
         def error(*args, **kwargs):
             httpswithverify.urlopen("https://localhost/error")
 
-        s._api_communicator.urlopen = error
-
+        s = self.newSendEventThread()
+        s._urllib2.urlopen = error
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.NOT_CONSUMED)
         # error handled; cleanup is still invoked.
@@ -200,7 +185,7 @@ class SendEventTest(unittest.TestCase):
         self._verifyConsumeCodeForHTTPError(
             403,
             ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
-        )
+            )
 
     def test_other_4xx(self):
         self._verifyConsumeCodeForHTTPError(400, ConsumeEvent.BAD_ENTRY)
@@ -219,21 +204,17 @@ class SendEventTest(unittest.TestCase):
     def test_bad_response(self):
         # bad response should not matter for our processing.
         s = self.newSendEventThread()
-        s._api_communicator.response = MockResponse(data="bad")
-
+        s._urllib2.response = MockResponse(data="bad")
         s.tick()
-
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def _verifyConsumeCodeForError(self, exception, expected_code):
-        s = self.newSendEventThread()
-
         def error(*args, **kwargs):
             raise exception
 
-        s._api_communicator.urlopen = error
-
+        s = self.newSendEventThread()
+        s._urllib2.urlopen = error
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, expected_code)
         # error handled; cleanup is still invoked.
@@ -241,9 +222,7 @@ class SendEventTest(unittest.TestCase):
 
     def _verifyConsumeCodeForHTTPError(self, error_code, expected_code):
         s = self.newSendEventThread()
-
-        s._api_communicator.response = MockResponse(code=error_code)
-
+        s._urllib2.response = MockResponse(code=error_code)
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, expected_code)
         # error handled; cleanup is still invoked.
