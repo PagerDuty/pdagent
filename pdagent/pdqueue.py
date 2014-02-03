@@ -97,15 +97,27 @@ class PDQueue(object):
             else:
                 return fname, fname_abs, fd
 
-    def dequeue(self, consume_func):
+    def dequeue(self, consume_func, stop_check_func=lambda: False):
         # process only first event in queue.
-        self._process_queue(lambda events: events[0:1], consume_func)
+        self._process_queue(
+            lambda events: events[0:1],
+            consume_func,
+            stop_check_func
+            )
 
-    def flush(self, consume_func):
+    def flush(self, consume_func, stop_check_func):
         # process all events in queue.
-        self._process_queue(lambda events: events, consume_func)
+        self._process_queue(
+            lambda events: events,
+            consume_func,
+            stop_check_func
+            )
 
-    def _process_queue(self, filter_events_to_process_func, consume_func):
+    def _process_queue(
+            self,
+            filter_events_to_process_func,
+            consume_func,
+            should_stop_func):
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
 
@@ -124,6 +136,8 @@ class PDQueue(object):
             err_svc_keys = set()
 
             for fname in file_names:
+                if should_stop_func():
+                    break
                 _, _, svc_key = _get_event_metadata(fname)
                 if svc_key not in err_svc_keys and \
                         self.backoff_info.get_current_retry_at(svc_key) <= now:
