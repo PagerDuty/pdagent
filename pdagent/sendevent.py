@@ -35,7 +35,7 @@ class SendEventThread(RepeatingThread):
         # flush the event queue.
         logger.info("Flushing event queue")
         try:
-            self.pd_queue.flush(self.send_event)
+            self.pd_queue.flush(self.send_event, self.is_stop_invoked)
         except EmptyQueueError:
             logger.info("Nothing to do - queue is empty!")
         except IOError:

@@ -55,6 +55,9 @@ class RepeatingThread(Thread):
         self.stop()
         self.join()
 
+    def is_stop_invoked(self):
+        return self._stop
+
     def tick(self):
         "You must override this method. It will be called repeatedly"
         raise NotImplementedError
