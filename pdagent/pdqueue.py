@@ -316,7 +316,8 @@ def _open_creat_excl(fname_abs):
 
 
 def _get_event_metadata(fname):
-    event_type, enqueue_time_str, service_key = fname.split('.')[0].split('_')
+    event_type, enqueue_time_str, service_key = \
+        fname.split('.')[0].split('_', 2)
     return event_type, int(enqueue_time_str), service_key
 
 
