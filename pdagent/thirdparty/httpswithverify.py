@@ -33,7 +33,7 @@ if hasattr(httplib, 'HTTPS'):
                 """Connects to a host on a given (SSL) port, using a
                 certificate-verifying socket wrapper."""
 
-                from pdagent.backports.ssl_match_hostname import \
+                from pdagent.thirdparty.ssl_match_hostname import \
                     match_hostname, CertificateError
 
                 args = [(self.host, self.port), self.timeout]
