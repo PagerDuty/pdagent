@@ -41,7 +41,7 @@ class MockQueue:
         self.consume_code = None
         self.cleaned_up = False
 
-    def flush(self, consume_func):
+    def flush(self, consume_func, stop_check_func):
         self.consume_code = consume_func(self.event)
 
     def cleanup(self, before):
