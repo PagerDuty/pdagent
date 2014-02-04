@@ -25,7 +25,7 @@ mkdir data target
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
-cp ../bin/*.py data/usr/bin
+cp ../bin/pd* data/usr/bin
 
 echo = /var/...
 mkdir -p data/var/run/pdagent

@@ -1,5 +1,5 @@
 AGENT_USER=pdagent
-BIN_PD_SEND=pd-send.py
+BIN_PD_SEND=pd-send
 CONFIG_FILE=/etc/pdagent/config.cfg
 DATA_DIR=/var/lib/pdagent
 OUTQUEUE_DIR=$DATA_DIR/outqueue
