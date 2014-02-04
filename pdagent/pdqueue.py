@@ -47,7 +47,9 @@ class PDQueue(object):
 
         self.max_event_bytes = max_event_bytes
         self.time = time_calc
-        self.backoff_info = _BackoffInfo(backoff_db, backoff_secs, time_calc)
+        if backoff_db and backoff_secs:
+            self.backoff_info = \
+                _BackoffInfo(backoff_db, backoff_secs, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -296,7 +298,9 @@ class PDQueue(object):
 
         # if throttle info is required, compute from pre-loaded info.
         # (we don't want to reload info if queue processing is underway.)
-        if throttle_info and self.backoff_info._current_retry_at:
+        if throttle_info and \
+                self.backoff_info and \
+                self.backoff_info._current_retry_at:
             throttled_keys = set()
             now = int(self.time.time())
             for key, retry_at in \
