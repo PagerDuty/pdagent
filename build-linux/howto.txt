@@ -22,7 +22,7 @@ Install & test the .deb:
  
     sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
 
-    service pd-agent status
+    service pdagentd status
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 
@@ -57,7 +57,7 @@ Install & test the .rpm:
 
     sudo rpm -i target/pdagent-0.1-1.noarch.rpm
 
-    service pd-agent status
+    service pdagentd status
     which pd-send.py
     python -c "import pdagent; print pdagent.__file__"
 

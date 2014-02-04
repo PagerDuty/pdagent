@@ -3,7 +3,7 @@ BIN_PD_SEND=pd-send.py
 CONFIG_FILE=/etc/pdagent/config.cfg
 DATA_DIR=/var/lib/pdagent
 OUTQUEUE_DIR=$DATA_DIR/outqueue
-AGENT_SVC_NAME=pd-agent
+AGENT_SVC_NAME=pdagentd
 CHECK_FREQ_SEC=5
 # The service key to use for testing commands like pd-send.py etc.
 SVC_KEY=CHANGEME
