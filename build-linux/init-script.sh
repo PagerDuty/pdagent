@@ -14,4 +14,4 @@
 # Description:       PagerDuty Agent daemon process.
 ### END INIT INFO
 
-sudo -u pdagent /usr/bin/agent.py "$@"
+sudo -u pdagent /usr/bin/pdagentd.py "$@"
