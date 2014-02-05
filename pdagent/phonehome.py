@@ -1,7 +1,7 @@
 
 import json
 import logging
-import urllib2
+from urllib2 import Request
 
 from pdagent.constants import AGENT_VERSION, PHONE_HOME_URI
 from pdagent.pdthread import RepeatingThread
@@ -38,7 +38,8 @@ class PhoneHomeThread(RepeatingThread):
                 "system_info": self.system_info
             }
 
-            request = urllib2.Request(PHONE_HOME_URI)
+            # Note that Request here is from urllib2, not self._urllib2.
+            request = Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")
             phone_home_data = json.dumps(phone_home_json)
             request.add_data(phone_home_data)
