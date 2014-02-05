@@ -1,79 +1,40 @@
 
 import json
 import unittest
-from urllib2 import HTTPError, URLError
+from urllib2 import URLError
 
 from pdagent.constants import ConsumeEvent
 from pdagent.sendevent import SendEventThread
 from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
-
+from pdagenttest.mockqueue import MockQueue
+from pdagenttest.mockresponse import MockResponse
+from pdagenttest.mockurllib import MockUrlLib
 
 FREQUENCY_SEC = 30
 SEND_TIMEOUT_SEC = 1
 CLEANUP_FREQUENCY_SEC = 60
 CLEANUP_AGE_SEC = 120
-
 INCIDENT_KEY = "123"
-
-
-class MockUrlLib:
-
-    def __init__(self):
-        self.request = None
-        self.response = None
-
-    def urlopen(self, request, **kwargs):
-        self.request = request
-        return self.response
-
-
-class MockQueue:
-
-    def __init__(self):
-        self.event = json.dumps({
-            "event_type":"acknowledge",
-            "service_key":"foo",
-            "incident_key": INCIDENT_KEY,
-            "description":"test",
-            "details":{}
-            })
-        self.consume_code = None
-        self.cleaned_up = False
-
-    def flush(self, consume_func, stop_check_func):
-        self.consume_code = consume_func(self.event)
-
-    def cleanup(self, before):
-        if before == CLEANUP_AGE_SEC:
-            self.cleaned_up = True
-        else:
-            raise Exception("Received cleanup_before=%s" % before)
-
-class MockResponse:
-
-    default_data = json.dumps({
-        "status": "success",
-        "incident_key": INCIDENT_KEY,
-        "message": "Event processed"
-        })
-
-    def __init__(self, code=200, data=default_data):
-        self.code = code
-        self.data = data
-
-    def getcode(self):
-        return self.code
-
-    def read(self):
-        return self.data
+DEFAULT_RESPONSE_DATA = json.dumps({
+    "status": "success",
+    "incident_key": INCIDENT_KEY,
+    "message": "Event processed"
+    })
+SAMPLE_EVENT = json.dumps({
+    "event_type": "acknowledge",
+    "service_key": "foo",
+    "incident_key": INCIDENT_KEY,
+    "description": "test",
+    "details": {}
+    })
 
 
 class SendEventTest(unittest.TestCase):
 
     def newSendEventThread(self):
         s = SendEventThread(
-            MockQueue(),
+            self.mockQueue(),
             FREQUENCY_SEC,
             SEND_TIMEOUT_SEC,
             CLEANUP_FREQUENCY_SEC,
@@ -82,9 +43,18 @@ class SendEventTest(unittest.TestCase):
         s._urllib2 = MockUrlLib()
         return s
 
+    def mockQueue(self):
+        return MockQueue(
+            event=SAMPLE_EVENT,
+            cleanup_age_secs=CLEANUP_AGE_SEC
+            )
+
+    def mockResponse(self, code=200, data=DEFAULT_RESPONSE_DATA):
+        return MockResponse(code, data)
+
     def test_send_and_cleanup(self):
         s = self.newSendEventThread()
-        s._urllib2.response = MockResponse()
+        s._urllib2.response = self.mockResponse()
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
@@ -120,7 +90,7 @@ class SendEventTest(unittest.TestCase):
         import time
 
         s = self.newSendEventThread()
-        s._urllib2.response = MockResponse()
+        s._urllib2.response = self.mockResponse()
         s.last_cleanup_time = int(time.time()) - 1
         s.tick()
         # queue is flushed normally...
@@ -133,7 +103,7 @@ class SendEventTest(unittest.TestCase):
             raise Exception
 
         s = self.newSendEventThread()
-        s._urllib2.response = MockResponse()
+        s._urllib2.response = self.mockResponse()
         s.pd_queue.cleanup = erroneous_cleanup
         s.tick()
         # queue is flushed normally...
@@ -204,7 +174,7 @@ class SendEventTest(unittest.TestCase):
     def test_bad_response(self):
         # bad response should not matter for our processing.
         s = self.newSendEventThread()
-        s._urllib2.response = MockResponse(data="bad")
+        s._urllib2.response = self.mockResponse(data="bad")
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
@@ -222,7 +192,7 @@ class SendEventTest(unittest.TestCase):
 
     def _verifyConsumeCodeForHTTPError(self, error_code, expected_code):
         s = self.newSendEventThread()
-        s._urllib2.response = MockResponse(code=error_code)
+        s._urllib2.response = self.mockResponse(code=error_code)
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, expected_code)
         # error handled; cleanup is still invoked.
