@@ -38,7 +38,7 @@ test_wakeup() {
   pd-send -k $SVC_KEY -t acknowledge -i test$$_2 -f baz=boo
   pd-send -k $SVC_KEY -t resolve -i test$$_2 -d "Testing"
   # corrupt one of the files.
-  echo "{bad json" \
+  echo "bad json" \
     | sudo tee $(ls $OUTQUEUE_DIR/* | tail -n1) >/dev/null
 
   sleep $(($CHECK_FREQ_SEC * 3 / 2))  # sleep-time + extra-time for processing.
