@@ -625,15 +625,17 @@ class PDQueueTest(unittest.TestCase):
         q1 = enqueue_before(2000)
         t1 = enqueue_before(2100, prefix="tmp")
         e1 = enqueue_before(2200, prefix="err")
-        s2 = enqueue_before(2300, prefix="suc")
+        s1_1 = enqueue_before(2250, prefix="suc")
+        s1_2 = enqueue_before(2300, prefix="suc")
         q2 = enqueue_before(1000)
         t2 = enqueue_before(1100, prefix="tmp")
         s2 = enqueue_before(1150, prefix="suc")
-        e2 = enqueue_before(1200, prefix="err")
+        e2_1 = enqueue_before(1200, prefix="err")
+        e2_2 = enqueue_before(1250, prefix="err")
 
         q.cleanup(1500)
         # old err+tmp+suc files are removed; old queue entries are not.
-        expected_unremoved = [q1, q2, t2, e2, s2]
+        expected_unremoved = [q1, q2, t2, e2_2, e2_1, s2]
         actual_unremoved = q._queued_files()
         actual_unremoved.extend(q._queued_files("tmp"))
         actual_unremoved.extend(q._queued_files("err"))
