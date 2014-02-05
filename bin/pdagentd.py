@@ -14,6 +14,7 @@ import os
 import signal
 import sys
 import time
+import uuid
 
 
 # Check Python version.
@@ -200,31 +201,26 @@ class Agent(Daemon):
 
 # read persisted, valid agent ID, or generate (and persist) one.
 def get_or_make_agent_id(agent_id_file):
-    import uuid
     fd = None
-    agent_id = None
 
-    try:
-        fd = open(agent_id_file, "r")
-        agent_id = str(uuid.UUID(fd.readline().strip()))
-    except IOError as e:
-        import errno
-        if e.errno != errno.ENOENT:
-            raise
-    finally:
-        if fd:
-            fd.close()
-
-    if not agent_id:
-        main_logger.info('Generating new agent ID')
-        agent_id = str(uuid.uuid4())
-        fd = None
+    if os.path.exists(agent_id_file):
         try:
-            fd = open(agent_id_file, "w")
-            fd.write(agent_id)
+            fd = open(agent_id_file, "r")
+            return str(uuid.UUID(fd.readline().strip()))
         finally:
             if fd:
                 fd.close()
+
+    # no agent id persisted yet.
+    main_logger.info('Generating new agent ID')
+    agent_id = str(uuid.uuid4())
+    fd = None
+    try:
+        fd = open(agent_id_file, "w")
+        fd.write(agent_id)
+    finally:
+        if fd:
+            fd.close()
     return agent_id
 
 

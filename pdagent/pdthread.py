@@ -110,3 +110,5 @@ class RepeatingThread(Thread):
         self.stop()
         self.join()
 
+    def is_stop_invoked(self):
+        return self._stop
