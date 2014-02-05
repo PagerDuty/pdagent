@@ -29,6 +29,7 @@ class SendEventThread(RepeatingThread):
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
         self.last_cleanup_time = 0
+        self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
         # flush the event queue.
@@ -56,9 +57,8 @@ class SendEventThread(RepeatingThread):
         request.add_header("Content-type", "application/json")
         request.add_data(json_event_str)
 
-        status_code, result_str = None, None
         try:
-            response = httpswithverify.urlopen(
+            response = self._urllib2.urlopen(
                 request,
                 timeout=self.send_event_timeout_sec
                 )
@@ -86,7 +86,7 @@ class SendEventThread(RepeatingThread):
                     "Error establishing a connection for sending event:",
                     exc_info=True)
                 return ConsumeEvent.NOT_CONSUMED
-        except IOError:
+        except Exception:
             logger.error("Error while sending event:", exc_info=True)
             return ConsumeEvent.NOT_CONSUMED
 

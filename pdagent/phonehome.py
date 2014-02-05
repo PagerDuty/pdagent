@@ -24,6 +24,7 @@ class PhoneHomeThread(RepeatingThread):
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
+        self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
         logger.info("Phoning home")
@@ -31,10 +32,12 @@ class PhoneHomeThread(RepeatingThread):
             phone_home_json = {
                 "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
-                "agent_stats": self.pd_queue.get_status(
-                    throttle_info=True, aggregated=True
-                    ),
             }
+            agent_stats = self.pd_queue.get_status(
+                throttle_info=True, aggregated=True
+                )
+            if agent_stats:
+                phone_home_json["agent_stats"] = agent_stats
             if self.system_info:
                 phone_home_json["system_info"] = self.system_info
 
@@ -45,7 +48,7 @@ class PhoneHomeThread(RepeatingThread):
 
             logger.debug("Phone-home stats: %s" % phone_home_data)
             try:
-                response = httpswithverify.urlopen(request)
+                response = self._urllib2.urlopen(request)
                 result_str = response.read()
             except:
                 logger.error("Error while phoning home:", exc_info=True)
