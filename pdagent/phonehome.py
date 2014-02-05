@@ -32,14 +32,11 @@ class PhoneHomeThread(RepeatingThread):
             phone_home_json = {
                 "agent_id": self.agent_id,
                 "agent_version": AGENT_VERSION,
+                "agent_stats": self.pd_queue.get_status(
+                    throttle_info=True, aggregated=True
+                    ),
+                "system_info": self.system_info
             }
-            agent_stats = self.pd_queue.get_status(
-                throttle_info=True, aggregated=True
-                )
-            if agent_stats:
-                phone_home_json["agent_stats"] = agent_stats
-            if self.system_info:
-                phone_home_json["system_info"] = self.system_info
 
             request = urllib2.Request(PHONE_HOME_URI)
             request.add_header("Content-type", "application/json")
