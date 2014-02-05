@@ -5,7 +5,7 @@
 #
 
 ### BEGIN INIT INFO
-# Provides:          pd-agent
+# Provides:          pdagentd
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
@@ -14,4 +14,4 @@
 # Description:       PagerDuty Agent daemon process.
 ### END INIT INFO
 
-sudo -u pdagent /usr/bin/agent.py "$@"
+sudo -u pdagent /usr/bin/pdagentd.py "$@"

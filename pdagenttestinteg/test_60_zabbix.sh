@@ -16,7 +16,7 @@ test_zabbix_trigger() {
   # clear outqueue
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 0 || sudo rm -r $OUTQUEUE_DIR/*
 
-  pd-zabbix.py DUMMY_SERVICE_KEY trigger "name:Zabbix server has just been restarted
+  pd-zabbix DUMMY_SERVICE_KEY trigger "name:Zabbix server has just been restarted
 id:13502
 status:PROBLEM
 hostname:Zabbix server
@@ -36,7 +36,7 @@ test_zabbix_resolve() {
   # clear outqueue
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 0 || sudo rm -r $OUTQUEUE_DIR/*
 
-  pd-zabbix.py DUMMY_SERVICE_KEY resolve "name:Zabbix server has just been restarted
+  pd-zabbix DUMMY_SERVICE_KEY resolve "name:Zabbix server has just been restarted
 id:13502
 status:OK
 hostname:Zabbix server
@@ -46,6 +46,7 @@ event_id:126
 severity:High"
 
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 1
+  test $(ls $OUTQUEUE_DIR/pdq_* | wc -l) -eq 1
 
   diff -q $OUTQUEUE_DIR/pdq_*.txt $(dirname $0)/test_60_zabbix.pdq2.txt
 

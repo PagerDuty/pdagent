@@ -20,7 +20,7 @@ class PhoneHomeThread(RepeatingThread):
             agent_id,
             system_info
             ):
-        RepeatingThread.__init__(self, heartbeat_frequency_sec)
+        RepeatingThread.__init__(self, heartbeat_frequency_sec, True)
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
@@ -66,7 +66,7 @@ class PhoneHomeThread(RepeatingThread):
 
                 new_heartbeat_freq = result.get("next_checkin_interval_seconds")
                 if new_heartbeat_freq:
-                    self.set_sleep_secs(new_heartbeat_freq)
+                    self.set_delay_secs(new_heartbeat_freq)
 
         except:
             logger.error("Error while phoning home:", exc_info=True)

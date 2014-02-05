@@ -21,27 +21,30 @@ sudo sed -i "s#^\#check_freq_sec.*#check_freq_sec=$CHECK_FREQ_SEC#" $CONFIG_FILE
 
 # agent must flush out queue when it starts up.
 test_startup() {
-  pd-send.py -k $SVC_KEY -t acknowledge -i test$$_1 -f key=value -f foo=bar
-  pd-send.py -k $SVC_KEY -t resolve -i test$$_1 -d "Testing"
+  $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i test$$_1 -f key=value -f foo=bar
+  $BIN_PD_SEND -k $SVC_KEY -t resolve -i test$$_1 -d "Testing"
 
   test $(ls $OUTQUEUE_DIR/pdq_* | wc -l) -eq 2
 
   start_agent
   test -n "$(agent_pid)"
   sleep $(($CHECK_FREQ_SEC / 2))  # enough time for agent to flush the queue.
+  test $(ls $OUTQUEUE_DIR | wc -l) -eq 2
   test $(ls $OUTQUEUE_DIR/suc_* | wc -l) -eq 2
 }
 
 # agent must flush out queue when it wakes up.
 test_wakeup() {
-  pd-send.py -k $SVC_KEY -t acknowledge -i test$$_2 -f baz=boo
-  pd-send.py -k $SVC_KEY -t resolve -i test$$_2 -d "Testing"
+  test $(ls $OUTQUEUE_DIR/* | wc -l) -eq 2
+  $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i test$$_2 -f baz=boo
+  $BIN_PD_SEND -k $SVC_KEY -t resolve -i test$$_2 -d "Testing"
   # corrupt the latest enqueued file.
   echo "bad json" \
     | sudo tee $(ls $OUTQUEUE_DIR/pdq_* | tail -n1) >/dev/null
 
   sleep $(($CHECK_FREQ_SEC * 3 / 2))  # sleep-time + extra-time for processing.
   # there must be one error file in outqueue; everything else must be cleared.
+  test $(ls $OUTQUEUE_DIR/* | wc -l) -eq 4
   test $(ls $OUTQUEUE_DIR/err_* | wc -l) -eq 1
   test $(ls $OUTQUEUE_DIR/suc_* | wc -l) -eq 3
 }

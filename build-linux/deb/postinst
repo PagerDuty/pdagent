@@ -18,10 +18,10 @@ if [ "$1" = "configure" ]; then
     fi
 
     # Register daemon
-    update-rc.d -f pd-agent defaults
+    update-rc.d -f pdagentd defaults
 
     # Restart daemon
-    service pd-agent restart
+    service pdagentd restart
 fi
 
 exit 0

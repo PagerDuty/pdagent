@@ -5,11 +5,11 @@ import unittest
 from pdagent.pdthread import RepeatingThread
 
 
-def _start_repeating_thread(f, *args):
+def _start_repeating_thread(f, delay_secs, is_absolute):
     class T(RepeatingThread):
         def tick(self):
             f()
-    t = T(*args)
+    t = T(delay_secs, is_absolute)
     t.start()
     return t
 
@@ -21,7 +21,7 @@ class RepeatingThreadTest(unittest.TestCase):
 
         def f():
             trace.append(42)
-        t = _start_repeating_thread(f, 1)
+        t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
             # check that tick() is run once immediately on startup
@@ -37,7 +37,7 @@ class RepeatingThreadTest(unittest.TestCase):
     def test_quick_stop(self):
         def f():
             pass
-        t = _start_repeating_thread(f, 5)
+        t = _start_repeating_thread(f, 5, False)
         try:
             time.sleep(0.1)
             t.stop()
@@ -80,16 +80,16 @@ class RepeatingThreadTest(unittest.TestCase):
         finally:
             t.stop_and_join()
 
-    def test_change_sleep_time(self):
+    def test_change_delay_secs(self):
         def f():
             trace.append(42)
         trace = []
 
-        t = _start_repeating_thread(f, 1)
+        t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
             self.assertEquals(trace, [42])
-            t.set_sleep_secs(2)
+            t.set_delay_secs(2)
             time.sleep(1.0)
             self.assertEquals(trace, [42, 42])
             time.sleep(1.0)
@@ -104,7 +104,7 @@ class RepeatingThreadTest(unittest.TestCase):
             trace.append(42)
             raise Exception("foo")
         trace = []
-        t = _start_repeating_thread(f, 1)
+        t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
             self.assertEquals(trace, [42])
