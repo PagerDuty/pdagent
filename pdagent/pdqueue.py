@@ -239,14 +239,15 @@ class PDQueue(object):
                         "Cleanup: ignoring invalid file name %s" % fname)
                     fnames.remove(fname)
                 else:
-                    if enqueue_time >= delete_before_time:
-                        fnames.remove(fname)
-            for fname in fnames:
-                try:
-                    os.remove(self._abspath(fname))
-                except IOError as e:
-                    logger.warning(
-                        "Could not clean up file %s: %s" % (fname, str(e)))
+                    if enqueue_time < delete_before_time:
+                        try:
+                            logger.info("Cleanup: removing file %s" % fname)
+                            os.remove(self._abspath(fname))
+                        except IOError as e:
+                            logger.warning(
+                                "Could not clean up file %s: %s" %
+                                (fname, str(e))
+                                )
 
         # clean up bad / temp / success files created before delete-before-time.
         _cleanup_files("err_")
