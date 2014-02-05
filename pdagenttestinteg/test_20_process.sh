@@ -21,8 +21,8 @@ sudo sed -i "s#^\#check_freq_sec.*#check_freq_sec=$CHECK_FREQ_SEC#" $CONFIG_FILE
 
 # agent must flush out queue when it starts up.
 test_startup() {
-  pd-send -k $SVC_KEY -t acknowledge -i test$$_1 -f key=value -f foo=bar
-  pd-send -k $SVC_KEY -t resolve -i test$$_1 -d "Testing"
+  $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i test$$_1 -f key=value -f foo=bar
+  $BIN_PD_SEND -k $SVC_KEY -t resolve -i test$$_1 -d "Testing"
 
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 2
 
@@ -35,8 +35,8 @@ test_startup() {
 
 # agent must flush out queue when it wakes up.
 test_wakeup() {
-  pd-send -k $SVC_KEY -t acknowledge -i test$$_2 -f baz=boo
-  pd-send -k $SVC_KEY -t resolve -i test$$_2 -d "Testing"
+  $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i test$$_2 -f baz=boo
+  $BIN_PD_SEND -k $SVC_KEY -t resolve -i test$$_2 -d "Testing"
   # corrupt one of the files.
   echo "bad json" \
     | sudo tee $(ls $OUTQUEUE_DIR/* | tail -n1) >/dev/null
