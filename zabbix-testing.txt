@@ -21,7 +21,7 @@ For the rpm build, remember to copy the rpm out of the build VM:
 
 - Enter the IP in your browser - this should bring up the Zabbix web UI
 
-- Login: zabbix / admin
+- Login: admin / zabbix
 
 
 
