@@ -214,7 +214,7 @@ test                Runs unit tests on specific virtual machines, bringing
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test test=pdagenttest/test_foo.py \
+                    scons test test=pdagenttest/test_foo.py \\
                                virt=agent-minimal-centos
 test-integration    Runs integration tests on specific virtual machines,
                     bringing the virtual machine up if required.
@@ -228,7 +228,7 @@ test-integration    Runs integration tests on specific virtual machines,
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test-integration test=pdagenttestinteg/test_foo.sh \
+                    scons test-integration test=pdagenttestinteg/test_foo.sh \\
                                            virt=agent-minimal-centos
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details about using the
