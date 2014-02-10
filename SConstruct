@@ -13,6 +13,8 @@ def create_dist(target, source, env):
     pass
 
 
+_RPM_BUILD_VM = "agent-minimal-centos65"
+
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
     ret_code = 0
@@ -20,14 +22,11 @@ def create_packages(target, source, env):
 
     env.Execute(Mkdir(target_dir))
 
-    debian_vms = [v for v in virts if v.find("ubuntu") != -1]
-    if debian_vms:
+    if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
         ret_code += _create_deb_package()
 
-    redhat_vms = [v for v in virts if v.find("centos") != -1]
-    if redhat_vms:
-        # create package on one of the virts.
-        ret_code += _create_rpm_package(redhat_vms[0])
+    if virts is None or [v for v in virts if v.find("centos") != -1]:
+        ret_code += _create_rpm_package(_RPM_BUILD_VM)
 
     return ret_code
 
@@ -234,7 +233,7 @@ test                Runs unit tests on specific virtual machines, bringing
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test test=pdagenttest/test_foo.py \
+                    scons test test=pdagenttest/test_foo.py \\
                                virt=agent-minimal-centos
 test-integration    Runs integration tests on specific virtual machines,
                     bringing the virtual machine up if required.
@@ -248,7 +247,7 @@ test-integration    Runs integration tests on specific virtual machines,
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test-integration test=pdagenttestinteg/test_foo.sh \
+                    scons test-integration test=pdagenttestinteg/test_foo.sh \\
                                            virt=agent-minimal-centos
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details about using the
