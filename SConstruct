@@ -18,6 +18,8 @@ def create_packages(target, source, env):
     ret_code = 0
     virts = env.get("virts")
 
+    env.Execute(Mkdir(target_dir))
+
     debian_vms = [v for v in virts if v.find("ubuntu") != -1]
     if debian_vms:
         ret_code += _create_deb_package()
