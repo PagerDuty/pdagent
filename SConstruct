@@ -7,20 +7,24 @@ import subprocess
 import sys
 
 
+_RPM_BUILD_VM = "agent-minimal-centos65"
+
+
 def create_dist(target, source, env):
     """Create distributable for agent."""
-    # TODO copy packages, documentation?
-    pass
+    env.Execute(Mkdir(dist_dir))
+    pkgs = [p.path for p in env.Glob(os.path.join(target_dir, "*.*"))]
+    cp_pkgs_cmd = ["cp"]
+    cp_pkgs_cmd.extend(pkgs)
+    cp_pkgs_cmd.append(dist_dir)
+    return subprocess.call(cp_pkgs_cmd)
 
-
-_RPM_BUILD_VM = "agent-minimal-centos65"
 
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
-    ret_code = 0
-    virts = env.get("virts")
-
     env.Execute(Mkdir(target_dir))
+    virts = env.get("virts")
+    ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
         ret_code += _create_deb_package()
@@ -100,6 +104,7 @@ def _create_rpm_package(virt):
     # Assuming that all requisite packages are available on virts.
     # (see build-linux/howto.txt)
     # Create a temporary file to cd to required directory and make rpm.
+    env.Execute(Mkdir(tmp_dir))
     make_file = os.path.join(tmp_dir, "make_rpm")
     _create_text_file(make_file, [
         'set -e',
@@ -305,7 +310,9 @@ dist_task = env.Command(
     "dist",
     None,
     env.Action(create_dist, "\n--- Creating distributables"))
-env.Requires(dist_task, [create_packages_task, integration_test_task])
+env.Requires(
+    dist_task,
+    [destroy_virts_task, create_packages_task, integration_test_task])
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
