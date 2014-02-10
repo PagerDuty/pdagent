@@ -10,6 +10,10 @@ set -x
 # install agent.
 case $(os_type) in
   debian)
+    # FIXME: Ubuntu 12.04 does not include python-support.
+    # We need to test that it is pulled in automatically when
+    # pdagent is installed from repo rather than from .deb
+    sudo apt-get install python-support
     sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
     ;;
   redhat)
