@@ -75,6 +75,15 @@ def start_virtual_boxes(target, source, env):
     return subprocess.call(start_cmd)
 
 
+def destroy_virtual_boxes(target, source, env):
+    virts = env.get("virts")
+    if not virts:
+        virts =  _get_minimal_virt_names()
+    destroy_cmd = ["vagrant", "destroy"]
+    destroy_cmd.extend(virts)
+    return subprocess.call(destroy_cmd)
+
+
 def _create_deb_package():
     # Assuming that all requisite packages are available.
     # (see build-linux/howto.txt)
@@ -251,6 +260,12 @@ start_virts_task = env.Command(
     "start-virt",
     None,
     env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
+    virts=_get_arg_values("virt"))
+
+destroy_virts_task = env.Command(
+    "destroy-virt",
+    None,
+    env.Action(destroy_virtual_boxes, "\n--- Destroying virtual boxes"),
     virts=_get_arg_values("virt"))
 
 unit_test_task = env.Command(
