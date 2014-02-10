@@ -14,10 +14,10 @@ case $(os_type) in
     # We need to test that it is pulled in automatically when
     # pdagent is installed from repo rather than from .deb
     sudo apt-get install python-support
-    sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
+    sudo dpkg -i /vagrant/target/pdagent_0.1_all.deb
     ;;
   redhat)
-    sudo rpm -i /vagrant/build-linux/target/pdagent-0.1-1.noarch.rpm
+    sudo rpm -i /vagrant/target/pdagent-0.1-1.noarch.rpm
     ;;
   *)
     echo "Unknown os_type " $(os_type) >&2

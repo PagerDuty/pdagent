@@ -49,7 +49,7 @@ def run_unit_tests(target, source, env):
             lambda f: f.startswith("test_") and f.endswith(".py"))
     test_paths.sort()
     remote_test_command = ["python", remote_test_runner]
-    remote_test_command.extend(\
+    remote_test_command.extend(
         [os.path.join(remote_project_root, t) for t in test_paths])
     return _run_on_virts(" ".join(remote_test_command), env.get("virts"))
 
@@ -88,7 +88,11 @@ def _create_deb_package():
     # Assuming that all requisite packages are available.
     # (see build-linux/howto.txt)
     print "\nCreating .deb package..."
-    return subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
+    r = subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
+    if not r:
+        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.deb"))[0].path
+        return subprocess.call(["cp", pkg, target_dir])
+    return r
 
 
 def _create_rpm_package(virt):
@@ -105,7 +109,11 @@ def _create_rpm_package(virt):
     ])
     make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .rpm package..."
-    return _run_on_virts("sh %s" % make_file_on_vm, [virt])
+    r = _run_on_virts("sh %s" % make_file_on_vm, [virt])
+    if not r:
+        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.rpm"))[0].path
+        return subprocess.call(["cp", pkg, target_dir])
+    return r
 
 
 def _generate_remote_test_runner_file(
@@ -246,6 +254,7 @@ test-local          Runs unit tests on the local machine.
 """)
 
 build_linux_dir = "build-linux"
+build_linux_target_dir = os.path.join(build_linux_dir, "target")
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
