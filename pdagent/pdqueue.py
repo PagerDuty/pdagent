@@ -177,7 +177,7 @@ class PDQueue(object):
             return True
 
         logger.info("Processing event " + fname)
-        consume_code = consume_func(data)
+        consume_code = consume_func(data, fname)
 
         if consume_code == ConsumeEvent.CONSUMED:
             # TODO a failure here means duplicate event sends

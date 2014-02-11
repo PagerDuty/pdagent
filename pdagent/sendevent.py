@@ -51,7 +51,7 @@ class SendEventThread(RepeatingThread):
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())
 
-    def send_event(self, json_event_str):
+    def send_event(self, json_event_str, event_id=None):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
@@ -101,7 +101,7 @@ class SendEventThread(RepeatingThread):
             logger.info("incident_key =", result.get("incident_key"))
         else:
             logger.error("Error sending event %s; Error code: %d, Reason: %s" %
-                (json_event_str, status_code, result_str))
+                (event_id, status_code, result_str))
 
         if status_code < 300:
             return ConsumeEvent.CONSUMED
