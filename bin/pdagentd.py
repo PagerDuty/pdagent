@@ -278,12 +278,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    pidFile = os.path.join(pidfile_dir, 'pdagentd.pid')
+    pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
     if os.access(pidfile_dir, os.W_OK) == False:
-        # FIXME: writeable test may only be needed for start
         raise SystemExit(
-            'Unable to write the PID file at ' + pidFile + '\n' +
+            'No write-access to PID file directory ' + pidfile_dir + '\n' +
             'Agent will now quit'
             )
 
@@ -291,12 +290,12 @@ if __name__ == '__main__':
     pdQueue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
-    daemon = Agent(pidFile)
+    daemon = Agent(pidfile)
 
     # Helper method for some control options
     def _getDaemonPID():
         try:
-            pf = file(pidFile, 'r')
+            pf = file(pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
@@ -310,7 +309,7 @@ if __name__ == '__main__':
         try:
             if _getDaemonPID():
                 daemon.stop()
-            os.remove(pidFile)
+            os.remove(pidfile)
         except OSError:
             # Did not find pid file
             pass
