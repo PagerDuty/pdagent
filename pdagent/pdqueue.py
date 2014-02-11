@@ -161,7 +161,6 @@ class PDQueue(object):
 
     # Returns true if processing can continue for service key, false if not.
     def _process_event(self, fname, consume_func, svc_key):
-        # TODO: handle missing file or other errors
         f = open(self._abspath(fname))
         try:
             data = f.read()
@@ -180,7 +179,9 @@ class PDQueue(object):
         consume_code = consume_func(data, fname)
 
         if consume_code == ConsumeEvent.CONSUMED:
-            # TODO a failure here means duplicate event sends
+            # a failure here means duplicate event sends if the incident key
+            # was not specified, i.e. if event was enqueued in a non-standard
+            # manner (e.g. not using the pd* scripts.)
             self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
             return True
         elif consume_code == ConsumeEvent.NOT_CONSUMED:
