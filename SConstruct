@@ -82,9 +82,18 @@ def start_virtual_boxes(target, source, env):
 
 def destroy_virtual_boxes(target, source, env):
     virts = env.get("virts")
+    force = env.get("force")
     if not virts:
-        virts =  _get_minimal_virt_names()
+        virts = _get_minimal_virt_names()
     destroy_cmd = ["vagrant", "destroy"]
+    if force is None:
+        msg = "You must manually confirm deletion of VMs."
+        h_border = "-" * len(msg)
+        print h_border
+        print msg
+        print h_border
+    else:
+        destroy_cmd.append("-f")
     destroy_cmd.extend(virts)
     return subprocess.call(destroy_cmd)
 
@@ -281,7 +290,8 @@ destroy_virts_task = env.Command(
     "destroy-virt",
     None,
     env.Action(destroy_virtual_boxes, "\n--- Destroying virtual boxes"),
-    virts=_get_arg_values("virt"))
+    virts=_get_arg_values("virt"),
+    force=_get_arg_values("force-destroy"))  # e.g. force-destroy=true
 
 unit_test_task = env.Command(
     "test",
