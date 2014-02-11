@@ -269,7 +269,7 @@ build_linux_target_dir = os.path.join(build_linux_dir, "target")
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
-remote_project_root = os.sep + "vagrant"  # TODO windows
+remote_project_root = os.sep + "vagrant"
 
 unit_test_local_task = env.Command(
     "test-local",
