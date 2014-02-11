@@ -109,6 +109,7 @@ class RepeatingThreadTest(unittest.TestCase):
             time.sleep(0.1)
             self.assertEquals(trace, [42])
             time.sleep(1.0)
+            self.assertTrue(t.is_stop_invoked())
             self.assertFalse(t.is_alive())
         finally:
             t.stop_and_join()

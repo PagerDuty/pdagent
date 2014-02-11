@@ -64,16 +64,24 @@ class RepeatingThread(Thread):
         while not self._stop:
             s = next_run_time - time.time()
             if s <= 0:
-                self.tick()
-                if self._is_absolute:
-                    # drop extra missed ticks if we fall behind
-                    next_run_time = max(
-                        next_run_time + self._delay_secs, time.time()
+                try:
+                    self.tick()
+                except:
+                    logger.error(
+                        "%s: Error in tick; Stopping." % self.getName(),
+                        exc_info=True
                         )
-                    # the above logic ruins clock alignment but it's
-                    # simpler than trying to do float modulo math :)
+                    self.stop()
                 else:
-                    next_run_time = time.time() + self._delay_secs
+                    if self._is_absolute:
+                        # drop extra missed ticks if we fall behind
+                        next_run_time = max(
+                            next_run_time + self._delay_secs, time.time()
+                            )
+                        # the above logic ruins clock alignment but it's
+                        # simpler than trying to do float modulo math :)
+                    else:
+                        next_run_time = time.time() + self._delay_secs
             elif s < 1.0:
                 time.sleep(s)
             else:
