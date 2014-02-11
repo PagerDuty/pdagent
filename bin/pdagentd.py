@@ -122,7 +122,6 @@ class Agent(Daemon):
                 'platform_name': sys.platform,
                 'python_version': platform.python_version(),
                 'host_name': socket.getfqdn()  # to show in stats-based alerts.
-                # TODO ip address?
                 }
 
             if sys.platform == 'linux2':
@@ -172,7 +171,9 @@ class Agent(Daemon):
 
             try:
                 if start_ok:
-                    while not stop_signal:
+                    while not stop_signal and \
+                            send_thread.is_alive() and \
+                            phone_thread.is_alive():
                         time.sleep(1.0)
             except:
                 main_logger.error("Error while sleeping", exc_info=True)
