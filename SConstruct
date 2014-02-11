@@ -184,10 +184,6 @@ def _get_file_paths_recursive(source_paths, filename_matcher):
 
 
 def _create_text_file(filepath, data):
-    #TODO this doesn't work -- 'Textfile' is not recognized.
-    #     env.Textfile(
-    #         target=test_runner_file,
-    #         source=run_commands)
     out = open(filepath, "w")
     out.write(os.linesep.join(data))
     out.close()
@@ -320,7 +316,7 @@ dist_task = env.Command(
     "dist",
     None,
     env.Action(create_dist, "\n--- Creating distributables"))
-env.Requires(
+env.Depends(
     dist_task,
     [destroy_virts_task, create_packages_task, integration_test_task])
 
