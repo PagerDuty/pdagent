@@ -28,7 +28,6 @@ mkdir -p data/usr/bin
 cp ../bin/pd* data/usr/bin
 
 echo = /var/...
-mkdir -p data/var/run/pdagent
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/db
 mkdir -p data/var/lib/pdagent/outqueue

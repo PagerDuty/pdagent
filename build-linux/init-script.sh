@@ -14,4 +14,11 @@
 # Description:       PagerDuty Agent daemon process.
 ### END INIT INFO
 
+set -e  # fail on errors
+
+if [ ! -d "/var/run/pdagent" ]; then
+  sudo mkdir /var/run/pdagent
+  sudo chown -R pdagent:pdagent /var/run/pdagent
+fi
+
 sudo -u pdagent /usr/bin/pdagentd.py "$@"

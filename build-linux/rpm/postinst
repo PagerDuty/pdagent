@@ -7,7 +7,7 @@ set -e
     /usr/sbin/adduser --system --shell /bin/false --no-create-home pdagent
 
 # Fix ownership of data and log dirs
-chown -R pdagent:pdagent /var/run/pdagent /var/lib/pdagent /var/log/pdagent
+chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
 chmod 777 /var/lib/pdagent/outqueue
 
 # Compile module .py to .pyc
