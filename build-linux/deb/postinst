@@ -18,10 +18,10 @@ if [ "$1" = "configure" ]; then
     fi
 
     # Register daemon
-    update-rc.d -f pdagentd defaults
+    update-rc.d -f pdagent defaults
 
     # Restart daemon
-    service pdagentd restart
+    service pdagent restart
 fi
 
 exit 0

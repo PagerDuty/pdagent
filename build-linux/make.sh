@@ -37,8 +37,8 @@ echo = /etc/...
 mkdir -p data/etc/pdagent/
 cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
-cp init-script.sh data/etc/init.d/pdagentd
-chmod 755 data/etc/init.d/pdagentd
+cp init-script.sh data/etc/init.d/pdagent
+chmod 755 data/etc/init.d/pdagent
 
 if [[ "$1" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared

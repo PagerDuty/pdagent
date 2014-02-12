@@ -27,7 +27,7 @@ if sys.version_info[0:2] not in ((2, 6), (2, 7)):
 # Check we're not running as root
 if os.geteuid() == 0:
     raise SystemExit(
-        "Agent should not be run as root. Use: service pdagentd <command>\n" +
+        "Agent should not be run as root. Use: sudo service pdagent <command>\n" +
         "Agent will now quit"
         )
 
@@ -267,7 +267,7 @@ if __name__ == '__main__':
             for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
-        messages.append('Use: service pdagentd <command>')
+        messages.append('Use: sudo service pdagent <command>')
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
