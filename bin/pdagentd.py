@@ -5,7 +5,7 @@
     ----
     Monitoring system agent for PagerDuty integration.
 
-    See LICENSE.TXT for licensing details.
+    See https://github.com/PagerDuty/agent for licensing details.
 '''
 
 # standard python modules
