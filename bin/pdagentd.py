@@ -225,6 +225,7 @@ def get_or_make_agent_id(agent_id_file):
     try:
         fd = open(agent_id_file, "w")
         fd.write(agent_id)
+        fd.write('\n')
     finally:
         if fd:
             fd.close()
