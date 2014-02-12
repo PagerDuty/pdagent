@@ -51,7 +51,7 @@ class SendEventThread(RepeatingThread):
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())
 
-    def send_event(self, json_event_str, event_id=None):
+    def send_event(self, json_event_str, event_id):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
@@ -73,13 +73,17 @@ class SendEventThread(RepeatingThread):
                 "Server certificate validation error while sending event:",
                 exc_info=True)
             return ConsumeEvent.STOP_ALL
+        except socket.timeout:
+            logger.error("Timeout while sending event:", exc_info=True)
+            # This could be real issue with PD, or just some anomaly in
+            # processing this service key or event. We'll retry this
+            # service key a few more times, and then decide that this
+            # event is possibly a bad entry.
+            return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         except URLError as e:
             if isinstance(e.reason, socket.timeout):
                 logger.error("Timeout while sending event:", exc_info=True)
-                # This could be real issue with PD, or just some anomaly in
-                # processing this service key or event. We'll retry this
-                # service key a few more times, and then decide that this
-                # event is possibly a bad entry.
+                # see above socket.timeout catch-block for details.
                 return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
             else:
                 logger.error(

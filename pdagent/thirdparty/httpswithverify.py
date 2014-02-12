@@ -7,6 +7,10 @@ import httplib
 import urllib2
 import socket
 
+from pdagent.pdagentutil import find_in_sys_path
+from pdagent.thirdparty.ssl_match_hostname import \
+    match_hostname, CertificateError
+
 if not hasattr(httplib, 'HTTPS'):
     raise SystemExit(
         "httplib does not support https!\n"
@@ -22,7 +26,6 @@ except ImportError:
         "See https://pypi.python.org/pypi/ssl/ for installation instructions."
         )
 
-from pdagent.pdagentutil import find_in_sys_path
 DEFAULT_CA_CERTS_FILE = find_in_sys_path("pdagent/root_certs/ca_certs.pem")
 
 class VerifyingHTTPSConnection(httplib.HTTPSConnection):
@@ -37,9 +40,6 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
     def connect(self):
         """Connects to a host on a given (SSL) port, using a
         certificate-verifying socket wrapper."""
-
-        from pdagent.thirdparty.ssl_match_hostname import \
-            match_hostname, CertificateError
 
         args = [(self.host, self.port), self.timeout]
         if hasattr(self, 'source_address'):

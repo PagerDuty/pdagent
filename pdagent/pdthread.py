@@ -61,18 +61,11 @@ class RepeatingThread(Thread):
 
     def run(self):
         next_run_time = 0
-        while not self._stop:
-            s = next_run_time - time.time()
-            if s <= 0:
-                try:
+        try:
+            while not self._stop:
+                s = next_run_time - time.time()
+                if s <= 0:
                     self.tick()
-                except:
-                    logger.error(
-                        "%s: Error in tick; Stopping." % self.getName(),
-                        exc_info=True
-                        )
-                    self.stop()
-                else:
                     if self._is_absolute:
                         # drop extra missed ticks if we fall behind
                         next_run_time = max(
@@ -82,11 +75,16 @@ class RepeatingThread(Thread):
                         # simpler than trying to do float modulo math :)
                     else:
                         next_run_time = time.time() + self._delay_secs
-            elif s < 1.0:
-                time.sleep(s)
-            else:
-                # Sleep for only 1 sec to allow graceful stop
-                time.sleep(1.0)
+                elif s < 1.0:
+                    time.sleep(s)
+                else:
+                    # Sleep for only 1 sec to allow graceful stop
+                    time.sleep(1.0)
+        except:
+            logger.error(
+                "%s: Error in run(); Stopping." % self.getName(),
+                exc_info=True
+                )
 
     def set_delay_secs(self, delay_secs):
         """

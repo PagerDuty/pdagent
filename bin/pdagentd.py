@@ -171,7 +171,7 @@ class Agent(Daemon):
 
             try:
                 if start_ok:
-                    while not stop_signal and \
+                    while (not stop_signal) and \
                             send_thread.is_alive() and \
                             phone_thread.is_alive():
                         time.sleep(1.0)
