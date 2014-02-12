@@ -81,10 +81,7 @@ class RepeatingThread(Thread):
                     # Sleep for only 1 sec to allow graceful stop
                     time.sleep(1.0)
         except:
-            logger.error(
-                "%s: Error in run(); Stopping." % self.getName(),
-                exc_info=True
-                )
+            logger.error("Error in run(); Stopping.", exc_info=True)
 
     def set_delay_secs(self, delay_secs):
         """
