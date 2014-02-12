@@ -82,9 +82,12 @@ class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
         new_kwargs.update(kwargs)  # allows overriding ca_certs
         return VerifyingHTTPSConnection(host, **new_kwargs)
 
+url_opener_cache = dict()
 
 def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
-    # TODO cache the opener?
-    opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
-    return opener.open(url, **kwargs)
+    if ca_certs not in url_opener_cache:
+        # create and cache an opener; not thread-safe, but doesn't matter.
+        url_opener_cache[ca_certs] = \
+            urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
+    return url_opener_cache[ca_certs].open(url, **kwargs)
