@@ -85,8 +85,6 @@ class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
 
 def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
-    if "timeout" not in kwargs:
-        kwargs["timeout"] = 10  # in seconds
     # TODO cache the opener?
     opener = urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
     return opener.open(url, **kwargs)

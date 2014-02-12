@@ -141,6 +141,12 @@ class Agent(Daemon):
 
             signal.signal(signal.SIGTERM, _sig_term_handler)
 
+            default_socket_timeout = 10
+            main_logger.debug(
+                "Setting default socket timeout to %d" %
+                default_socket_timeout)
+            socket.setdefaulttimeout(default_socket_timeout)
+
             try:
                 send_thread = SendEventThread(
                     pdQueue, check_freq_sec,
