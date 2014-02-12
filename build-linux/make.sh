@@ -76,13 +76,11 @@ fpm -s dir \
     $_FPM_DEPENDS \
     --$1-user root \
     --$1-group root \
+    --config-files /etc/pdagent/config.cfg \
     --post-install ../$1/postinst \
     --pre-uninstall ../$1/prerm \
     -C ../data \
     etc usr var
-
-# TODO:
-# --config-files /etc/redis/redis.conf -v 2.6.10 ./src/redis-server=/usr/bin redis.conf=/etc/redis
 
 exit 0
 
