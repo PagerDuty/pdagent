@@ -61,7 +61,7 @@ class PDQueueTest(unittest.TestCase):
             shutil.rmtree(TEST_DB_DIR)
         os.makedirs(TEST_DB_DIR)
 
-    def newQueue(self):
+    def new_queue(self):
         return PDQueue(
             queue_dir=TEST_QUEUE_DIR,
             lock_class=NoOpLock,
@@ -72,7 +72,7 @@ class PDQueueTest(unittest.TestCase):
 
     def test__open_creat_excl_with_retry(self):
         from pdagent.pdqueue import _open_creat_excl
-        q = self.newQueue()
+        q = self.new_queue()
         fname_abs = q._abspath("_open_creat_excl_with_retry.txt")
         fd1 = _open_creat_excl(fname_abs)
         self.assertNotEquals(fd1, None)
@@ -86,7 +86,7 @@ class PDQueueTest(unittest.TestCase):
                 os.close(fd2)
 
     def test_enqueue_and_dequeue(self):
-        q = self.newQueue()
+        q = self.new_queue()
 
         self.assertEquals(q._queued_files(), [])
 
@@ -107,19 +107,20 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
         self.assertEquals(open(q._abspath(f_baz)).read(), "baz")
 
-        def verify_and_consume(event):
-            def consume(s):
+        def verify_and_consume(event, event_id):
+            def consume(s, i):
                 self.assertEquals(event, s)
+                self.assertEquals(event_id, i)
                 return ConsumeEvent.CONSUMED
             return consume
-        q.dequeue(verify_and_consume("foo"))
-        q.dequeue(verify_and_consume("bar"))
-        q.dequeue(verify_and_consume("baz"))
+        q.dequeue(verify_and_consume("foo", f_foo))
+        q.dequeue(verify_and_consume("bar", f_bar))
+        q.dequeue(verify_and_consume("baz", f_baz))
 
         # check queue is empty
         self.assertEquals(q._queued_files(), [])
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
 
         # verify that queued files are now success files.
         success_contents = []
@@ -131,31 +132,34 @@ class PDQueueTest(unittest.TestCase):
 
     def test_dont_consume(self):
         # The item should stay in the queue if we don't consume it.
-        q = self.newQueue()
-        q.enqueue("svckey", "foo")
+        q = self.new_queue()
+        f_foo = q.enqueue("svckey", "foo")
 
-        def dont_consume_foo(s):
+        def dont_consume_foo(s, i):
             self.assertEquals("foo", s)
+            self.assertEquals(f_foo, i)
             return ConsumeEvent.NOT_CONSUMED
         q.dequeue(dont_consume_foo)
         q.dequeue(dont_consume_foo)
 
-        def consume_foo(s):
+        def consume_foo(s, i):
             self.assertEquals("foo", s)
+            self.assertEquals(f_foo, i)
             return ConsumeEvent.CONSUMED
         q.dequeue(consume_foo)
 
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
 
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
         # further consumption, if consumption causes error.
-        q = self.newQueue()
-        q.enqueue("svckey", "foo")
+        q = self.new_queue()
+        f_foo = q.enqueue("svckey", "foo")
 
-        def erroneous_consume_foo(s):
+        def erroneous_consume_foo(s, i):
             self.assertEquals("foo", s)
+            self.assertEquals(f_foo, i)
             return ConsumeEvent.BAD_ENTRY
         q.dequeue(erroneous_consume_foo)
 
@@ -166,11 +170,11 @@ class PDQueueTest(unittest.TestCase):
     def test_huge_event_not_processed(self):
         # The item should get tagged as error, and not be available for
         # further consumption.
-        q = self.newQueue()
+        q = self.new_queue()
         f = q.enqueue("svckey", "huuuuuuuuge")
         self.assertEquals(q._queued_files(), [f])
 
-        def unexpected_consume(s):
+        def unexpected_consume(s, i):
             self.fail("Unexpected event %s" % s)
         q.dequeue(unexpected_consume)  # consume function must not be called.
 
@@ -181,7 +185,7 @@ class PDQueueTest(unittest.TestCase):
         # The item and all other items for same service key must get backed off
         # until backoff limit is hit, then the offending item should get tagged
         # as error, and not be available for further consumption.
-        q = self.newQueue()
+        q = self.new_queue()
         e1_1 = q.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
         e1_2 = q.enqueue("svckey1", "bar")
@@ -194,16 +198,16 @@ class PDQueueTest(unittest.TestCase):
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
         max_total_attempts = len(BACKOFF_SECS) + 1
 
-        def consume_with_backoff(s):
+        def consume_with_backoff(s, i):
             events_processed.append(s)
-            if count == 1 and s == "baz":
+            if count == 1 and s == "baz" and i == e2_1:
                 # good service key; processed only once.
                 return ConsumeEvent.CONSUMED
-            elif count <= max_total_attempts and s == "foo":
+            elif count <= max_total_attempts and s == "foo" and i == e1_1:
                 # while back-off limit is not exceeded for bad event, only first
                 # event for service key is processed.
                 return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
-            elif count == max_total_attempts and s == "bar":
+            elif count == max_total_attempts and s == "bar" and i == e1_2:
                 # when back-off limit has exceeded, bad event is kicked out, and
                 # next event is finally processed.
                 return ConsumeEvent.CONSUMED
@@ -255,13 +259,13 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
 
     def test_backoff_not_consumed(self):
         # The item and all other items for same service key must get backed off
         # until backoff limit is hit, then continue getting backed off until the
         # erroneous event is consumed.
-        q = self.newQueue()
+        q = self.new_queue()
         e1_1 = q.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
         e1_2 = q.enqueue("svckey1", "bar")
@@ -274,17 +278,18 @@ class PDQueueTest(unittest.TestCase):
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
         max_total_attempts = len(BACKOFF_SECS) + 1
 
-        def consume_with_backoff(s):
+        def consume_with_backoff(s, i):
             events_processed.append(s)
             if count == 1 and s == "baz":
                 # good service key; processed only once.
                 return ConsumeEvent.CONSUMED
-            elif count <= max_total_attempts + 1 and s == "foo":
+            elif count <= max_total_attempts + 1 and s == "foo" and i == e1_1:
                 # until, and even after, back-off limit has exceeded, bad event
                 # is processed. (Next event is processed only when bad event
                 # becomes good.)
                 return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
-            elif count == max_total_attempts + 2 and s in ["foo", "bar"]:
+            elif count == max_total_attempts + 2 and \
+                    ((s == "foo" and i == e1_1) or s == "bar" and i == e1_2):
                 # next event finally processed because all events are now good.
                 return ConsumeEvent.CONSUMED
             else:
@@ -351,8 +356,8 @@ class PDQueueTest(unittest.TestCase):
 
     def test_stop_processing(self):
         # No later event must be processed.
-        q = self.newQueue()
-        q.enqueue("svckey1", "foo")
+        q = self.new_queue()
+        f_foo = q.enqueue("svckey1", "foo")
         q.time.sleep(1)
         q.enqueue("svckey1", "bar")
         q.time.sleep(1)
@@ -361,9 +366,9 @@ class PDQueueTest(unittest.TestCase):
         events_processed = []
         count = 0
 
-        def consume_with_stopall(s):
+        def consume_with_stopall(s, i):
             events_processed.append(s)
-            if count == 1 and s == "foo":
+            if count == 1 and s == "foo" and i == f_foo:
                 # first time, we'll ask that no further events be processed.
                 return ConsumeEvent.STOP_ALL
             elif count == 2:
@@ -397,7 +402,7 @@ class PDQueueTest(unittest.TestCase):
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
-        q = self.newQueue()
+        q = self.new_queue()
         f_foo = q.enqueue("svckey", "foo")
 
         trace = []
@@ -415,7 +420,7 @@ class PDQueueTest(unittest.TestCase):
 
         def dequeue():
             try:
-                def consume(s):
+                def consume(*args):
                     trace.append("C1")
                     time.sleep(0.2)
                     trace.append("C2")
@@ -444,8 +449,8 @@ class PDQueueTest(unittest.TestCase):
     def test_parallel_dequeue(self):
         # test that a dequeue blocks another dequeue using locking
 
-        q1 = self.newQueue()
-        q2 = self.newQueue()
+        q1 = self.new_queue()
+        q2 = self.new_queue()
         q1.enqueue("svckey", "foo")
 
         dequeue_lockfile = q1._dequeue_lockfile
@@ -475,7 +480,7 @@ class PDQueueTest(unittest.TestCase):
 
         def dequeue2():
             try:
-                def consume2(s):
+                def consume2(*args):
                     self.fail()  # consume2 shouldn't be called!
                 q2.dequeue(consume2)
             except EmptyQueueError:
@@ -483,7 +488,7 @@ class PDQueueTest(unittest.TestCase):
 
         thread_dequeue2 = Thread(target=dequeue2)
 
-        def consume1(s):
+        def consume1(s, i):
             # check that q1 acquired the lock
             self.assertEquals(trace, ["q1_A1", "q1_A2"])
             # start dequeue2 in separate thread to recreate concurrent access
@@ -508,7 +513,7 @@ class PDQueueTest(unittest.TestCase):
              ])
 
     def test_resurrect(self):
-        q = self.newQueue()
+        q = self.new_queue()
         fnames = []
         fnames.append(q.enqueue("svckey1", "foo"))
         fnames.append(q.enqueue("svckey1", "bar"))
@@ -537,7 +542,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files("err_")), 0)
 
     def test_status(self):
-        q = self.newQueue()
+        q = self.new_queue()
         events = ["e11", "e12", "e13", "e21", "e22", "e31", "e32", "e41", "e42"]
         fnames = []
         for e in events:
@@ -609,7 +614,7 @@ class PDQueueTest(unittest.TestCase):
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
-        q = self.newQueue()
+        q = self.new_queue()
 
         def enqueue_before(sec, prefix="pdq"):
             enqueue_time_ms = (int(time.time()) - sec) * 1000

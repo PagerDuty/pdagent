@@ -5,7 +5,7 @@
     ----
     Monitoring system agent for PagerDuty integration.
 
-    See LICENSE.TXT for licensing details.
+    See https://github.com/PagerDuty/agent for licensing details.
 '''
 
 # standard python modules
@@ -27,7 +27,7 @@ if sys.version_info[0:2] not in ((2, 6), (2, 7)):
 # Check we're not running as root
 if os.geteuid() == 0:
     raise SystemExit(
-        "Agent should not be run as root. Use: service pdagentd <command>\n" +
+        "Agent should not be run as root. Use: sudo service pdagent <command>\n" +
         "Agent will now quit"
         )
 
@@ -122,7 +122,6 @@ class Agent(Daemon):
                 'platform_name': sys.platform,
                 'python_version': platform.python_version(),
                 'host_name': socket.getfqdn()  # to show in stats-based alerts.
-                # TODO ip address?
                 }
 
             if sys.platform == 'linux2':
@@ -141,6 +140,12 @@ class Agent(Daemon):
             phone_thread = None
 
             signal.signal(signal.SIGTERM, _sig_term_handler)
+
+            default_socket_timeout = 10
+            main_logger.debug(
+                "Setting default socket timeout to %d" %
+                default_socket_timeout)
+            socket.setdefaulttimeout(default_socket_timeout)
 
             try:
                 send_thread = SendEventThread(
@@ -172,7 +177,9 @@ class Agent(Daemon):
 
             try:
                 if start_ok:
-                    while not stop_signal:
+                    while (not stop_signal) and \
+                            send_thread.is_alive() and \
+                            phone_thread.is_alive():
                         time.sleep(1.0)
             except:
                 main_logger.error("Error while sleeping", exc_info=True)
@@ -218,6 +225,7 @@ def get_or_make_agent_id(agent_id_file):
     try:
         fd = open(agent_id_file, "w")
         fd.write(agent_id)
+        fd.write('\n')
     finally:
         if fd:
             fd.close()
@@ -260,7 +268,7 @@ if __name__ == '__main__':
             for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
-        messages.append('Use: service pdagentd <command>')
+        messages.append('Use: sudo service pdagent <command>')
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
@@ -277,12 +285,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    pidFile = os.path.join(pidfile_dir, 'pdagentd.pid')
+    pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
     if os.access(pidfile_dir, os.W_OK) == False:
-        # FIXME: writeable test may only be needed for start
         raise SystemExit(
-            'Unable to write the PID file at ' + pidFile + '\n' +
+            'No write-access to PID file directory ' + pidfile_dir + '\n' +
             'Agent will now quit'
             )
 
@@ -290,12 +297,12 @@ if __name__ == '__main__':
     pdQueue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
-    daemon = Agent(pidFile)
+    daemon = Agent(pidfile)
 
     # Helper method for some control options
     def _getDaemonPID():
         try:
-            pf = file(pidFile, 'r')
+            pf = file(pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
@@ -309,7 +316,7 @@ if __name__ == '__main__':
         try:
             if _getDaemonPID():
                 daemon.stop()
-            os.remove(pidFile)
+            os.remove(pidfile)
         except OSError:
             # Did not find pid file
             pass

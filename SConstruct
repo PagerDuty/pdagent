@@ -7,25 +7,30 @@ import subprocess
 import sys
 
 
+_RPM_BUILD_VM = "agent-minimal-centos65"
+
+
 def create_dist(target, source, env):
     """Create distributable for agent."""
-    # TODO copy packages, documentation?
-    pass
+    env.Execute(Mkdir(dist_dir))
+    pkgs = [p.path for p in env.Glob(os.path.join(target_dir, "*.*"))]
+    cp_pkgs_cmd = ["cp"]
+    cp_pkgs_cmd.extend(pkgs)
+    cp_pkgs_cmd.append(dist_dir)
+    return subprocess.call(cp_pkgs_cmd)
 
 
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
-    ret_code = 0
+    env.Execute(Mkdir(target_dir))
     virts = env.get("virts")
+    ret_code = 0
 
-    debian_vms = [v for v in virts if v.find("ubuntu") != -1]
-    if debian_vms:
+    if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
         ret_code += _create_deb_package()
 
-    redhat_vms = [v for v in virts if v.find("centos") != -1]
-    if redhat_vms:
-        # create package on one of the virts.
-        ret_code += _create_rpm_package(redhat_vms[0])
+    if virts is None or [v for v in virts if v.find("centos") != -1]:
+        ret_code += _create_rpm_package(_RPM_BUILD_VM)
 
     return ret_code
 
@@ -49,7 +54,7 @@ def run_unit_tests(target, source, env):
             lambda f: f.startswith("test_") and f.endswith(".py"))
     test_paths.sort()
     remote_test_command = ["python", remote_test_runner]
-    remote_test_command.extend(\
+    remote_test_command.extend(
         [os.path.join(remote_project_root, t) for t in test_paths])
     return _run_on_virts(" ".join(remote_test_command), env.get("virts"))
 
@@ -75,17 +80,40 @@ def start_virtual_boxes(target, source, env):
     return subprocess.call(start_cmd)
 
 
+def destroy_virtual_boxes(target, source, env):
+    virts = env.get("virts")
+    force = env.get("force")
+    if not virts:
+        virts = _get_minimal_virt_names()
+    destroy_cmd = ["vagrant", "destroy"]
+    if force is None:
+        msg = "You must manually confirm deletion of VMs."
+        h_border = "-" * len(msg)
+        print h_border
+        print msg
+        print h_border
+    else:
+        destroy_cmd.append("-f")
+    destroy_cmd.extend(virts)
+    return subprocess.call(destroy_cmd)
+
+
 def _create_deb_package():
     # Assuming that all requisite packages are available.
     # (see build-linux/howto.txt)
     print "\nCreating .deb package..."
-    return subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
+    r = subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
+    if not r:
+        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.deb"))[0].path
+        return subprocess.call(["cp", pkg, target_dir])
+    return r
 
 
 def _create_rpm_package(virt):
     # Assuming that all requisite packages are available on virts.
     # (see build-linux/howto.txt)
     # Create a temporary file to cd to required directory and make rpm.
+    env.Execute(Mkdir(tmp_dir))
     make_file = os.path.join(tmp_dir, "make_rpm")
     _create_text_file(make_file, [
         'set -e',
@@ -96,7 +124,11 @@ def _create_rpm_package(virt):
     ])
     make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .rpm package..."
-    return _run_on_virts("sh %s" % make_file_on_vm, [virt])
+    r = _run_on_virts("sh %s" % make_file_on_vm, [virt])
+    if not r:
+        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.rpm"))[0].path
+        return subprocess.call(["cp", pkg, target_dir])
+    return r
 
 
 def _generate_remote_test_runner_file(
@@ -152,10 +184,6 @@ def _get_file_paths_recursive(source_paths, filename_matcher):
 
 
 def _create_text_file(filepath, data):
-    #TODO this doesn't work -- 'Textfile' is not recognized.
-    #     env.Textfile(
-    #         target=test_runner_file,
-    #         source=run_commands)
     out = open(filepath, "w")
     out.write(os.linesep.join(data))
     out.close()
@@ -215,7 +243,7 @@ test                Runs unit tests on specific virtual machines, bringing
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test test=pdagenttest/test_foo.py \
+                    scons test test=pdagenttest/test_foo.py \\
                                virt=agent-minimal-centos
 test-integration    Runs integration tests on specific virtual machines,
                     bringing the virtual machine up if required.
@@ -229,7 +257,7 @@ test-integration    Runs integration tests on specific virtual machines,
                     required. Both test files and test directories are
                     supported.
                     e.g.
-                    scons test-integration test=pdagenttestinteg/test_foo.sh \
+                    scons test-integration test=pdagenttestinteg/test_foo.sh \\
                                            virt=agent-minimal-centos
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details about using the
@@ -237,10 +265,11 @@ test-local          Runs unit tests on the local machine.
 """)
 
 build_linux_dir = "build-linux"
+build_linux_target_dir = os.path.join(build_linux_dir, "target")
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
 dist_dir = "dist"
-remote_project_root = os.sep + "vagrant"  # TODO windows
+remote_project_root = os.sep + "vagrant"
 
 unit_test_local_task = env.Command(
     "test-local",
@@ -252,6 +281,13 @@ start_virts_task = env.Command(
     None,
     env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
     virts=_get_arg_values("virt"))
+
+destroy_virts_task = env.Command(
+    "destroy-virt",
+    None,
+    env.Action(destroy_virtual_boxes, "\n--- Destroying virtual boxes"),
+    virts=_get_arg_values("virt"),
+    force=_get_arg_values("force-destroy"))  # e.g. force-destroy=true
 
 unit_test_task = env.Command(
     "test",
@@ -280,7 +316,9 @@ dist_task = env.Command(
     "dist",
     None,
     env.Action(create_dist, "\n--- Creating distributables"))
-env.Requires(dist_task, [create_packages_task, integration_test_task])
+env.Depends(
+    dist_task,
+    [destroy_virts_task, create_packages_task, integration_test_task])
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
