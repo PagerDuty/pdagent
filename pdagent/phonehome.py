@@ -29,15 +29,15 @@ class PhoneHomeThread(RepeatingThread):
     def tick(self):
         logger.info("Phoning home")
         try:
-            phone_home_json = self.make_phone_home_json()
-            response_str = self.get_phone_home_response(phone_home_json)
+            phone_home_json = self._make_phone_home_json()
+            response_str = self._get_phone_home_response(phone_home_json)
             if response_str:
-                self.process_response(response_str)
+                self._process_response(response_str)
 
         except:
             logger.error("Error while phoning home:", exc_info=True)
 
-    def make_phone_home_json(self):
+    def _make_phone_home_json(self):
         phone_home_json = {
             "agent_id": self.agent_id,
             "agent_version": AGENT_VERSION,
@@ -48,7 +48,7 @@ class PhoneHomeThread(RepeatingThread):
         }
         return phone_home_json
 
-    def get_phone_home_response(self, phone_home_json):
+    def _get_phone_home_response(self, phone_home_json):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(PHONE_HOME_URI)
         request.add_header("Content-type", "application/json")
@@ -63,7 +63,7 @@ class PhoneHomeThread(RepeatingThread):
             result_str = None
         return result_str
 
-    def process_response(self, response_str):
+    def _process_response(self, response_str):
         try:
             result = json.loads(response_str)
         except:
