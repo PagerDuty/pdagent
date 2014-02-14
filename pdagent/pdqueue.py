@@ -238,7 +238,6 @@ class PDQueue(object):
                     # invalid file-name; we'll not include it in cleanup.
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
-                    fnames.remove(fname)
                 else:
                     if enqueue_time < delete_before_time:
                         try:
