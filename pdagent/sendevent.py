@@ -3,8 +3,7 @@ import json
 import logging
 import socket
 import time
-from urllib2 import HTTPError, URLError
-import urllib2
+from urllib2 import HTTPError, Request, URLError
 
 from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
@@ -29,6 +28,7 @@ class SendEventThread(RepeatingThread):
         self.cleanup_freq_sec = cleanup_freq_sec
         self.cleanup_before_sec = cleanup_before_sec
         self.last_cleanup_time = 0
+        self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
         # flush the event queue.
@@ -52,13 +52,13 @@ class SendEventThread(RepeatingThread):
             self.last_cleanup_time = int(time.time())
 
     def send_event(self, json_event_str):
-        request = urllib2.Request(EVENTS_API_BASE)
+        # Note that Request here is from urllib2, not self._urllib2.
+        request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
         request.add_data(json_event_str)
 
-        status_code, result_str = None, None
         try:
-            response = httpswithverify.urlopen(
+            response = self._urllib2.urlopen(
                 request,
                 timeout=self.send_event_timeout_sec
                 )
@@ -86,7 +86,7 @@ class SendEventThread(RepeatingThread):
                     "Error establishing a connection for sending event:",
                     exc_info=True)
                 return ConsumeEvent.NOT_CONSUMED
-        except IOError:
+        except:
             logger.error("Error while sending event:", exc_info=True)
             return ConsumeEvent.NOT_CONSUMED
 
