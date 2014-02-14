@@ -20,13 +20,14 @@ class SendEventThread(RepeatingThread):
     def __init__(
             self, pd_queue, send_interval_secs,
             send_event_timeout_sec,
-            cleanup_interval_secs, cleanup_before_sec,
+            cleanup_interval_secs,
+            cleanup_threshold_secs,
             ):
         RepeatingThread.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
         self.send_event_timeout_sec = send_event_timeout_sec
         self.cleanup_interval_secs = cleanup_interval_secs
-        self.cleanup_before_sec = cleanup_before_sec
+        self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
         self._urllib2 = httpswithverify  # to ease unit testing.
 
@@ -46,7 +47,7 @@ class SendEventThread(RepeatingThread):
         secs_since_cleanup = int(time.time()) - self.last_cleanup_time
         if secs_since_cleanup >= self.cleanup_interval_secs:
             try:
-                self.pd_queue.cleanup(self.cleanup_before_sec)
+                self.pd_queue.cleanup(self.cleanup_threshold_secs)
             except:
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())

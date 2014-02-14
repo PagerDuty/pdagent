@@ -133,7 +133,7 @@ class Agent(Daemon):
             send_interval_secs = mainConfig['send_interval_secs']
             send_event_timeout_sec = mainConfig['send_event_timeout_sec']
             cleanup_interval_secs = mainConfig['cleanup_interval_secs']
-            cleanup_before_sec = mainConfig['cleanup_before_sec']
+            cleanup_threshold_secs = mainConfig['cleanup_threshold_secs']
 
             start_ok = True
             send_thread = None
@@ -151,7 +151,8 @@ class Agent(Daemon):
                 send_thread = SendEventThread(
                     pdQueue, send_interval_secs,
                     send_event_timeout_sec,
-                    cleanup_interval_secs, cleanup_before_sec
+                    cleanup_interval_secs,
+                    cleanup_threshold_secs
                     )
                 send_thread.start()
             except:

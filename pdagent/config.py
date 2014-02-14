@@ -62,7 +62,7 @@ _CONFIG_DEFAULTS = {
     "send_interval_secs": 60,
     "send_event_timeout_sec": 30,
     "cleanup_interval_secs": 60 * 60 * 3,  # clean up every 3 hours.
-    "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
+    "cleanup_threshold_secs": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
     "max_event_bytes": 4 * 1024 * 1024,  # 4MB limit on request data sent out.
     }
 
@@ -126,7 +126,7 @@ def load_agent_config():
     for key in [
             "send_interval_secs",
             "cleanup_interval_secs",
-            "cleanup_before_sec",
+            "cleanup_threshold_secs",
             "send_event_timeout_sec",
             "max_event_bytes",
             ]:
