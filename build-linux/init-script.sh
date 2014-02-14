@@ -94,10 +94,9 @@ cleanup() {
   stop && {
     test ! -e $PID_FILE || {
       echo "Removing pid file..."
-      echo sudo -u pdagent /bin/rm $PID_FILE
+      sudo -u pdagent /bin/rm $PID_FILE || return 1
     }
   }
-  return 0
 }
 
 options=
