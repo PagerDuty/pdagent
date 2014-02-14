@@ -69,7 +69,8 @@ class SendEventThread(RepeatingThread):
         except CertificateError:
             logger.error(
                 "Server certificate validation error while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             return ConsumeEvent.STOP_ALL
         except socket.timeout:
             logger.error("Timeout while sending event:", exc_info=True)
@@ -86,7 +87,8 @@ class SendEventThread(RepeatingThread):
             else:
                 logger.error(
                     "Error establishing a connection for sending event:",
-                    exc_info=True)
+                    exc_info=True
+                    )
                 return ConsumeEvent.NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)
@@ -97,13 +99,16 @@ class SendEventThread(RepeatingThread):
         except:
             logger.warning(
                 "Error reading response data while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             result = {}
         if result.get("status") == "success":
             logger.info("incident_key =", result.get("incident_key"))
         else:
-            logger.error("Error sending event %s; Error code: %d, Reason: %s" %
-                (event_id, status_code, result_str))
+            logger.error(
+                "Error sending event %s; Error code: %d, Reason: %s" %
+                (event_id, status_code, result_str)
+                )
 
         if status_code < 300:
             return ConsumeEvent.CONSUMED
@@ -119,5 +124,5 @@ class SendEventThread(RepeatingThread):
             # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            # anything 3xx and >= 5xx
+            # anything 3xx and >= 600
             return ConsumeEvent.NOT_CONSUMED

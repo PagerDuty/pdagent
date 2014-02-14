@@ -95,7 +95,8 @@ class Agent(Daemon):
 
             agent_id_file = os.path.join(
                 agentConfig.get_conf_dirs()['data_dir'],
-                "agent_id.txt")
+                "agent_id.txt"
+                )
             try:
                 agent_id = get_or_make_agent_id(agent_id_file)
             except IOError:
@@ -103,13 +104,13 @@ class Agent(Daemon):
                     'Could not read from / write to agent ID file %s' %
                     agent_id_file,
                     exc_info=True
-                )
+                    )
                 raise SystemExit
             except ValueError:
                 main_logger.fatal(
                     'Invalid value in agent ID file %s' % agent_id_file,
                     exc_info=True
-                )
+                    )
                 raise SystemExit
             main_logger.info('Agent ID: ' + agent_id)
 
@@ -143,12 +144,14 @@ class Agent(Daemon):
             default_socket_timeout = 10
             main_logger.debug(
                 "Setting default socket timeout to %d" %
-                default_socket_timeout)
+                default_socket_timeout
+                )
             socket.setdefaulttimeout(default_socket_timeout)
 
             try:
                 send_thread = SendEventThread(
-                    pdQueue, send_interval_secs,
+                    pdQueue,
+                    send_interval_secs,
                     cleanup_interval_secs,
                     cleanup_threshold_secs
                     )

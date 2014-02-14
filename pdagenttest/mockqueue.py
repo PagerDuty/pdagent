@@ -21,14 +21,14 @@ class MockQueue:
                 throttle_info == self.expected_throttle_info:
             return self.status
         raise Exception(
-            (
-            "Received aggregated=%s and throttle_info=%s; " +
-            "expected aggregated=%s and throttle_info=%s"
-            ) %
-            (
-            aggregated, throttle_info,
-            self.expected_aggregated, self.expected_throttle_info
-            )
+                (
+                    "Received aggregated=%s and throttle_info=%s; " +
+                    "expected aggregated=%s and throttle_info=%s"
+                ) %
+                (
+                    aggregated, throttle_info,
+                    self.expected_aggregated, self.expected_throttle_info
+                )
             )
 
     def flush(self, consume_func, stop_check_func):
