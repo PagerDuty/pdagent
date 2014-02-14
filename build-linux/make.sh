@@ -25,7 +25,7 @@ mkdir data target
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
-cp ../bin/*.py data/usr/bin
+cp ../bin/pd* data/usr/bin
 
 echo = /var/...
 mkdir -p data/var/run/pdagent
@@ -37,8 +37,8 @@ echo = /etc/...
 mkdir -p data/etc/pdagent/
 cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
-cp init-script.sh data/etc/init.d/pd-agent
-chmod 755 data/etc/init.d/pd-agent
+cp init-script.sh data/etc/init.d/pdagentd
+chmod 755 data/etc/init.d/pdagentd
 
 if [[ "$1" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared

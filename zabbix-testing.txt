@@ -52,15 +52,15 @@ in CentOS:
     > https://www.zabbix.com/documentation/2.0/manual/appendix/config/zabbix_server
 
 
-- Make a soft link to `pd-zabbix.py` in this directory
+- Make a soft link to `pd-zabbix` in this directory
 
         cd /etc/zabbix/alert.d  # use the correct directory here
-        sudo ln -s /usr/bin/pd-zabbix.py
+        sudo ln -s /usr/bin/pd-zabbix
 
 
 - Follow the PagerDuty Zabbix Integration Guide from step 6, with the following changes:
 
-    Step 11: Enter `pd-zabbix.py` for Script name
+    Step 11: Enter `pd-zabbix` for Script name
 
     > Note: the guide is here:
     > http://www.pagerduty.com/docs/guides/zabbix-integration-guide/

@@ -27,7 +27,7 @@ if sys.version_info[0:2] not in ((2, 6), (2, 7)):
 # Check we're not running as root
 if os.geteuid() == 0:
     raise SystemExit(
-        "Agent should not be run as root. Use: service pd-agent <command>\n" +
+        "Agent should not be run as root. Use: service pdagentd <command>\n" +
         "Agent will now quit"
         )
 
@@ -191,11 +191,12 @@ class Agent(Daemon):
             except:
                 main_logger.error("Error stopping send thread", exc_info=True)
 
-            main_logger.info('*** pdagentd exiting!')
         except SystemExit:
             main_logger.error('*** pdagentd exiting because of errors!')
             sys.exit(1)
-        sys.exit(0)
+        else:
+            main_logger.info('*** pdagentd exiting normally!')
+            sys.exit(0)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
@@ -224,7 +225,7 @@ def get_or_make_agent_id(agent_id_file):
 
 
 def init_logging(log_dir):
-    logFile = os.path.join(log_dir, 'pd-agent.log')
+    logFile = os.path.join(log_dir, 'pdagentd.log')
     # 10MB files
     handler = logging.handlers.RotatingFileHandler(
         logFile, maxBytes=10485760, backupCount=5
@@ -259,7 +260,7 @@ if __name__ == '__main__':
             for d in problem_directories
             ]
         messages.append('Agent may be running as the wrong user.')
-        messages.append('Use: service pd-agent <command>')
+        messages.append('Use: service pdagentd <command>')
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
@@ -276,7 +277,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    pidFile = os.path.join(pidfile_dir, 'pd-agent.pid')
+    pidFile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
     if os.access(pidfile_dir, os.W_OK) == False:
         # FIXME: writeable test may only be needed for start
@@ -329,9 +330,9 @@ if __name__ == '__main__':
     elif 'status' == args.action:
         pid = _getDaemonPID()
         if pid:
-            print 'pd-agent is running as pid %s.' % pid
+            print 'pdagentd is running as pid %s.' % pid
         else:
-            print 'pd-agent is not running.'
+            print 'pdagentd is not running.'
 
     else:
         print 'Unknown command'

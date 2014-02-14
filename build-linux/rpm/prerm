@@ -5,10 +5,10 @@ set -e
 case "$*" in
     0)  # remove-only; not upgrade.
         # Stop daemon
-        service pd-agent stop
+        service pdagentd stop
 
         # Unregister daemon
-        chkconfig --del pd-agent
+        chkconfig --del pdagentd
 
         # Clean up module .pyc
         find /usr/lib/python2.6/site-packages/pdagent/ \

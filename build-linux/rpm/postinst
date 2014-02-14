@@ -14,7 +14,7 @@ chmod 777 /var/lib/pdagent/outqueue
 python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
 
 # Register daemon
-chkconfig --add pd-agent
+chkconfig --add pdagentd
 
 # Restart daemon
-service pd-agent restart
+service pdagentd restart
