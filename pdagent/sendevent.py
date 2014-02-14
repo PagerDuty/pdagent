@@ -121,5 +121,5 @@ class SendEventThread(RepeatingThread):
             # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            # anything 3xx and >= 5xx
+            # anything 3xx and >= 600
             return ConsumeEvent.NOT_CONSUMED
