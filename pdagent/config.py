@@ -60,7 +60,6 @@ _valid_log_levels = \
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
     "send_interval_secs": 60,
-    "send_event_timeout_sec": 30,
     "cleanup_interval_secs": 60 * 60 * 3,  # 3 hours
     "cleanup_threshold_secs": 60 * 60 * 24 * 7,  # 1 week
     "event_size_max_bytes": 4 * 1024 * 1024,  # 4MB
@@ -127,7 +126,6 @@ def load_agent_config():
             "send_interval_secs",
             "cleanup_interval_secs",
             "cleanup_threshold_secs",
-            "send_event_timeout_sec",
             "event_size_max_bytes",
             ]:
         try:

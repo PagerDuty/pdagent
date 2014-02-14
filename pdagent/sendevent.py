@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 class SendEventThread(RepeatingThread):
 
     def __init__(
-            self, pd_queue, send_interval_secs,
-            send_event_timeout_sec,
+            self,
+            pd_queue,
+            send_interval_secs,
             cleanup_interval_secs,
             cleanup_threshold_secs,
             ):
         RepeatingThread.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
-        self.send_event_timeout_sec = send_event_timeout_sec
         self.cleanup_interval_secs = cleanup_interval_secs
         self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
@@ -59,10 +59,7 @@ class SendEventThread(RepeatingThread):
         request.add_data(json_event_str)
 
         try:
-            response = self._urllib2.urlopen(
-                request,
-                timeout=self.send_event_timeout_sec
-                )
+            response = self._urllib2.urlopen(request)
             status_code = response.getcode()
             result_str = response.read()
         except HTTPError as e:
