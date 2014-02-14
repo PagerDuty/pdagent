@@ -59,7 +59,7 @@ _valid_log_levels = \
 
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
-    "queue_poll_interval_secs": 60,
+    "send_interval_secs": 60,
     "send_event_timeout_sec": 30,
     "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
     "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
@@ -124,7 +124,7 @@ def load_agent_config():
 
     # parse integer values.
     for key in [
-            "queue_poll_interval_secs",
+            "send_interval_secs",
             "cleanup_freq_sec",
             "cleanup_before_sec",
             "send_event_timeout_sec",

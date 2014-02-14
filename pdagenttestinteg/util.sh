@@ -7,7 +7,7 @@ CONFIG_FILE=/etc/pdagent/config.cfg
 DATA_DIR=/var/lib/pdagent
 OUTQUEUE_DIR=$DATA_DIR/outqueue
 AGENT_SVC_NAME=pdagent
-QUEUE_POLL_INTERVAL_SECS=5
+SEND_INTERVAL_SECS=5
 # The service key to use for testing commands like pd-send etc.
 SVC_KEY=CHANGEME
 

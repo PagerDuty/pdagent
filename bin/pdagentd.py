@@ -130,7 +130,7 @@ class Agent(Daemon):
             main_logger.info('System: ' + str(system_stats))
 
             # Send event thread config
-            queue_poll_interval_secs = mainConfig['queue_poll_interval_secs']
+            send_interval_secs = mainConfig['send_interval_secs']
             send_event_timeout_sec = mainConfig['send_event_timeout_sec']
             cleanup_freq_sec = mainConfig['cleanup_freq_sec']
             cleanup_before_sec = mainConfig['cleanup_before_sec']
@@ -149,7 +149,7 @@ class Agent(Daemon):
 
             try:
                 send_thread = SendEventThread(
-                    pdQueue, queue_poll_interval_secs,
+                    pdQueue, send_interval_secs,
                     send_event_timeout_sec,
                     cleanup_freq_sec, cleanup_before_sec
                     )

@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 class SendEventThread(RepeatingThread):
 
     def __init__(
-            self, pd_queue, queue_poll_interval_secs,
+            self, pd_queue, send_interval_secs,
             send_event_timeout_sec,
             cleanup_freq_sec, cleanup_before_sec,
             ):
-        RepeatingThread.__init__(self, queue_poll_interval_secs, False)
+        RepeatingThread.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
         self.send_event_timeout_sec = send_event_timeout_sec
         self.cleanup_freq_sec = cleanup_freq_sec
