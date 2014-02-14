@@ -83,7 +83,7 @@ stop() {
 }
 
 status() {
-  if $(is_running); then
+  if is_running; then
     echo "pdagent (pid $(get_pid)) is running."
   else
     echo "pdagent is not running."
