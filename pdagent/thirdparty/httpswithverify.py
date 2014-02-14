@@ -51,11 +51,13 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
 
         # require server certificate to be provided, and pass along
         # the ca_certs file.
-        self.sock = ssl.wrap_socket(sock,
-                                    keyfile=self.key_file,
-                                    certfile=self.cert_file,
-                                    cert_reqs=ssl.CERT_REQUIRED,
-                                    ca_certs=self.ca_certs)
+        self.sock = ssl.wrap_socket(
+            sock,
+            keyfile=self.key_file,
+            certfile=self.cert_file,
+            cert_reqs=ssl.CERT_REQUIRED,
+            ca_certs=self.ca_certs
+            )
         try:
             match_hostname(self.sock.getpeercert(), self.host)
         except CertificateError:
@@ -78,7 +80,7 @@ class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
     def _proxyHTTPSConnection(self, host, **kwargs):
         new_kwargs = {
             "ca_certs": self.ca_certs
-        }
+            }
         new_kwargs.update(kwargs)  # allows overriding ca_certs
         return VerifyingHTTPSConnection(host, **new_kwargs)
 

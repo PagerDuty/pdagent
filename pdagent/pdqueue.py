@@ -30,8 +30,13 @@ class PDQueue(object):
 
     def __init__(
             self,
-            queue_dir, lock_class, time_calc, max_event_bytes,
-            backoff_secs, backoff_db):
+            queue_dir,
+            lock_class,
+            time_calc,
+            max_event_bytes,
+            backoff_secs,
+            backoff_db
+            ):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
 
@@ -119,7 +124,8 @@ class PDQueue(object):
             self,
             filter_events_to_process_func,
             consume_func,
-            should_stop_func):
+            should_stop_func
+            ):
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
 
@@ -146,8 +152,8 @@ class PDQueue(object):
                     # no back-off; nothing has gone wrong in this pass yet.
                     try:
                         if not self._process_event(
-                            fname, consume_func, svc_key
-                        ):
+                                fname, consume_func, svc_key
+                                ):
                             # this service key is problematic.
                             err_svc_keys.add(svc_key)
                     except StopIteration:
@@ -201,7 +207,8 @@ class PDQueue(object):
                         "Service key %s breached back-off limit." +
                         " Assuming bad event."
                     ) %
-                    svc_key)
+                    svc_key
+                    )
                 self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
@@ -256,13 +263,16 @@ class PDQueue(object):
         _cleanup_files("suc_")
 
     def get_status(
-        self, service_key=None, aggregated=False, throttle_info=False
-    ):
+            self,
+            service_key=None,
+            aggregated=False,
+            throttle_info=False
+            ):
         empty_event_stats = {
             "pending": 0,
             "succeeded": 0,
             "failed": 0
-        }
+            }
         if aggregated:
             event_stats = empty_event_stats
         else:
@@ -288,13 +298,13 @@ class PDQueue(object):
 
         status = {
             "service_keys": len(svc_keys),
-        }
+            }
         if aggregated:
             status.update({
                 "events_pending": event_stats["pending"],
                 "events_succeeded": event_stats["succeeded"],
                 "events_failed": event_stats["failed"]
-            })
+                })
         else:
             status["events"] = event_stats
 
@@ -377,7 +387,7 @@ class _BackoffInfo(object):
         logger.info(
             "Retrying events in service key %s after %d sec" %
             (svc_key, backoff)
-        )
+            )
 
         self._current_attempts[svc_key] = cur_attempt
         self._current_retry_at[svc_key] = int(self._time.time()) + backoff
@@ -397,7 +407,7 @@ class _BackoffInfo(object):
             previous = {
                 'attempts': {},
                 'next_retries': {}
-            }
+                }
 
         self._current_attempts = {}
         self._current_retry_at = {}
@@ -419,7 +429,7 @@ class _BackoffInfo(object):
             self._db.set({
                 'attempts': self._current_attempts,
                 'next_retries': self._current_retry_at
-            })
+                })
         except:
             logger.warning(
                 "Unable to save service-key back-off history",

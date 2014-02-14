@@ -25,13 +25,13 @@ def ensure_readable_directory(dir):
     if not os.access(dir, os.R_OK):
         raise Exception(
             "Can't read directory %s, please check permissions" % dir
-        )
+            )
 
 def ensure_writable_directory(dir):
     if not os.access(dir, os.W_OK):
         raise Exception(
             "Can't write to directory %s, please check permissions" % dir
-        )
+            )
 
 
 def queue_event(
@@ -61,7 +61,7 @@ def _build_event_json_str(
         "service_key": service_key,
         "event_type": event_type,
         "details": details,
-    }
+        }
     if incident_key is not None:
         d["incident_key"] = incident_key
     if description is not None:
@@ -71,4 +71,4 @@ def _build_event_json_str(
         d,
         separators=(',', ':'),  # compact json str
         sort_keys=True
-    )
+        )

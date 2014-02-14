@@ -18,9 +18,12 @@ logger = logging.getLogger(__name__)
 class SendEventThread(RepeatingThread):
 
     def __init__(
-            self, pd_queue, check_freq_sec,
+            self,
+            pd_queue,
+            check_freq_sec,
             send_event_timeout_sec,
-            cleanup_freq_sec, cleanup_before_sec,
+            cleanup_freq_sec,
+            cleanup_before_sec,
             ):
         RepeatingThread.__init__(self, check_freq_sec, False)
         self.pd_queue = pd_queue
@@ -71,7 +74,8 @@ class SendEventThread(RepeatingThread):
         except CertificateError:
             logger.error(
                 "Server certificate validation error while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             return ConsumeEvent.STOP_ALL
         except socket.timeout:
             logger.error("Timeout while sending event:", exc_info=True)
@@ -88,7 +92,8 @@ class SendEventThread(RepeatingThread):
             else:
                 logger.error(
                     "Error establishing a connection for sending event:",
-                    exc_info=True)
+                    exc_info=True
+                    )
                 return ConsumeEvent.NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)
@@ -99,13 +104,16 @@ class SendEventThread(RepeatingThread):
         except:
             logger.warning(
                 "Error reading response data while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             result = {}
         if result.get("status") == "success":
             logger.info("incident_key =", result.get("incident_key"))
         else:
-            logger.error("Error sending event %s; Error code: %d, Reason: %s" %
-                (event_id, status_code, result_str))
+            logger.error(
+                "Error sending event %s; Error code: %d, Reason: %s" %
+                (event_id, status_code, result_str)
+                )
 
         if status_code < 300:
             return ConsumeEvent.CONSUMED
