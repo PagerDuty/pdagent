@@ -252,11 +252,22 @@ def init_logging(log_dir):
 if __name__ == '__main__':
 
     conf_dirs = agentConfig.get_conf_dirs()
-    pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
     db_dir = conf_dirs["db_dir"]
+
+    if len(sys.argv) == 2:
+        # use pid-file argument if specified.
+        pidfile = sys.argv[1]
+        pidfile_dir = os.path.dirname(pidfile)
+    elif not agentConfig.dev_layout:
+        # pid-file argument is mandatory in production.
+        raise SystemExit("Usage: %s pid-file-path" % sys.argv[0])
+    else:
+        # no pid-file specified, dev environment. use data_dir as pidfile_dir.
+        pidfile_dir = conf_dirs['data_dir']
+        pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
     problem_directories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # create directories in development
@@ -272,77 +283,11 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.thirdparty.argparse import ArgumentParser
-    description = "PagerDuty Agent daemon process."
-    parser = ArgumentParser(description=description)
-    parser.add_argument(
-        'action', choices=['start', 'stop', 'restart', 'status']
-        )
-    parser.add_argument(
-        "--clean", action="store_true", dest="clean",
-        help="Remove old pid file"
-        )
-
-    args = parser.parse_args()
-
-    pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
-
-    if os.access(pidfile_dir, os.W_OK) == False:
-        raise SystemExit(
-            'No write-access to PID file directory ' + pidfile_dir + '\n' +
-            'Agent will now quit'
-            )
-
     # queue to work on.
     pdQueue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidfile)
-
-    # Helper method for some control options
-    def _getDaemonPID():
-        try:
-            pf = file(pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-        except SystemExit:
-            pid = None
-        return pid
-
-    # Control options
-    if args.clean:
-        try:
-            if _getDaemonPID():
-                daemon.stop()
-            os.remove(pidfile)
-        except OSError:
-            # Did not find pid file
-            pass
-
-    if 'start' == args.action:
-        daemon.start()
-
-    elif 'stop' == args.action:
-        daemon.stop()
-
-    elif 'restart' == args.action:
-        daemon.restart()
-
-    # XXX: unsafe - doesnt use pidfile, may want to log to stdout
-    #elif 'foreground' == args.action:
-    #    daemon.run()
-
-    elif 'status' == args.action:
-        pid = _getDaemonPID()
-        if pid:
-            print 'pdagentd is running as pid %s.' % pid
-        else:
-            print 'pdagentd is not running.'
-
-    else:
-        print 'Unknown command'
-        sys.exit(1)
+    daemon.start()
 
     sys.exit(0)

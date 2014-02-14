@@ -53,7 +53,6 @@ class Daemon:
                 if status:
                     raise SystemExit("Error in second parent: %s" % status)
                 else:
-                    print "Started"
                     sys.exit(0)
         except OSError, e:
             raise SystemExit(
@@ -100,8 +99,6 @@ class Daemon:
         Start the daemon
         """
 
-        print "Starting..."
-
         # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile, 'r')
@@ -124,8 +121,6 @@ class Daemon:
         """
         Stop the daemon
         """
-
-        print "Stopping..."
 
         # Get the pid from the pidfile
         try:
@@ -160,8 +155,6 @@ class Daemon:
                     os.remove(self.pidfile)
             else:
                 raise SystemExit(str(err))
-
-        print "Stopped"
 
     def restart(self):
         """
