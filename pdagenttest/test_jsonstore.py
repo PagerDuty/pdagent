@@ -37,7 +37,7 @@ class JsonStoreTest(unittest.TestCase):
         j = {
             "foo": "bar",
             "baz": 1
-        }
+            }
         self.store.set(j)
         self.assertEqual(self.store.get(), j)
         # ensure that json is persisted.
@@ -56,7 +56,7 @@ class JsonStoreTest(unittest.TestCase):
         j = {
             "foo": "bar",
             "baz": True
-        }
+            }
         self.store.set(j)   # successful write.
         # now make file not writable, and check that set fails.
         try:
@@ -75,7 +75,7 @@ class JsonStoreTest(unittest.TestCase):
         j = {
             "foo": "bar",
             "baz": True
-        }
+            }
         self.store.set(j)   # successful write.
         # now corrupt the persisted data.
         out = open(_TEST_STORE_FILE, "w")

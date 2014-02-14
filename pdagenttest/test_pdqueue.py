@@ -120,7 +120,8 @@ class PDQueueTest(unittest.TestCase):
         # check queue is empty
         self.assertEquals(q._queued_files(), [])
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED
+            )
 
         # verify that queued files are now success files.
         success_contents = []
@@ -149,7 +150,8 @@ class PDQueueTest(unittest.TestCase):
         q.dequeue(consume_foo)
 
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED
+            )
 
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
@@ -165,7 +167,8 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(len(q._queued_files("err_")), 1)
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
+            )
 
     def test_huge_event_not_processed(self):
         # The item should get tagged as error, and not be available for
@@ -253,13 +256,16 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
         self.assertEquals(len(q._queued_files()), 0)
-        self.assertEquals(q._queued_files("err_"),
-            [e1_1.replace("pdq_", "err_")])
+        self.assertEquals(
+            q._queued_files("err_"),
+            [e1_1.replace("pdq_", "err_")]
+            )
         self._assertBackoffData(q, None)
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED
+            )
 
     def test_backoff_not_consumed(self):
         # The item and all other items for same service key must get backed off
@@ -293,8 +299,7 @@ class PDQueueTest(unittest.TestCase):
                 # next event finally processed because all events are now good.
                 return ConsumeEvent.CONSUMED
             else:
-                self.fail(
-                    "Unexpected event %s in attempt %d" % (s, count))
+                self.fail("Unexpected event %s in attempt %d" % (s, count))
 
         self.assertEquals(q._queued_files(), [e1_1, e1_2, e2_1])
 
@@ -336,9 +341,10 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(events_processed, ["foo"])  # bad event
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # still no errors
-            self._assertBackoffData(q,
+            self._assertBackoffData(
+                q,
                 [("svckey1", max_total_attempts + i, -1)]
-            )
+                )
 
         # retry now (much after max_backoff_attempts), with no bad event.
         q.time.sleep(BACKOFF_INTERVALS[-1])
@@ -352,7 +358,8 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
+            )
 
     def test_stop_processing(self):
         # No later event must be processed.
@@ -375,8 +382,7 @@ class PDQueueTest(unittest.TestCase):
                 # next time, we'll consider it a success.
                 return ConsumeEvent.CONSUMED
             else:
-                self.fail(
-                    "Unexpected event %s in attempt %d" % (s, count))
+                self.fail("Unexpected event %s in attempt %d" % (s, count))
 
         self.assertEquals(len(q._queued_files()), 3)
 
@@ -398,7 +404,8 @@ class PDQueueTest(unittest.TestCase):
 
         # and now, the queue must be empty.
         self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED)
+            EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
+            )
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
@@ -532,8 +539,10 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(errfiles), 2)
         for errname in errfiles:
             self.assertEquals(errname.find("svckey1"), -1)
-            self.assertTrue(errname.find("svckey2") == -1 or \
-                errname.find("svckey3") == -1)
+            self.assertTrue(
+                errname.find("svckey2") != -1 or
+                errname.find("svckey3") != -1
+                )
 
         q.resurrect("non_existent_key")  # should not throw an error.
 
@@ -567,32 +576,32 @@ class PDQueueTest(unittest.TestCase):
                     "pending": 1,
                     "failed": 1,
                     "succeeded": 1
+                    }
                 }
-            }
-        })
+            })
 
         self.assertEqual(q.get_status("non_existent_key"), {
             "service_keys": 0,
             "events": {}
-        })
+            })
 
         expected_stats = {
             "service_keys": 4,
             "events": {
                 "svckey1": {
                     "pending": 1, "succeeded": 1, "failed": 1
-                },
+                    },
                 "svckey2": {
                     "pending": 0, "succeeded": 0, "failed": 2
-                },
+                    },
                 "svckey3": {
                     "pending": 2, "succeeded": 0, "failed": 0
-                },
+                    },
                 "svckey4": {
                     "pending": 0, "succeeded": 2, "failed": 0
+                    }
                 }
             }
-        }
         self.assertEqual(q.get_status(), expected_stats)
 
         expected_stats["service_keys_throttled"] = 1
@@ -603,14 +612,14 @@ class PDQueueTest(unittest.TestCase):
             "events_pending": 3,
             "events_succeeded": 3,
             "events_failed": 3
-        }
+            }
         self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
 
         expected_aggr_stats["service_keys_throttled"] = 1
         self.assertEqual(
             q.get_status(throttle_info=True, aggregated=True),
             expected_aggr_stats
-        )
+            )
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
@@ -621,7 +630,8 @@ class PDQueueTest(unittest.TestCase):
             fname = "%s_%d_%s.txt" % (
                 prefix,
                 enqueue_time_ms,
-                "svckey%d" % (enqueue_time_ms % 10))
+                "svckey%d" % (enqueue_time_ms % 10)
+                )
             fpath = os.path.join(q.queue_dir, fname)
             os.close(os.open(fpath, os.O_CREAT))
             return fname
@@ -673,7 +683,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEqual(backup_data, {
             "attempts": attempts,
             "next_retries": retries
-        })
+            })
 
 
 

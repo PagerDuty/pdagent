@@ -13,7 +13,7 @@ AGENT_ID = "test123"
 SYSTEM_INFO = {
     "name": "Test",
     "version": "Infinity"
-}
+    }
 RESPONSE_FREQUENCY_SEC = 30
 
 
@@ -24,7 +24,8 @@ class PhoneHomeTest(unittest.TestCase):
             RESPONSE_FREQUENCY_SEC + 10,  # something different from response.
             self.mock_queue(),
             AGENT_ID,
-            SYSTEM_INFO)
+            SYSTEM_INFO
+            )
         ph._urllib2 = MockUrlLib()
         return ph
 
@@ -38,14 +39,14 @@ class PhoneHomeTest(unittest.TestCase):
     def test_data(self):
         ph = self.new_phone_home_task()
         ph.tick()
-        self.assertEqual(
-            json.loads(ph._urllib2.request.get_data()),
-            {
-                "agent_id": AGENT_ID,
-                "agent_version": AGENT_VERSION,
-                "system_info": SYSTEM_INFO,
-                "agent_stats": ph.pd_queue.status
-            })
+        expected = {
+            "agent_id": AGENT_ID,
+            "agent_version": AGENT_VERSION,
+            "system_info": SYSTEM_INFO,
+            "agent_stats": ph.pd_queue.status
+            }
+
+        self.assertEqual(json.loads(ph._urllib2.request.get_data()), expected)
 
     def test_new_frequency(self):
         ph = self.new_phone_home_task()
