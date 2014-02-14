@@ -30,7 +30,7 @@ class PDQueue(object):
 
     def __init__(
             self,
-            queue_dir, lock_class, time_calc, max_event_bytes,
+            queue_dir, lock_class, time_calc, event_size_max_bytes,
             backoff_secs, backoff_db):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
@@ -45,7 +45,7 @@ class PDQueue(object):
             self.queue_dir, "dequeue.lock"
             )
 
-        self.max_event_bytes = max_event_bytes
+        self.event_size_max_bytes = event_size_max_bytes
         self.time = time_calc
         if backoff_db and backoff_secs:
             self.backoff_info = \
@@ -168,7 +168,7 @@ class PDQueue(object):
             f.close()
 
         # ensure that the event is not too large.
-        if len(data) > self.max_event_bytes:
+        if len(data) > self.event_size_max_bytes:
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)

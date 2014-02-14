@@ -66,7 +66,7 @@ class PDQueueTest(unittest.TestCase):
             queue_dir=TEST_QUEUE_DIR,
             lock_class=NoOpLock,
             time_calc=MockTime(),
-            max_event_bytes=10,
+            event_size_max_bytes=10,
             backoff_secs=BACKOFF_SECS,
             backoff_db=MockBackupDB())
 
