@@ -1,10 +1,13 @@
+#
+AGENT_VERSION=0.6
+#
 AGENT_USER=pdagent
 BIN_PD_SEND=pd-send
 CONFIG_FILE=/etc/pdagent/config.cfg
 DATA_DIR=/var/lib/pdagent
 OUTQUEUE_DIR=$DATA_DIR/outqueue
 AGENT_SVC_NAME=pdagent
-CHECK_FREQ_SEC=5
+QUEUE_POLL_INTERVAL_SECS=5
 # The service key to use for testing commands like pd-send etc.
 SVC_KEY=CHANGEME
 
