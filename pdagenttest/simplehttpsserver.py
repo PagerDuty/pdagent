@@ -11,12 +11,12 @@ class SimpleHTTPSServer(Thread):
         self.httpd = BaseHTTPServer.HTTPServer(
             self.address,
             BaseHTTPServer.BaseHTTPRequestHandler
-        )
+            )
         self.httpd.socket = ssl.wrap_socket(
             self.httpd.socket,
             certfile=self.cert_file_path,
             server_side=True
-        )
+            )
 
     def run(self):
         self.httpd.serve_forever()
