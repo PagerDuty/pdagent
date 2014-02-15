@@ -51,9 +51,8 @@ class PDVerifiedHttpsTest(unittest.TestCase):
                 port=port
                 )
             local_server.start()
-            time.sleep(0.5)
             try:
-                urlopen(_make_url(host, port = port))
+                urlopen(_make_url(host, port=port))
             except URLError as e:
                 if e.reason and type(e.reason) is SSLError:
                     # this is the right error.
