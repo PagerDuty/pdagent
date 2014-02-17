@@ -15,12 +15,12 @@ class PhoneHomeTask(RepeatingTask):
 
     def __init__(
             self,
-            heartbeat_frequency_sec,
+            heartbeat_interval_secs,
             pd_queue,
             agent_id,
             system_info
             ):
-        RepeatingTask.__init__(self, heartbeat_frequency_sec, True)
+        RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info

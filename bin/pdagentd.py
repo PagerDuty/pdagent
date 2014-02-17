@@ -165,9 +165,9 @@ class Agent(Daemon):
             try:
                 # we'll phone-home daily, although that will change if server
                 # indicates a different frequency.
-                heartbeat_frequency_sec = 60 * 60 * 24
+                heartbeat_interval_secs = 60 * 60 * 24
                 phone_task = PhoneHomeTask(
-                    heartbeat_frequency_sec,
+                    heartbeat_interval_secs,
                     pdQueue,
                     agent_id,
                     system_stats
