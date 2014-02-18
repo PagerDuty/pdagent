@@ -18,7 +18,7 @@ class RepeatingTask:
     - pass the task to a task runner e.g. RepeatingTaskThread
     """
 
-    def __init__(self, interval_secs, is_absolute, name=None):
+    def __init__(self, interval_secs, is_absolute):
         """
         Create a RepeatingTask with given settings.
 
@@ -43,10 +43,10 @@ class RepeatingTask:
         assert interval_secs >= 1
         self._interval_secs = interval_secs
         self._is_absolute = is_absolute
-        self._name = self.__class__.__name__ if name is None else name
         self._stop = False
         logger.info(
-            "%s created with interval_secs %s" % (self._name, interval_secs)
+            "%s created with interval_secs %s"
+            % (self.get_name(), interval_secs)
             )
 
     def tick(self):
@@ -63,15 +63,17 @@ class RepeatingTask:
         if interval_secs != self._interval_secs:
             self._interval_secs = interval_secs
             logger.info(
-                "%s changed interval_secs to %s" % (self._name, interval_secs)
-            )
+                "%s changed interval_secs to %s"
+                % (self.get_name(), interval_secs)
+                )
 
     def stop(self):
         "Ask a task to exit early from a tick()."
         self._stop = True
 
     def get_name(self):
-        return self._name
+        # Override this method to implement a custom name
+        return self.__class__.__name__
 
     def get_interval_secs(self):
         return self._interval_secs
