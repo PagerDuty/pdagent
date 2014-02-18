@@ -1,7 +1,7 @@
 
 import json
 import logging
-import urllib2
+from urllib2 import Request
 
 from pdagent.constants import AGENT_VERSION, PHONE_HOME_URI
 from pdagent.pdthread import RepeatingThread
@@ -24,6 +24,7 @@ class PhoneHomeThread(RepeatingThread):
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
+        self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
         logger.info("Phoning home")
@@ -48,13 +49,14 @@ class PhoneHomeThread(RepeatingThread):
         return phone_home_json
 
     def _get_phone_home_response(self, phone_home_json):
-        request = urllib2.Request(PHONE_HOME_URI)
+        # Note that Request here is from urllib2, not self._urllib2.
+        request = Request(PHONE_HOME_URI)
         request.add_header("Content-type", "application/json")
         phone_home_data = json.dumps(phone_home_json)
         request.add_data(phone_home_data)
         logger.debug("Phone-home stats: %s" % phone_home_data)
         try:
-            response = httpswithverify.urlopen(request)
+            response = self._urllib2.urlopen(request)
             result_str = response.read()
         except:
             logger.error("Error while phoning home:", exc_info=True)
