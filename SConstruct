@@ -83,10 +83,12 @@ def start_virtual_boxes(target, source, env):
 def destroy_virtual_boxes(target, source, env):
     virts = env.get("virts")
     force = env.get("force")
+    if force:
+        force = force.lower() in ['true', 'yes', 'y', '1']
     if not virts:
         virts = _get_minimal_virt_names()
     destroy_cmd = ["vagrant", "destroy"]
-    if force is None:
+    if not force:
         msg = "You must manually confirm deletion of VMs."
         h_border = "-" * len(msg)
         print h_border
