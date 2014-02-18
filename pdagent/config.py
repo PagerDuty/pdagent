@@ -40,7 +40,7 @@ class AgentConfig:
             backoff_secs = [
                 int(s.strip()) for s in
                 self.main_config["backoff_secs"].split(",")
-            ]
+                ]
         else:
             backoff_db = None
             backoff_secs = None
@@ -51,7 +51,7 @@ class AgentConfig:
             max_event_bytes=self.main_config["max_event_bytes"],
             backoff_db=backoff_db,
             backoff_secs=backoff_secs
-        )
+            )
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']

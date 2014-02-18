@@ -6,6 +6,7 @@
 /*.iml
 /.idea/
 
+/dist
 /pdagenttest/test_db/
 /pdagenttest/test_queue/
 /target/

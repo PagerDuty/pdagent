@@ -43,9 +43,9 @@ class PhoneHomeThread(RepeatingThread):
             "agent_version": AGENT_VERSION,
             "agent_stats": self.pd_queue.get_status(
                 throttle_info=True, aggregated=True
-            ),
+                ),
             "system_info": self.system_info
-        }
+            }
         return phone_home_json
 
     def _get_phone_home_response(self, phone_home_json):
@@ -70,7 +70,7 @@ class PhoneHomeThread(RepeatingThread):
             logger.warning(
                 "Error reading phone-home response data:",
                 exc_info=True
-            )
+                )
         else:
             new_heartbeat_freq = result.get("next_checkin_interval_seconds")
             if new_heartbeat_freq:
