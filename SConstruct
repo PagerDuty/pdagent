@@ -89,6 +89,8 @@ def _create_rpm_package(virt):
     make_file = os.path.join(tmp_dir, "make_rpm")
     _create_text_file(make_file, [
         'set -e',
+        'sudo yum install -y -q rpm-build ruby-devel rubygems',
+        'sudo gem install -q fpm',
         'cd %s' % os.path.join(remote_project_root, build_linux_dir),
         'sh make.sh rpm'
     ])

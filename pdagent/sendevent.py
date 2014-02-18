@@ -22,7 +22,7 @@ class SendEventThread(RepeatingThread):
             send_event_timeout_sec,
             cleanup_freq_sec, cleanup_before_sec,
             ):
-        RepeatingThread.__init__(self, check_freq_sec)
+        RepeatingThread.__init__(self, check_freq_sec, False)
         self.pd_queue = pd_queue
         self.send_event_timeout_sec = send_event_timeout_sec
         self.cleanup_freq_sec = cleanup_freq_sec

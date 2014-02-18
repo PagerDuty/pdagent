@@ -55,7 +55,7 @@ class PhoneHomeTest(unittest.TestCase):
                 })
             )
         ph.tick()
-        self.assertEquals(RESPONSE_FREQUENCY_SEC, ph._sleep_secs)
+        self.assertEquals(RESPONSE_FREQUENCY_SEC, ph._delay_secs)
 
     def test_communication_error(self):
         ph = self.new_phone_home_thread()
