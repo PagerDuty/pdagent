@@ -90,19 +90,7 @@ status() {
   fi
 }
 
-cleanup() {
-  stop && {
-    test ! -e $PID_FILE || {
-      echo "Removing pid file..."
-      sudo -u pdagent /bin/rm $PID_FILE || return 1
-    }
-  }
-}
-
 case $1 in
---clean|-clean|-c)
-  cleanup
-  ;;
 start)
   start
   ;;
@@ -116,6 +104,6 @@ restart)
   stop && start
   ;;
 *)
-  echo "Unrecognized argument: $w" >&2
+  echo "Unrecognized argument: $1" >&2
   exit 1
 esac
