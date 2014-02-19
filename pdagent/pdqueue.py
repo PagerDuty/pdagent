@@ -190,8 +190,6 @@ class PDQueue(object):
             # manner (e.g. not using the pd* scripts.)
             self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
             return True
-        elif consume_code == ConsumeEvent.NOT_CONSUMED:
-            return True
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             raise StopIteration

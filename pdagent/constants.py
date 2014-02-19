@@ -8,7 +8,6 @@ AGENT_VERSION = "1.0"
 ConsumeEvent = enum(
     'CONSUMED',
     'BAD_ENTRY',
-    'NOT_CONSUMED',
     'STOP_ALL',
     'BACKOFF_SVCKEY_BAD_ENTRY',
     'BACKOFF_SVCKEY_NOT_CONSUMED',
