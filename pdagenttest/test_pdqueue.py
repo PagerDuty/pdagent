@@ -131,28 +131,6 @@ class PDQueueTest(unittest.TestCase):
             fd.close()
         self.assertEquals(success_contents, ["foo", "bar", "baz"])
 
-    def test_dont_consume(self):
-        # The item should stay in the queue if we don't consume it.
-        q = self.new_queue()
-        f_foo = q.enqueue("svckey", "foo")
-
-        def dont_consume_foo(s, i):
-            self.assertEquals("foo", s)
-            self.assertEquals(f_foo, i)
-            return ConsumeEvent.NOT_CONSUMED
-        q.dequeue(dont_consume_foo)
-        q.dequeue(dont_consume_foo)
-
-        def consume_foo(s, i):
-            self.assertEquals("foo", s)
-            self.assertEquals(f_foo, i)
-            return ConsumeEvent.CONSUMED
-        q.dequeue(consume_foo)
-
-        self.assertRaises(
-            EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED
-            )
-
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
         # further consumption, if consumption causes error.
