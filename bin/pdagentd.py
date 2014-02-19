@@ -151,7 +151,7 @@ class Agent(Daemon):
 
             try:
                 send_thread = SendEventThread(
-                    pdQueue,
+                    pd_queue,
                     check_freq_sec,
                     send_event_timeout_sec,
                     cleanup_freq_sec,
@@ -168,7 +168,7 @@ class Agent(Daemon):
                 heartbeat_frequency_sec = 60 * 60 * 24
                 phone_thread = PhoneHomeThread(
                     heartbeat_frequency_sec,
-                    pdQueue,
+                    pd_queue,
                     agent_id,
                     system_stats
                     )
@@ -256,22 +256,11 @@ def init_logging(log_dir):
 if __name__ == '__main__':
 
     conf_dirs = agentConfig.get_conf_dirs()
+    pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
     outqueue_dir = conf_dirs["outqueue_dir"]
     db_dir = conf_dirs["db_dir"]
-
-    if len(sys.argv) == 2:
-        # use pid-file argument if specified.
-        pidfile = sys.argv[1]
-        pidfile_dir = os.path.dirname(pidfile)
-    elif not agentConfig.dev_layout:
-        # pid-file argument is mandatory in production.
-        raise SystemExit("Usage: %s pid-file-path" % sys.argv[0])
-    else:
-        # no pid-file specified, dev environment. use data_dir as pidfile_dir.
-        pidfile_dir = conf_dirs['data_dir']
-        pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
     problem_directories = _ensureWritableDirectories(
         agentConfig.is_dev_layout(),  # create directories in development
@@ -287,8 +276,16 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
+    pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
+
+    if not os.access(pidfile_dir, os.W_OK):
+        raise SystemExit(
+            'No write-access to PID file directory ' + pidfile_dir + '\n' +
+            'Agent will now quit'
+            )
+
     # queue to work on.
-    pdQueue = agentConfig.get_queue(dequeue_enabled=True)
+    pd_queue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidfile)
