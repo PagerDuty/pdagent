@@ -99,38 +99,23 @@ cleanup() {
   }
 }
 
-options=
-commands=
-
-for w in "$@"; do
-  case $w in
-  -*)
-    options="$options $w"
-    ;;
-  *)
-    commands="$commands $w"
-  esac
-done
-
-for w in $options $commands; do
-  case $w in
-  --clean|-clean|-c)
-    cleanup
-    ;;
-  start)
-    start
-    ;;
-  stop)
-    stop
-    ;;
-  status)
-    status
-    ;;
-  restart)
-    stop && start
-    ;;
-  *)
-    echo "Unrecognized argument: $w" >&2
-    exit 1
-  esac
-done
+case $1 in
+--clean|-clean|-c)
+  cleanup
+  ;;
+start)
+  start
+  ;;
+stop)
+  stop
+  ;;
+status)
+  status
+  ;;
+restart)
+  stop && start
+  ;;
+*)
+  echo "Unrecognized argument: $w" >&2
+  exit 1
+esac
