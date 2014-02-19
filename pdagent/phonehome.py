@@ -4,14 +4,14 @@ import logging
 from urllib2 import Request
 
 from pdagent.constants import AGENT_VERSION, PHONE_HOME_URI
-from pdagent.pdthread import RepeatingThread
+from pdagent.pdthread import RepeatingTask
 from pdagent.thirdparty import httpswithverify
 
 
 logger = logging.getLogger(__name__)
 
 
-class PhoneHomeThread(RepeatingThread):
+class PhoneHomeTask(RepeatingTask):
 
     def __init__(
             self,
@@ -20,7 +20,7 @@ class PhoneHomeThread(RepeatingThread):
             agent_id,
             system_info
             ):
-        RepeatingThread.__init__(self, heartbeat_interval_secs, True)
+        RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
@@ -74,4 +74,4 @@ class PhoneHomeThread(RepeatingThread):
         else:
             new_heartbeat_freq = result.get("next_checkin_interval_seconds")
             if new_heartbeat_freq:
-                self.set_delay_secs(new_heartbeat_freq)
+                self.set_interval_secs(new_heartbeat_freq)
