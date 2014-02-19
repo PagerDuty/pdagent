@@ -106,7 +106,7 @@ class RepeatingTaskThread(Thread):
 
     def __init__(self, repeating_task):
         assert isinstance(repeating_task, RepeatingTask)
-        Thread.__init__(self, name="RTT:" + repeating_task.get_name())
+        Thread.__init__(self, name=repeating_task.get_name())
         self._rtask = repeating_task
         self._stop = False
         logger.info("RepeatingTaskThread %s created" % self.getName())
