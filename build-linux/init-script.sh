@@ -18,23 +18,22 @@ EXEC=/usr/bin/pdagentd.py
 PID_DIR=/var/run/pdagent
 PID_FILE=$PID_DIR/pdagentd.pid
 
-test -x $EXEC || exit 1
+[ -x $EXEC ] || {
+  echo "Missing pdagent executable: $EXEC" >&2
+  exit 1
+}
 
 get_pid() {
-  test ! -e $PID_FILE || cat $PID_FILE
+  [ -e $PID_FILE ] && cat $PID_FILE
 }
 
 is_running() {
   pid=$(get_pid)
-  if test -n "$pid"; then
-   ps -p $pid >/dev/null 2>&1
-  else
-    return 1
-  fi
+  [ -n "$pid" ] && ps -p $pid >/dev/null 2>&1
 }
 
 setup() {
-  test -d $PID_DIR || {
+  [ -d $PID_DIR ] || {
     sudo mkdir $PID_DIR || {
       echo "Error creating pid directory $PID_DIR" >&2
       exit 2
@@ -50,9 +49,8 @@ start() {
   echo "Starting pdagent..."
   setup
   is_running || {
-    sudo -u pdagent $EXEC $PID_FILE
-    exit_code=$?
-    test $exit_code -eq 0 || return $exit_code
+    sudo -u pdagent $EXEC
+    [ $? -eq 0 ] || return $?
   }
   echo "Started."
   return 0
@@ -62,10 +60,9 @@ stop() {
   echo "Stopping pdagent..."
   is_running && {
     sudo -u pdagent kill -TERM $(get_pid)
-    exit_code=$?
-    test $exit_code -eq 0 || return $exit_code
+    [ $? -eq 0 ] || return $?
     c=30  # wait up to 30sec for process to stop running.
-    while test $c -gt 0; do
+    while [ $c -gt 0 ]; do
       if is_running; then
         sleep 1
         c=$(( $c - 1 ))
@@ -73,7 +70,7 @@ stop() {
         c=0
       fi
     done
-    ! is_running || {
+    is_running && {
       echo "pdagent has still not stopped."
       return 1
     }
@@ -105,5 +102,6 @@ restart)
   ;;
 *)
   echo "Unrecognized argument: $1" >&2
+  echo "Usage: $(basename "$0") {start|stop|restart|status}" >&2
   exit 1
 esac
