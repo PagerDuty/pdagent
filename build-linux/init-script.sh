@@ -101,7 +101,6 @@ restart)
   stop && start
   ;;
 *)
-  echo "Unrecognized argument: $1" >&2
   echo "Usage: $(basename "$0") {start|stop|restart|status}" >&2
   exit 1
 esac
