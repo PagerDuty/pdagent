@@ -124,7 +124,10 @@ class SendEventTest(unittest.TestCase):
         s = self.new_send_event_thread()
         s._urllib2.urlopen = error
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.NOT_CONSUMED)
+        self.assertEquals(
+            s.pd_queue.consume_code,
+            ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
+            )
         # error handled; cleanup is still invoked.
         self.assertTrue(s.pd_queue.cleaned_up)
 
@@ -141,15 +144,24 @@ class SendEventTest(unittest.TestCase):
     def test_generic_url_error(self):
         self._verifyConsumeCodeForError(
             URLError(reason=None),
-            ConsumeEvent.NOT_CONSUMED
+            ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
             )
 
     def test_generic_error(self):
-        self._verifyConsumeCodeForError(Exception(), ConsumeEvent.NOT_CONSUMED)
+        self._verifyConsumeCodeForError(
+            Exception(),
+            ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
+            )
 
     def test_3xx(self):
-        self._verifyConsumeCodeForHTTPError(300, ConsumeEvent.NOT_CONSUMED)
-        self._verifyConsumeCodeForHTTPError(399, ConsumeEvent.NOT_CONSUMED)
+        self._verifyConsumeCodeForHTTPError(
+            300,
+            ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
+            )
+        self._verifyConsumeCodeForHTTPError(
+            399,
+            ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
+            )
 
     def test_403(self):
         self._verifyConsumeCodeForHTTPError(

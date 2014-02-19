@@ -94,10 +94,10 @@ class SendEventThread(RepeatingThread):
                     "Error establishing a connection for sending event:",
                     exc_info=True
                     )
-                return ConsumeEvent.NOT_CONSUMED
+                return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)
-            return ConsumeEvent.NOT_CONSUMED
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
 
         try:
             result = json.loads(result_str)
@@ -129,5 +129,5 @@ class SendEventThread(RepeatingThread):
             # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            # anything 3xx and >= 600
-            return ConsumeEvent.NOT_CONSUMED
+            # anything 3xx and >= 600 -- we don't know what this means!!
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
