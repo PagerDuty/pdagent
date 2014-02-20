@@ -1,6 +1,9 @@
 """The match_hostname() function from Python 3.3.3, essential when using SSL."""
 
 #
+# Source: https://pypi.python.org/pypi/backports.ssl_match_hostname/
+# Version: 3.4.0.2
+#
 # PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
 # --------------------------------------------
 #

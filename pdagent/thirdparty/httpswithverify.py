@@ -1,5 +1,7 @@
 #
-# Verified HTTPS connection - based on httplib & urllib2.
+# Verified HTTPS connection - based on Python's httplib & urllib2.
+#
+# Source: http://www.python.org/
 #
 # PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
 # --------------------------------------------

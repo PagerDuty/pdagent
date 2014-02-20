@@ -1,6 +1,9 @@
 # Author: Steven J. Bethard <steven.bethard@gmail.com>.
 
 #
+# Source: https://code.google.com/p/argparse/
+# Version: 1.2.1
+#
 # PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
 # --------------------------------------------
 #
