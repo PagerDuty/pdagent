@@ -1,14 +1,17 @@
 
 # Introduction
 
-This project is licensed under the terms described below.
+This project includes files that have a different license than the one below.
+See each individual file for the license for that file.
 
-Note that this project includes third-party code that has different licensing
-terms.  See the `licenses` folder for specific licenses for such code.
+Specifically, the folder `pdagent/thirdparty/` contains third-party code and
+the folder `pdagent/root_certs/` contains files derived from third-party code.
+
+All files authored by PagerDuty Inc and any files in this project that do not
+mention a license are licensed under the terms below.
 
 
 # License
-
 
 Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 All rights reserved.
