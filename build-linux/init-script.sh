@@ -43,6 +43,7 @@
 ### END INIT INFO
 
 EXEC=/usr/bin/pdagentd.py
+EXEC_NAME=$(basename "$EXEC")
 PID_DIR=/var/run/pdagent
 PID_FILE=$PID_DIR/pdagentd.pid
 
@@ -57,7 +58,7 @@ get_pid() {
 
 is_running() {
   pid=$(get_pid)
-  [ -n "$pid" ] && ps -p $pid >/dev/null 2>&1
+  [ -n "$pid" ] && ps -p $pid | grep "$EXEC_NAME" >/dev/null 2>&1
 }
 
 setup() {
@@ -89,7 +90,7 @@ stop() {
   is_running && {
     sudo -u pdagent kill -TERM $(get_pid)
     [ $? -eq 0 ] || return $?
-    c=30  # wait up to 30sec for process to stop running.
+    c=15  # wait up to 15sec for process to stop running.
     while [ $c -gt 0 ]; do
       if is_running; then
         sleep 1
