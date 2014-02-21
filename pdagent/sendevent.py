@@ -9,13 +9,13 @@ from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
-from pdagent.pdthread import RepeatingThread
+from pdagent.pdthread import RepeatingTask
 
 
 logger = logging.getLogger(__name__)
 
 
-class SendEventThread(RepeatingThread):
+class SendEventTask(RepeatingTask):
 
     def __init__(
             self,
@@ -24,7 +24,7 @@ class SendEventThread(RepeatingThread):
             cleanup_interval_secs,
             cleanup_threshold_secs,
             ):
-        RepeatingThread.__init__(self, send_interval_secs, False)
+        RepeatingTask.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
         self.cleanup_interval_secs = cleanup_interval_secs
         self.cleanup_threshold_secs = cleanup_threshold_secs
@@ -89,10 +89,10 @@ class SendEventThread(RepeatingThread):
                     "Error establishing a connection for sending event:",
                     exc_info=True
                     )
-                return ConsumeEvent.NOT_CONSUMED
+                return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)
-            return ConsumeEvent.NOT_CONSUMED
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
 
         try:
             result = json.loads(result_str)
@@ -124,5 +124,5 @@ class SendEventThread(RepeatingThread):
             # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            # anything 3xx and >= 600
-            return ConsumeEvent.NOT_CONSUMED
+            # anything 3xx and >= 600 -- we don't know what this means!!
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED

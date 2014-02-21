@@ -43,8 +43,9 @@ except ImportError:
 
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
-from pdagent.phonehome import PhoneHomeThread
-from pdagent.sendevent import SendEventThread
+from pdagent.pdthread import RepeatingTaskThread
+from pdagent.phonehome import PhoneHomeTask
+from pdagent.sendevent import SendEventTask
 
 
 # Config handling
@@ -149,12 +150,13 @@ class Agent(Daemon):
             socket.setdefaulttimeout(default_socket_timeout)
 
             try:
-                send_thread = SendEventThread(
+                send_task = SendEventTask(
                     pdQueue,
                     send_interval_secs,
                     cleanup_interval_secs,
                     cleanup_threshold_secs
                     )
+                send_thread = RepeatingTaskThread(send_task)
                 send_thread.start()
             except:
                 start_ok = False
@@ -164,12 +166,13 @@ class Agent(Daemon):
                 # we'll phone-home daily, although that will change if server
                 # indicates a different frequency.
                 heartbeat_interval_secs = 60 * 60 * 24
-                phone_thread = PhoneHomeThread(
+                phone_task = PhoneHomeTask(
                     heartbeat_interval_secs,
                     pdQueue,
                     agent_id,
                     system_stats
                     )
+                phone_thread = RepeatingTaskThread(phone_task)
                 phone_thread.start()
             except:
                 start_ok = False
