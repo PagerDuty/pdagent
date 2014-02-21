@@ -272,9 +272,9 @@ def init_logging(log_dir):
         )
     handler.setFormatter(formatter)
 
-    rootLogger = logging.getLogger()
-    rootLogger.setLevel(main_config['log_level'])
-    rootLogger.addHandler(handler)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(main_config['log_level'])
+    root_logger.addHandler(handler)
 
 
 # Control of daemon
