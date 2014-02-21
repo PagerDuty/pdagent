@@ -62,7 +62,7 @@ def main():
     details = parse_fields(args.fields)
 
     if args.event_type == "trigger":
-        if not args.description:
+        if (not args.description) or (not args.description.strip()):
             parser.error("Event type '%s' requires description" % args.event_type)
     else:
         if not args.incident_key:
