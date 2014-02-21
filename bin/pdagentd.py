@@ -73,8 +73,8 @@ from pdagent.sendevent import SendEventTask
 
 
 # Config handling
-agentConfig = pdagent.config.load_agent_config()
-mainConfig = agentConfig.get_main_config()
+agent_config = pdagent.config.load_agent_config()
+main_config = agent_config.get_main_config()
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -119,7 +119,7 @@ class Agent(Daemon):
             main_logger.info('Agent version: %s', AGENT_VERSION)
 
             agent_id_file = os.path.join(
-                agentConfig.get_conf_dirs()['data_dir'],
+                agent_config.get_conf_dirs()['data_dir'],
                 "agent_id.txt"
                 )
             try:
@@ -156,9 +156,9 @@ class Agent(Daemon):
             main_logger.info('System: ' + str(system_stats))
 
             # Send event thread config
-            send_interval_secs = mainConfig['send_interval_secs']
-            cleanup_interval_secs = mainConfig['cleanup_interval_secs']
-            cleanup_threshold_secs = mainConfig['cleanup_threshold_secs']
+            send_interval_secs = main_config['send_interval_secs']
+            cleanup_interval_secs = main_config['cleanup_interval_secs']
+            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
 
             start_ok = True
             send_thread = None
@@ -273,14 +273,14 @@ def init_logging(log_dir):
     handler.setFormatter(formatter)
 
     rootLogger = logging.getLogger()
-    rootLogger.setLevel(mainConfig['log_level'])
+    rootLogger.setLevel(main_config['log_level'])
     rootLogger.addHandler(handler)
 
 
 # Control of daemon
 if __name__ == '__main__':
 
-    conf_dirs = agentConfig.get_conf_dirs()
+    conf_dirs = agent_config.get_conf_dirs()
     pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     db_dir = conf_dirs["db_dir"]
 
     problem_directories = _ensureWritableDirectories(
-        agentConfig.is_dev_layout(),  # create directories in development
+        agent_config.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problem_directories:
@@ -310,7 +310,7 @@ if __name__ == '__main__':
             )
 
     # queue to work on.
-    pd_queue = agentConfig.get_queue(dequeue_enabled=True)
+    pd_queue = agent_config.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidfile)
