@@ -151,7 +151,7 @@ class Agent(Daemon):
 
             try:
                 send_task = SendEventTask(
-                    pdQueue,
+                    pd_queue,
                     send_interval_secs,
                     cleanup_interval_secs,
                     cleanup_threshold_secs
@@ -168,7 +168,7 @@ class Agent(Daemon):
                 heartbeat_interval_secs = 60 * 60 * 24
                 phone_task = PhoneHomeTask(
                     heartbeat_interval_secs,
-                    pdQueue,
+                    pd_queue,
                     agent_id,
                     system_stats
                     )
@@ -277,77 +277,19 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.thirdparty.argparse import ArgumentParser
-    description = "PagerDuty Agent daemon process."
-    parser = ArgumentParser(description=description)
-    parser.add_argument(
-        'action', choices=['start', 'stop', 'restart', 'status']
-        )
-    parser.add_argument(
-        "--clean", action="store_true", dest="clean",
-        help="Remove old pid file"
-        )
-
-    args = parser.parse_args()
-
     pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
-    if os.access(pidfile_dir, os.W_OK) == False:
+    if not os.access(pidfile_dir, os.W_OK):
         raise SystemExit(
             'No write-access to PID file directory ' + pidfile_dir + '\n' +
             'Agent will now quit'
             )
 
     # queue to work on.
-    pdQueue = agentConfig.get_queue(dequeue_enabled=True)
+    pd_queue = agentConfig.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidfile)
-
-    # Helper method for some control options
-    def _getDaemonPID():
-        try:
-            pf = file(pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-        except SystemExit:
-            pid = None
-        return pid
-
-    # Control options
-    if args.clean:
-        try:
-            if _getDaemonPID():
-                daemon.stop()
-            os.remove(pidfile)
-        except OSError:
-            # Did not find pid file
-            pass
-
-    if 'start' == args.action:
-        daemon.start()
-
-    elif 'stop' == args.action:
-        daemon.stop()
-
-    elif 'restart' == args.action:
-        daemon.restart()
-
-    # XXX: unsafe - doesnt use pidfile, may want to log to stdout
-    #elif 'foreground' == args.action:
-    #    daemon.run()
-
-    elif 'status' == args.action:
-        pid = _getDaemonPID()
-        if pid:
-            print 'pdagentd is running as pid %s.' % pid
-        else:
-            print 'pdagentd is not running.'
-
-    else:
-        print 'Unknown command'
-        sys.exit(1)
+    daemon.start()
 
     sys.exit(0)
