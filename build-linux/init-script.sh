@@ -62,7 +62,7 @@ stop() {
   is_running && {
     sudo -u pdagent kill -TERM $(get_pid)
     [ $? -eq 0 ] || return $?
-    c=30  # wait up to 30sec for process to stop running.
+    c=15  # wait up to 15sec for process to stop running.
     while [ $c -gt 0 ]; do
       if is_running; then
         sleep 1
