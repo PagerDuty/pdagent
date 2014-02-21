@@ -15,6 +15,7 @@
 ### END INIT INFO
 
 EXEC=/usr/bin/pdagentd.py
+EXEC_NAME=$(basename "$EXEC")
 PID_DIR=/var/run/pdagent
 PID_FILE=$PID_DIR/pdagentd.pid
 
@@ -29,7 +30,7 @@ get_pid() {
 
 is_running() {
   pid=$(get_pid)
-  [ -n "$pid" ] && ps -p $pid >/dev/null 2>&1
+  [ -n "$pid" ] && ps -p $pid | grep "$EXEC_NAME" >/dev/null 2>&1
 }
 
 setup() {
