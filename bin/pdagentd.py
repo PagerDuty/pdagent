@@ -187,11 +187,10 @@ class Agent(Daemon):
                 main_logger.error("Error starting send thread", exc_info=True)
 
             try:
-                # we'll phone-home daily, although that will change if server
-                # indicates a different frequency.
-                heartbeat_interval_secs = 60 * 60 * 24
+                # by default, phone-home daily
+                phonehome_interval_secs = 60 * 60 * 24
                 phone_task = PhoneHomeTask(
-                    heartbeat_interval_secs,
+                    phonehome_interval_secs,
                     pd_queue,
                     agent_id,
                     system_stats
