@@ -71,7 +71,7 @@ cd target
 fpm -s dir \
     -t $1 \
     --name "pdagent" \
-    --version "0.1" \
+    --version "0.6" \
     --architecture all \
     $_FPM_DEPENDS \
     --$1-user root \

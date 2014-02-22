@@ -17,7 +17,7 @@ test -z "$(agent_pid)" || stop_agent
 test $(ls $OUTQUEUE_DIR | wc -l) -eq 0 || sudo rm -r $OUTQUEUE_DIR/*
 
 # modify agent check frequency so we wait for lesser time.
-sudo sed -i "s#^\#check_freq_sec.*#check_freq_sec=$CHECK_FREQ_SEC#" $CONFIG_FILE
+sudo sed -i "s#^\#send_interval_secs.*#send_interval_secs=$SEND_INTERVAL_SECS#" $CONFIG_FILE
 
 # agent must flush out queue when it starts up.
 test_startup() {
@@ -28,7 +28,7 @@ test_startup() {
 
   start_agent
   test -n "$(agent_pid)"
-  sleep $(($CHECK_FREQ_SEC / 2))  # enough time for agent to flush the queue.
+  sleep $(($SEND_INTERVAL_SECS / 2))  # enough time for agent to flush the queue.
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 2
   test $(ls $OUTQUEUE_DIR/suc_* | wc -l) -eq 2
 }
@@ -42,7 +42,7 @@ test_wakeup() {
   echo "bad json" \
     | sudo tee $(ls $OUTQUEUE_DIR/pdq_* | tail -n1) >/dev/null
 
-  sleep $(($CHECK_FREQ_SEC * 3 / 2))  # sleep-time + extra-time for processing.
+  sleep $(($SEND_INTERVAL_SECS * 3 / 2))  # sleep-time + extra-time for processing.
   # there must be one error file in outqueue; everything else must be cleared.
   test $(ls $OUTQUEUE_DIR/* | wc -l) -eq 4
   test $(ls $OUTQUEUE_DIR/err_* | wc -l) -eq 1
