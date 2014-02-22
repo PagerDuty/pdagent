@@ -30,19 +30,19 @@
 import time
 import unittest
 
-from pdagent.pdthread import RepeatingThread
+from pdagent.pdthread import RepeatingTask, RepeatingTaskThread
 
 
-def _start_repeating_thread(f, delay_secs, is_absolute):
-    class T(RepeatingThread):
+def _start_repeating_thread(f, interval_secs, is_absolute):
+    class T(RepeatingTask):
         def tick(self):
             f()
-    t = T(delay_secs, is_absolute)
+    t = RepeatingTaskThread(T(interval_secs, is_absolute))
     t.start()
     return t
 
 
-class RepeatingThreadTest(unittest.TestCase):
+class RepeatingTaskThreadTest(unittest.TestCase):
 
     def test_basic(self):
         trace = []
@@ -108,7 +108,7 @@ class RepeatingThreadTest(unittest.TestCase):
         finally:
             t.stop_and_join()
 
-    def test_change_delay_secs(self):
+    def test_change_interval_secs(self):
         def f():
             trace.append(42)
         trace = []
@@ -117,7 +117,7 @@ class RepeatingThreadTest(unittest.TestCase):
         try:
             time.sleep(0.1)
             self.assertEquals(trace, [42])
-            t.set_delay_secs(2)
+            t._rtask.set_interval_secs(2)
             time.sleep(1.0)
             self.assertEquals(trace, [42, 42])
             time.sleep(1.0)

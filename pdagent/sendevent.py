@@ -37,13 +37,13 @@ from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
-from pdagent.pdthread import RepeatingThread
+from pdagent.pdthread import RepeatingTask
 
 
 logger = logging.getLogger(__name__)
 
 
-class SendEventThread(RepeatingThread):
+class SendEventTask(RepeatingTask):
 
     def __init__(
             self,
@@ -52,7 +52,7 @@ class SendEventThread(RepeatingThread):
             cleanup_interval_secs,
             cleanup_threshold_secs,
             ):
-        RepeatingThread.__init__(self, send_interval_secs, False)
+        RepeatingTask.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
         self.cleanup_interval_secs = cleanup_interval_secs
         self.cleanup_threshold_secs = cleanup_threshold_secs
