@@ -44,12 +44,12 @@ class PhoneHomeTask(RepeatingTask):
 
     def __init__(
             self,
-            heartbeat_interval_secs,
+            phonehome_interval_secs,
             pd_queue,
             agent_id,
             system_info
             ):
-        RepeatingTask.__init__(self, heartbeat_interval_secs, True)
+        RepeatingTask.__init__(self, phonehome_interval_secs, True)
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
@@ -62,7 +62,6 @@ class PhoneHomeTask(RepeatingTask):
             response_str = self._get_phone_home_response(phone_home_json)
             if response_str:
                 self._process_response(response_str)
-
         except:
             logger.error("Error while phoning home:", exc_info=True)
 
@@ -101,6 +100,6 @@ class PhoneHomeTask(RepeatingTask):
                 exc_info=True
                 )
         else:
-            new_heartbeat_freq = result.get("next_checkin_interval_seconds")
-            if new_heartbeat_freq:
-                self.set_interval_secs(new_heartbeat_freq)
+            phonehome_interval_secs = result.get("phonehome_interval_secs")
+            if phonehome_interval_secs:
+                self.set_interval_secs(phonehome_interval_secs)
