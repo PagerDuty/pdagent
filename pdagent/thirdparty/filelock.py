@@ -1,3 +1,7 @@
+#
+# Source: https://github.com/raphendyr/FileLock
+# Version: 2123d796c1
+#
 # Copyright (c) 2009, Evan Fosmark
 # All rights reserved.
 #

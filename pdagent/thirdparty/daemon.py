@@ -1,19 +1,31 @@
-'''
-    ***
-    Modified generic daemon class
-    ***
+"Generic Unix daemon class"
 
-    Author:     www.boxedice.com
-
-    http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
-
-    License:    http://creativecommons.org/licenses/by-sa/3.0/
-
-    Changes:    - Modifications by PagerDuty - see history at:
-                    https://github.com/PagerDuty/agent/blob/master/pdagent/daemon.py
-                - Based on the file at:
-                    https://github.com/serverdensity/sd-agent/blob/master/daemon.py
-'''
+#
+# Author:    www.boxedice.com
+#
+# http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+#
+# License:   http://creativecommons.org/licenses/by-sa/3.0/
+#
+# Changes:
+#
+#    2013-2014 PagerDuty, Inc.
+#        - See history at https://github.com/PagerDuty/agent/
+#        - Based on the file at:
+#            https://github.com/serverdensity/sd-agent/blob/master/daemon.py
+#
+# Previous Changes:
+#
+#    23rd Jan 2009 (David Mytton <david@boxedice.com>)
+#        - Replaced hard coded '/dev/null in __init__ with os.devnull
+#        - Added OS check to conditionally remove code that doesn't work on OS X
+#        - Added output to console on completion
+#        - Tidied up formatting
+#    11th Mar 2009 (David Mytton <david@boxedice.com>)
+#        - Fixed problem with daemon exiting on Python 2.4 (before SystemExit was part of the Exception base)
+#    13th Aug 2010 (David Mytton <david@boxedice.com>
+#        - Fixed unhandled exception if PID file is empty
+#
 
 # Core modules
 import atexit
