@@ -1,4 +1,3 @@
-
 "Generic Unix daemon class"
 
 #
@@ -10,7 +9,7 @@
 #
 # Changes:
 #
-#    2013-2014 PagerDuty Inc
+#    2013-2014 PagerDuty, Inc.
 #        - See history at https://github.com/PagerDuty/agent/
 #        - Based on the file at:
 #            https://github.com/serverdensity/sd-agent/blob/master/daemon.py
