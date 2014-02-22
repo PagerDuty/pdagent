@@ -155,10 +155,9 @@ class Agent(Daemon):
             main_logger.info('System: ' + str(system_stats))
 
             # Send event thread config
-            check_freq_sec = mainConfig['check_freq_sec']
-            send_event_timeout_sec = mainConfig['send_event_timeout_sec']
-            cleanup_freq_sec = mainConfig['cleanup_freq_sec']
-            cleanup_before_sec = mainConfig['cleanup_before_sec']
+            send_interval_secs = mainConfig['send_interval_secs']
+            cleanup_interval_secs = mainConfig['cleanup_interval_secs']
+            cleanup_threshold_secs = mainConfig['cleanup_threshold_secs']
 
             start_ok = True
             send_thread = None
@@ -176,10 +175,9 @@ class Agent(Daemon):
             try:
                 send_thread = SendEventThread(
                     pdQueue,
-                    check_freq_sec,
-                    send_event_timeout_sec,
-                    cleanup_freq_sec,
-                    cleanup_before_sec
+                    send_interval_secs,
+                    cleanup_interval_secs,
+                    cleanup_threshold_secs
                     )
                 send_thread.start()
             except:
@@ -189,9 +187,9 @@ class Agent(Daemon):
             try:
                 # we'll phone-home daily, although that will change if server
                 # indicates a different frequency.
-                heartbeat_frequency_sec = 60 * 60 * 24
+                heartbeat_interval_secs = 60 * 60 * 24
                 phone_thread = PhoneHomeThread(
-                    heartbeat_frequency_sec,
+                    heartbeat_interval_secs,
                     pdQueue,
                     agent_id,
                     system_stats
