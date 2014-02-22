@@ -53,7 +53,6 @@ class Daemon:
                 if status:
                     raise SystemExit("Error in second parent: %s" % status)
                 else:
-                    print "Started"
                     sys.exit(0)
         except OSError, e:
             raise SystemExit(
@@ -100,8 +99,6 @@ class Daemon:
         Start the daemon
         """
 
-        print "Starting..."
-
         # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile, 'r')
@@ -119,56 +116,6 @@ class Daemon:
         # Start the daemon
         self.daemonize()
         self.run()
-
-    def stop(self):
-        """
-        Stop the daemon
-        """
-
-        print "Stopping..."
-
-        # Get the pid from the pidfile
-        try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-        except ValueError:
-            pid = None
-
-        if not pid:
-            message = "pidfile %s does not exist. Not running?\n"
-            sys.stderr.write(message % self.pidfile)
-
-            # Just to be sure. A ValueError might occur if the PID file
-            # is empty but does actually exist
-            if os.path.exists(self.pidfile):
-                os.remove(self.pidfile)
-
-            return  # Not an error in a restart
-
-        # Try killing the daemon process
-        try:
-            while 1:
-                os.kill(pid, SIGTERM)
-                time.sleep(0.1)
-        except OSError, err:
-            err = str(err)
-            if err.find("No such process") > 0:
-                if os.path.exists(self.pidfile):
-                    os.remove(self.pidfile)
-            else:
-                raise SystemExit(str(err))
-
-        print "Stopped"
-
-    def restart(self):
-        """
-        Restart the daemon
-        """
-        self.stop()
-        self.start()
 
     def run(self):
         """
