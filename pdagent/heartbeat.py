@@ -30,7 +30,8 @@
 
 import json
 import logging
-from urllib2 import Request
+import time
+from urllib2 import Request, URLError, HTTPError
 
 from pdagent.constants import HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
@@ -48,14 +49,50 @@ class HeartbeatTask(RepeatingTask):
         self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
-        logger.info("Sending heartbeat")
         try:
+            logger.info("Sending heartbeat")
+            # max time is half an interval
+            retry_time_limit = time.time() + (self.get_interval_secs() / 2)
+            attempt_number = 0
+            response_str = None
             heartbeat_json = self._make_heart_beat_json()
-            response_str = self._heart_beat(heartbeat_json)
+            while not self.is_stop_invoked():
+                attempt_number += 1
+                try:
+                    response_str = self._heart_beat(heartbeat_json)
+                    break  # yay! success!
+                except HTTPError as e:
+                    # retry for 5xx errors
+                    if 500 <= e.getcode() < 600:
+                        logger.error("HTTPError (will retry): %s" % e)
+                    else:
+                        raise
+                except (URLError, IOError):
+                    # assumes 2.6 where socket.error is a sub-class of IOError
+                    logger.error("Error (will retry):", exc_info=True)
+                # retry limit checks
+                if time.time() > retry_time_limit:
+                    logger.info("Won't retry - time limit reached")
+                    break
+                if attempt_number > 10:
+                    logger.info("Won't retry - count limit reached")
+                    break
+                # sleep before retry
+                logger.debug("Sleeping before retry...")
+                for _ in range(10):
+                    if self.is_stop_invoked():
+                        break
+                    time.sleep(1)
+                else:
+                    logger.debug("Retrying...")
+            # if successful, there may be a response body to process
             if response_str:
                 self._process_response(response_str)
         except:
-            logger.error("Error sending heartbeat:", exc_info=True)
+            logger.error(
+                "Error sending heartbeat (won't retry):",
+                exc_info=True
+                )
 
     def _make_heart_beat_json(self):
         return {
