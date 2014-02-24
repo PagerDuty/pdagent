@@ -78,7 +78,7 @@ class HeartbeatTask(RepeatingTask):
                 except (URLError, IOError):
                     # assumes 2.6 where socket.error is a sub-class of IOError
                     logger.error(
-                        "Error send heartbeat (will retry):", exc_info=True
+                        "Error sending heartbeat (will retry):", exc_info=True
                         )
                 # retry limit checks
                 if time.time() > retry_time_limit:
