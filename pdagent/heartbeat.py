@@ -41,6 +41,10 @@ from pdagent.thirdparty import httpswithverify
 logger = logging.getLogger(__name__)
 
 
+RETRY_GAP_SECS = 10
+HEARTBEAT_MAX_RETRIES = 10
+
+
 class HeartbeatTask(RepeatingTask):
 
     def __init__(self, heartbeat_interval_secs, agent_id):
@@ -79,12 +83,12 @@ class HeartbeatTask(RepeatingTask):
                 if time.time() > retry_time_limit:
                     logger.info("Won't retry - time limit reached")
                     break
-                if attempt_number > 10:
-                    logger.info("Won't retry - count limit reached")
+                if attempt_number >= HEARTBEAT_MAX_RETRIES:
+                    logger.info("Won't retry - attempt count limit reached")
                     break
                 # sleep before retry
                 logger.debug("Sleeping before retry...")
-                for _ in range(10):
+                for _ in range(RETRY_GAP_SECS):
                     if self.is_stop_invoked():
                         break
                     time.sleep(1)
