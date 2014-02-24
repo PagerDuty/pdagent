@@ -64,12 +64,16 @@ class HeartbeatTask(RepeatingTask):
                 except HTTPError as e:
                     # retry for 5xx errors
                     if 500 <= e.getcode() < 600:
-                        logger.error("HTTPError (will retry): %s" % e)
+                        logger.error(
+                            "HTTPError sending heartbeat (will retry): %s" % e
+                            )
                     else:
                         raise
                 except (URLError, IOError):
                     # assumes 2.6 where socket.error is a sub-class of IOError
-                    logger.error("Error (will retry):", exc_info=True)
+                    logger.error(
+                        "Error send heartbeat (will retry):", exc_info=True
+                        )
                 # retry limit checks
                 if time.time() > retry_time_limit:
                     logger.info("Won't retry - time limit reached")
