@@ -49,7 +49,7 @@ class PhoneHomeTask(RepeatingTask):
             agent_id,
             system_info
             ):
-        RepeatingTask.__init__(self, phonehome_interval_secs, True)
+        RepeatingTask.__init__(self, phonehome_interval_secs, False)
         self.pd_queue = pd_queue
         self.agent_id = agent_id
         self.system_info = system_info
