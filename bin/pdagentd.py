@@ -155,10 +155,29 @@ class Agent(Daemon):
 
             main_logger.info('System: ' + str(system_stats))
 
-            # Send event thread config
-            send_interval_secs = main_config['send_interval_secs']
-            cleanup_interval_secs = main_config['cleanup_interval_secs']
-            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+            #
+            def mk_sendevent_task():
+                # Send event thread config
+                send_interval_secs = main_config['send_interval_secs']
+                cleanup_interval_secs = main_config['cleanup_interval_secs']
+                cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+                return SendEventTask(
+                    pd_queue,
+                    send_interval_secs,
+                    cleanup_interval_secs,
+                    cleanup_threshold_secs
+                    )
+
+            #
+            def mk_phonehome_task():
+                # by default, phone-home daily
+                phonehome_interval_secs = 60 * 60 * 24
+                return PhoneHomeTask(
+                    phonehome_interval_secs,
+                    pd_queue,
+                    agent_id,
+                    system_stats
+                    )
 
             start_ok = True
             send_thread = None
@@ -174,12 +193,7 @@ class Agent(Daemon):
             socket.setdefaulttimeout(default_socket_timeout)
 
             try:
-                send_task = SendEventTask(
-                    pd_queue,
-                    send_interval_secs,
-                    cleanup_interval_secs,
-                    cleanup_threshold_secs
-                    )
+                send_task = mk_sendevent_task()
                 send_thread = RepeatingTaskThread(send_task)
                 send_thread.start()
             except:
@@ -187,14 +201,7 @@ class Agent(Daemon):
                 main_logger.error("Error starting send thread", exc_info=True)
 
             try:
-                # by default, phone-home daily
-                phonehome_interval_secs = 60 * 60 * 24
-                phone_task = PhoneHomeTask(
-                    phonehome_interval_secs,
-                    pd_queue,
-                    agent_id,
-                    system_stats
-                    )
+                phone_task = mk_phonehome_task()
                 phone_thread = RepeatingTaskThread(phone_task)
                 phone_thread.start()
             except:
