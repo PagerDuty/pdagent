@@ -42,43 +42,43 @@ RESPONSE_FREQUENCY_SEC = 30
 class HeartbeatTest(unittest.TestCase):
 
     def new_heartbeat_task(self):
-        ph = HeartbeatTask(
+        hb = HeartbeatTask(
             RESPONSE_FREQUENCY_SEC + 10,  # something different from response.
             AGENT_ID
             )
-        ph._urllib2 = MockUrlLib()
-        return ph
+        hb._urllib2 = MockUrlLib()
+        return hb
 
     def test_data(self):
-        ph = self.new_heartbeat_task()
-        ph.tick()
+        hb = self.new_heartbeat_task()
+        hb.tick()
         expected = {
             "agent_id": AGENT_ID,
             }
-        self.assertEqual(json.loads(ph._urllib2.request.get_data()), expected)
+        self.assertEqual(json.loads(hb._urllib2.request.get_data()), expected)
 
     def test_new_frequency(self):
-        ph = self.new_heartbeat_task()
-        ph._urllib2.response = MockResponse(
+        hb = self.new_heartbeat_task()
+        hb._urllib2.response = MockResponse(
             data=json.dumps({
                 "heartbeat_interval_secs": RESPONSE_FREQUENCY_SEC
                 })
             )
-        ph.tick()
-        self.assertEquals(RESPONSE_FREQUENCY_SEC, ph._interval_secs)
+        hb.tick()
+        self.assertEquals(RESPONSE_FREQUENCY_SEC, hb._interval_secs)
 
     def test_communication_error(self):
         def err_func(url, **kwargs):
             raise Exception
-        ph = self.new_heartbeat_task()
-        ph._urllib2.urlopen = err_func
-        ph.tick()
+        hb = self.new_heartbeat_task()
+        hb._urllib2.urlopen = err_func
+        hb.tick()
         # no errors here means communication errors were handled.
 
     def test_bad_response_data(self):
-        ph = self.new_heartbeat_task()
-        ph._urllib2.response = MockResponse(data="bad")
-        ph.tick()
+        hb = self.new_heartbeat_task()
+        hb._urllib2.response = MockResponse(data="bad")
+        hb.tick()
         # no errors here means bad response data was handled.
 
 
