@@ -31,7 +31,6 @@ import json
 import unittest
 
 from pdagent.heartbeat import HeartbeatTask
-from pdagenttest.mockqueue import MockQueue
 from pdagenttest.mockresponse import MockResponse
 from pdagenttest.mockurllib import MockUrlLib
 
@@ -49,13 +48,6 @@ class HeartbeatTest(unittest.TestCase):
             )
         ph._urllib2 = MockUrlLib()
         return ph
-
-    def mock_queue(self):
-        return MockQueue(
-            status={"foo": "bar"},
-            aggregated=True,
-            throttle_info=True
-            )
 
     def test_data(self):
         ph = self.new_heartbeat_task()
