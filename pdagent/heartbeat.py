@@ -60,7 +60,8 @@ class HeartbeatTask(RepeatingTask):
                 attempt_number += 1
                 try:
                     response_str = self._heart_beat(heartbeat_json)
-                    break  # yay! success!
+                    logger.debug("Heartbeat successful!")
+                    break
                 except HTTPError as e:
                     # retry for 5xx errors
                     if 500 <= e.getcode() < 600:
