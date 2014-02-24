@@ -70,6 +70,7 @@ except ImportError:
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdthread import RepeatingTaskThread
+from pdagent.heartbeat import HeartbeatTask
 from pdagent.phonehome import PhoneHomeTask
 from pdagent.sendevent import SendEventTask
 
@@ -186,7 +187,17 @@ class Agent(Daemon):
                     system_stats
                     )
 
-            mk_tasks = [mk_sendevent_task, mk_phonehome_task]
+            def mk_heartbeat_task():
+                # by default, heartbeat every 24 hours
+                heartbeat_interval_secs = 60 * 60 * 24
+                return HeartbeatTask(heartbeat_interval_secs, agent_id)
+
+            mk_tasks = [
+                mk_sendevent_task,
+                mk_phonehome_task,
+                mk_heartbeat_task,
+                ]
+
             tasks = [mk_task() for mk_task in mk_tasks]
             task_threads = []
 
