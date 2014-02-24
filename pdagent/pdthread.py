@@ -140,7 +140,7 @@ class RepeatingTaskThread(Thread):
         logger.info("RepeatingTaskThread created for %s" % self.getName())
 
     def run(self):
-        next_run_time = 0
+        next_run_time = time.time()
         try:
             while not self._stop:
                 s = next_run_time - time.time()
