@@ -35,7 +35,9 @@
 # standard python modules
 import logging.handlers
 import os
+import platform
 import signal
+import socket
 import sys
 import time
 import uuid
@@ -108,14 +110,13 @@ class Agent(Daemon):
         global log_dir, main_logger
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
-
         main_logger.info('*** pdagentd started')
 
+        all_ok = True
         try:
             from pdagent.constants import AGENT_VERSION
 
             main_logger.info('PID file: %s', self.pidfile)
-
             main_logger.info('Agent version: %s', AGENT_VERSION)
 
             agent_id_file = os.path.join(
@@ -142,8 +143,6 @@ class Agent(Daemon):
             main_logger.debug('Collecting basic system stats')
 
             # Get some basic system stats to post back in phone-home
-            import platform
-            import socket
             system_stats = {
                 'platform_name': sys.platform,
                 'python_version': platform.python_version(),
@@ -155,7 +154,16 @@ class Agent(Daemon):
 
             main_logger.info('System: ' + str(system_stats))
 
-            #
+            main_logger.debug("Setting signal handler for SIGTERM")
+            signal.signal(signal.SIGTERM, _sig_term_handler)
+
+            default_socket_timeout = 10
+            main_logger.debug(
+                "Setting default socket timeout to %d" %
+                default_socket_timeout
+                )
+            socket.setdefaulttimeout(default_socket_timeout)
+
             def mk_sendevent_task():
                 # Send event thread config
                 send_interval_secs = main_config['send_interval_secs']
@@ -168,7 +176,6 @@ class Agent(Daemon):
                     cleanup_threshold_secs
                     )
 
-            #
             def mk_phonehome_task():
                 # by default, phone-home daily
                 phonehome_interval_secs = 60 * 60 * 24
@@ -179,66 +186,60 @@ class Agent(Daemon):
                     system_stats
                     )
 
-            start_ok = True
-            send_thread = None
-            phone_thread = None
+            mk_tasks = [mk_sendevent_task, mk_phonehome_task]
+            tasks = [mk_task() for mk_task in mk_tasks]
+            task_threads = []
 
-            signal.signal(signal.SIGTERM, _sig_term_handler)
+            for task in tasks:
+                try:
+                    rtthread = RepeatingTaskThread(task)
+                    rtthread.setDaemon(True)  # don't let thread block exit
+                    rtthread.start()
+                    task_threads.append(rtthread)
+                except:
+                    main_logger.fatal(
+                        "Error starting thread for task %s" % task.get_name(),
+                        exc_info=True
+                        )
+                    all_ok = False
 
-            default_socket_timeout = 10
-            main_logger.debug(
-                "Setting default socket timeout to %d" %
-                default_socket_timeout
-                )
-            socket.setdefaulttimeout(default_socket_timeout)
-
-            try:
-                send_task = mk_sendevent_task()
-                send_thread = RepeatingTaskThread(send_task)
-                send_thread.start()
-            except:
-                start_ok = False
-                main_logger.error("Error starting send thread", exc_info=True)
-
-            try:
-                phone_task = mk_phonehome_task()
-                phone_thread = RepeatingTaskThread(phone_task)
-                phone_thread.start()
-            except:
-                start_ok = False
-                main_logger.error(
-                    "Error starting phone home thread", exc_info=True
-                    )
-
-            try:
-                if start_ok:
-                    while (not stop_signal) and \
-                            send_thread.is_alive() and \
-                            phone_thread.is_alive():
+            if all_ok:
+                try:
+                    main_logger.debug(
+                        "Main thread sleeping till we need to stop!"
+                        )
+                    while all_ok and not stop_signal:
                         time.sleep(1.0)
-            except:
-                main_logger.error("Error while sleeping", exc_info=True)
+                        for rtthread in task_threads:
+                            if not rtthread.is_alive():
+                                main_logger.fatal(
+                                    "Thread %s is not alive!" % rtthread
+                                    )
+                                all_ok = False
+                except:
+                    main_logger.fatal("Error while sleeping", exc_info=True)
+                    all_ok = False
 
-            try:
-                if phone_thread:
-                    phone_thread.stop_and_join()
-            except:
-                main_logger.error(
-                    "Error stopping phone home thread", exc_info=True
-                    )
-
-            try:
-                if send_thread:
-                    send_thread.stop_and_join()
-            except:
-                main_logger.error("Error stopping send thread", exc_info=True)
+            for rtthread in task_threads:
+                try:
+                    rtthread.stop_and_join()
+                except:
+                    main_logger.error(
+                        "Error stopping thread %s:" % rtthread, exc_info=True
+                        )
 
         except SystemExit:
-            main_logger.error('*** pdagentd exiting because of errors!')
-            sys.exit(1)
-        else:
+            all_ok = False
+        except:
+            all_ok = False
+            main_logger.error("Uncaught error:", exc_info=True)
+
+        if all_ok:
             main_logger.info('*** pdagentd exiting normally!')
             sys.exit(0)
+        else:
+            main_logger.error('*** pdagentd exiting because of fatal errors!')
+            sys.exit(1)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.

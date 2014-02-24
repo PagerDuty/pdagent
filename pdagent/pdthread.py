@@ -137,7 +137,7 @@ class RepeatingTaskThread(Thread):
         Thread.__init__(self, name=repeating_task.get_name())
         self._rtask = repeating_task
         self._stop = False
-        logger.info("RepeatingTaskThread %s created" % self.getName())
+        logger.info("RepeatingTaskThread created for %s" % self.getName())
 
     def run(self):
         next_run_time = 0
