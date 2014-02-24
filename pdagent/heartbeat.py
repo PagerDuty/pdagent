@@ -58,7 +58,7 @@ class HeartbeatTask(RepeatingTask):
             # max time is half an interval
             retry_time_limit = time.time() + (self.get_interval_secs() / 2)
             attempt_number = 0
-            heartbeat_json = self._make_heart_beat_json()
+            heartbeat_json = self._make_heartbeat_json()
             while not self.is_stop_invoked():
                 attempt_number += 1
                 try:
@@ -101,7 +101,7 @@ class HeartbeatTask(RepeatingTask):
                 exc_info=True
                 )
 
-    def _make_heart_beat_json(self):
+    def _make_heartbeat_json(self):
         return {
             "agent_id": self.agent_id
             }
@@ -110,8 +110,8 @@ class HeartbeatTask(RepeatingTask):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(HEARTBEAT_URI)
         request.add_header("Content-type", "application/json")
-        phone_home_data = json.dumps(heartbeat_json)
-        request.add_data(phone_home_data)
+        heartbeat_data = json.dumps(heartbeat_json)
+        request.add_data(heartbeat_data)
         response = self._urllib2.urlopen(request)
         return response.read()
 
@@ -120,7 +120,7 @@ class HeartbeatTask(RepeatingTask):
             result = json.loads(response_str)
         except:
             logger.warning(
-                "Error reading heart-beat response data:",
+                "Error reading heartbeat response data:",
                 exc_info=True
                 )
         else:
