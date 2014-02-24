@@ -58,13 +58,14 @@ class HeartbeatTask(RepeatingTask):
             # max time is half an interval
             retry_time_limit = time.time() + (self.get_interval_secs() / 2)
             attempt_number = 0
-            response_str = None
             heartbeat_json = self._make_heart_beat_json()
             while not self.is_stop_invoked():
                 attempt_number += 1
                 try:
                     response_str = self._heart_beat(heartbeat_json)
                     logger.debug("Heartbeat successful!")
+                    if response_str:
+                        self._process_response(response_str)
                     break
                 except HTTPError as e:
                     # retry for 5xx errors
@@ -94,9 +95,6 @@ class HeartbeatTask(RepeatingTask):
                     time.sleep(1)
                 else:
                     logger.debug("Retrying...")
-            # if successful, there may be a response body to process
-            if response_str:
-                self._process_response(response_str)
         except:
             logger.error(
                 "Error sending heartbeat (won't retry):",
