@@ -62,7 +62,7 @@ class HeartbeatTask(RepeatingTask):
             while not self.is_stop_invoked():
                 attempt_number += 1
                 try:
-                    response_str = self._heart_beat(heartbeat_json)
+                    response_str = self._heartbeat(heartbeat_json)
                     logger.debug("Heartbeat successful!")
                     if response_str:
                         self._process_response(response_str)
@@ -106,7 +106,7 @@ class HeartbeatTask(RepeatingTask):
             "agent_id": self.agent_id
             }
 
-    def _heart_beat(self, heartbeat_json):
+    def _heartbeat(self, heartbeat_json):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(HEARTBEAT_URI)
         request.add_header("Content-type", "application/json")
