@@ -36,6 +36,7 @@ from urllib2 import Request, URLError, HTTPError
 from pdagent.constants import HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
 from pdagent.thirdparty import httpswithverify
+from httplib import HTTPException
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,10 @@ class HeartbeatTask(RepeatingTask):
     def __init__(self, heartbeat_interval_secs, agent_id):
         RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self.agent_id = agent_id
-        self._urllib2 = httpswithverify  # to ease unit testing.
+        # to ease unit testing
+        self._urllib2 = httpswithverify
+        self._retry_gap_secs = RETRY_GAP_SECS
+        self._heartbeat_max_retries = HEARTBEAT_MAX_RETRIES
 
     def tick(self):
         try:
@@ -75,7 +79,7 @@ class HeartbeatTask(RepeatingTask):
                             )
                     else:
                         raise
-                except (URLError, IOError):
+                except (URLError, HTTPException):
                     # assumes 2.6 where socket.error is a sub-class of IOError
                     logger.error(
                         "Error sending heartbeat (will retry):", exc_info=True
@@ -84,12 +88,12 @@ class HeartbeatTask(RepeatingTask):
                 if time.time() > retry_time_limit:
                     logger.info("Won't retry - time limit reached")
                     break
-                if attempt_number >= HEARTBEAT_MAX_RETRIES:
+                if attempt_number >= self._heartbeat_max_retries:
                     logger.info("Won't retry - attempt count limit reached")
                     break
                 # sleep before retry
                 logger.debug("Sleeping before retry...")
-                for _ in range(RETRY_GAP_SECS):
+                for _ in range(self._retry_gap_secs):
                     if self.is_stop_invoked():
                         break
                     time.sleep(1)

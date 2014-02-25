@@ -27,10 +27,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+from httplib import HTTPException
 import json
 import unittest
+from urllib2 import URLError, HTTPError
 
 from pdagent.heartbeat import HeartbeatTask
+from pdagent.thirdparty import httpswithverify
 from pdagenttest.mockresponse import MockResponse
 from pdagenttest.mockurllib import MockUrlLib
 
@@ -80,6 +83,82 @@ class HeartbeatTest(unittest.TestCase):
         hb._urllib2.response = MockResponse(data="bad")
         hb.tick()
         # no errors here means bad response data was handled.
+
+    def test_url_connection_error(self):
+        def error(*args, **kwargs):
+            t.append('e')
+            httpswithverify.urlopen("https://localhost/error")
+        t = []
+        hb = self.new_heartbeat_task()
+        hb._urllib2.urlopen = error
+        hb.set_interval_secs(100)
+        hb._heartbeat_max_retries = 2
+        hb.tick()
+        self.assertEquals(t, ['e', 'e'])
+
+    def test_retry_vs_no_retry(self):
+        def error(*args, **kwargs):
+            t.append('e')
+            raise e
+        hb = self.new_heartbeat_task()
+        hb._urllib2.urlopen = error
+        hb._retry_gap_secs = 1
+        hb.set_interval_secs(100)
+        hb._heartbeat_max_retries = 2
+        # http non-5xx
+        t = []
+        e = HTTPError(None, 400, None, None, None)
+        hb.tick()
+        self.assertEquals(t, ['e'])
+        # http 5xx
+        t = []
+        e = HTTPError(None, 500, None, None, None)
+        hb.tick()
+        self.assertEquals(t, ['e', 'e'])
+        # urlerror
+        t = []
+        e = URLError("foo")
+        hb.tick()
+        self.assertEquals(t, ['e', 'e'])
+        # httpexception
+        t = []
+        e = HTTPException()
+        hb.tick()
+        self.assertEquals(t, ['e', 'e'])
+
+    def test_retry_limits(self):
+        def error(*args, **kwargs):
+            t.append('e')
+            raise URLError(500)
+        t = []
+        hb = self.new_heartbeat_task()
+        hb._urllib2.urlopen = error
+        hb._retry_gap_secs = 1
+        # max retries
+        hb.set_interval_secs(100)
+        hb._heartbeat_max_retries = 2
+        hb.tick()
+        self.assertEquals(t, ['e'] * 2)
+        # time limit
+        t = []
+        hb.set_interval_secs(5)
+        hb._heartbeat_max_retries = 10
+        hb.tick()
+        self.assertEquals(t, ['e'] * 3)
+
+    def test_retry_and_stop_signal(self):
+        def error(*args, **kwargs):
+            t.append('e')
+            hb.stop()
+            raise URLError(500)
+        t = []
+        hb = self.new_heartbeat_task()
+        hb._urllib2.urlopen = error
+        hb.set_interval_secs(100)
+        hb._heartbeat_max_retries = 10
+        hb._retry_gap_secs = 1
+        hb.tick()
+        self.assertEquals(t, ['e'])
 
 
 if __name__ == '__main__':
