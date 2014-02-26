@@ -91,6 +91,7 @@ agent_id_file = os.path.join(
     )
 
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
+pid = os.getpid()
 
 pd_queue = agent_config.get_queue(dequeue_enabled=True)
 
@@ -234,7 +235,7 @@ def run():
     global main_logger, agent_id, system_stats
     init_logging(log_dir)
     main_logger = logging.getLogger('main')
-    main_logger.info('*** pdagentd started')
+    main_logger.info("*** pdagentd starting! pid=%s" % pid)
 
     all_ok = True
     try:
@@ -303,10 +304,12 @@ def run():
 
     # Exit
     if all_ok:
-        main_logger.info('*** pdagentd exiting normally!')
+        main_logger.warn("*** pdagentd exiting normally! pid=%s" % pid)
         sys.exit(0)
     else:
-        main_logger.error('*** pdagentd exiting because of fatal errors!')
+        main_logger.error(
+            "*** pdagentd exiting due to fatal errors! pid=%s" % pid
+            )
         sys.exit(1)
 
 
