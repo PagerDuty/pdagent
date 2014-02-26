@@ -54,7 +54,10 @@ echo = /usr/bin/...
 mkdir -p data/usr/bin
 cp ../bin/pd-send data/usr/bin
 cp ../bin/pd-zabbix data/usr/bin
-cp ../bin/pdagentd.py data/usr/bin
+
+echo = /usr/share/pdagent/bin
+mkdir -p data/usr/share/pdagent/bin
+cp ../bin/pdagentd.py data/usr/share/pdagent/bin
 
 echo = /var/...
 mkdir -p data/var/log/pdagent

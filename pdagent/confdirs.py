@@ -34,7 +34,7 @@ import sys
 
 
 _PRODUCTION_MAIN_DIRS = [
-    "/usr/bin", "/etc/init.d",  # Linux
+    "/usr/bin", "/usr/share/pdagent/bin",  # Linux
     ]
 
 
