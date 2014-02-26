@@ -185,8 +185,8 @@ def mk_phonehome_task():
 
 
 def mk_heartbeat_task():
-    # by default, heartbeat every 24 hours
-    heartbeat_interval_secs = 60 * 60 * 24
+    # by default, heartbeat every hour
+    heartbeat_interval_secs = 60 * 60
     return HeartbeatTask(heartbeat_interval_secs, agent_id)
 
 
