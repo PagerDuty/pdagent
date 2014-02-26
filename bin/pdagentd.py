@@ -131,6 +131,7 @@ _check_dirs()
 
 
 # Import agent modules
+from pdagent.constants import AGENT_VERSION
 from pdagent.thirdparty.daemon import daemonize
 from pdagent.pdthread import RepeatingTaskThread
 from pdagent.heartbeat import HeartbeatTask
@@ -139,12 +140,13 @@ from pdagent.sendevent import SendEventTask
 
 
 # ---- The following functions run after daemonization.
-# ---- This means they must use logging only & not stdout/stderr.
+# ---- This means they must use logging & not stdout/stderr.
 
 # Non-config globals
 stop_signal = False
 main_logger = None
-
+agent_id = None
+system_stats = None
 
 def _sig_term_handler(signum, frame):
     global stop_signal
@@ -153,22 +155,50 @@ def _sig_term_handler(signum, frame):
         stop_signal = True
 
 
+def mk_sendevent_task():
+    # Send event thread config
+    send_interval_secs = main_config['send_interval_secs']
+    cleanup_interval_secs = main_config['cleanup_interval_secs']
+    cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+    return SendEventTask(
+        pd_queue,
+        send_interval_secs,
+        cleanup_interval_secs,
+        cleanup_threshold_secs
+        )
+
+
+def mk_phonehome_task():
+    # by default, phone-home daily
+    phonehome_interval_secs = 60 * 60 * 24
+    return PhoneHomeTask(
+        phonehome_interval_secs,
+        pd_queue,
+        agent_id,
+        system_stats
+        )
+
+
+def mk_heartbeat_task():
+    # by default, heartbeat every 24 hours
+    heartbeat_interval_secs = 60 * 60 * 24
+    return HeartbeatTask(heartbeat_interval_secs, agent_id)
+
+
 def run():
-    global main_logger
+    global main_logger, agent_id, system_stats
     init_logging(log_dir)
     main_logger = logging.getLogger('main')
     main_logger.info('*** pdagentd started')
 
     all_ok = True
     try:
-        from pdagent.constants import AGENT_VERSION
-
         main_logger.info('PID file: %s', pidfile)
         main_logger.info('Agent version: %s', AGENT_VERSION)
 
+        # Load/create agent id
         agent_id_file = os.path.join(
-            agent_config.get_conf_dirs()['data_dir'],
-            "agent_id.txt"
+            agent_config.get_conf_dirs()['data_dir'], "agent_id.txt"
             )
         try:
             agent_id = get_or_make_agent_id(agent_id_file)
@@ -187,23 +217,22 @@ def run():
             raise SystemExit
         main_logger.info('Agent ID: ' + agent_id)
 
-        main_logger.debug('Collecting basic system stats')
-
         # Get some basic system stats to post back in phone-home
+        main_logger.debug('Collecting basic system stats')
         system_stats = {
             'platform_name': sys.platform,
             'python_version': platform.python_version(),
             'host_name': socket.getfqdn()  # to show in stats-based alerts.
             }
-
         if sys.platform == 'linux2':
             system_stats['platform_version'] = platform.dist()
-
         main_logger.info('System: ' + str(system_stats))
 
+        # Configure SIGTERM handler
         main_logger.debug("Setting signal handler for SIGTERM")
         signal.signal(signal.SIGTERM, _sig_term_handler)
 
+        # Set default socket timeout
         default_socket_timeout = 10
         main_logger.debug(
             "Setting default socket timeout to %d" %
@@ -211,42 +240,16 @@ def run():
             )
         socket.setdefaulttimeout(default_socket_timeout)
 
-        def mk_sendevent_task():
-            # Send event thread config
-            send_interval_secs = main_config['send_interval_secs']
-            cleanup_interval_secs = main_config['cleanup_interval_secs']
-            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
-            return SendEventTask(
-                pd_queue,
-                send_interval_secs,
-                cleanup_interval_secs,
-                cleanup_threshold_secs
-                )
-
-        def mk_phonehome_task():
-            # by default, phone-home daily
-            phonehome_interval_secs = 60 * 60 * 24
-            return PhoneHomeTask(
-                phonehome_interval_secs,
-                pd_queue,
-                agent_id,
-                system_stats
-                )
-
-        def mk_heartbeat_task():
-            # by default, heartbeat every 24 hours
-            heartbeat_interval_secs = 60 * 60 * 24
-            return HeartbeatTask(heartbeat_interval_secs, agent_id)
-
+        # Assemble agent tasks
         mk_tasks = [
             mk_sendevent_task,
             mk_phonehome_task,
             mk_heartbeat_task,
             ]
-
         tasks = [mk_task() for mk_task in mk_tasks]
-        task_threads = []
 
+        # Create task runner threads
+        task_threads = []
         for task in tasks:
             try:
                 rtthread = RepeatingTaskThread(task)
@@ -260,6 +263,7 @@ def run():
                     )
                 all_ok = False
 
+        # Sleep till it's time to exit
         if all_ok:
             try:
                 main_logger.debug(
@@ -277,6 +281,7 @@ def run():
                 main_logger.fatal("Error while sleeping", exc_info=True)
                 all_ok = False
 
+        # Stop task runner threads
         for rtthread in task_threads:
             try:
                 rtthread.stop_and_join()
@@ -291,6 +296,7 @@ def run():
         all_ok = False
         main_logger.error("Uncaught error:", exc_info=True)
 
+    # Exit
     if all_ok:
         main_logger.info('*** pdagentd exiting normally!')
         sys.exit(0)
@@ -341,6 +347,7 @@ def init_logging(log_dir):
     root_logger.addHandler(handler)
 
 
-# Daemonize and run agent
+# ---- Daemonize and run agent
+
 daemonize(pidfile)
 run()
