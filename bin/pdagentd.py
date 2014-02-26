@@ -151,6 +151,7 @@ stop_signal = False
 main_logger = None
 agent_id = None
 system_stats = None
+task_threads = None
 
 
 def _sig_term_handler(signum, frame):
@@ -190,6 +191,45 @@ def mk_heartbeat_task():
     return HeartbeatTask(heartbeat_interval_secs, agent_id)
 
 
+def make_agent_tasks():
+    mk_tasks = [
+        mk_sendevent_task,
+        mk_phonehome_task,
+        mk_heartbeat_task,
+        ]
+    return [mk_task() for mk_task in mk_tasks]
+
+
+def create_and_start_task_threads(tasks):
+    global task_threads
+    task_threads = []
+    for task in tasks:
+        try:
+            rtthread = RepeatingTaskThread(task)
+            rtthread.setDaemon(True)  # don't let thread block exit
+            rtthread.start()
+            task_threads.append(rtthread)
+        except:
+            main_logger.fatal(
+                "Error starting thread for task %s" % task.get_name(),
+                exc_info=True
+                )
+            return False
+    return True
+
+
+def stop_task_threads():
+    global task_threads
+    for rtthread in task_threads:
+        try:
+            rtthread.stop_and_join()
+        except:
+            main_logger.error(
+                "Error stopping thread %s:" % rtthread, exc_info=True
+                )
+    task_threads = None
+
+
 def run():
     global main_logger, agent_id, system_stats
     init_logging(log_dir)
@@ -227,28 +267,9 @@ def run():
             )
         socket.setdefaulttimeout(default_socket_timeout)
 
-        # Assemble agent tasks
-        mk_tasks = [
-            mk_sendevent_task,
-            mk_phonehome_task,
-            mk_heartbeat_task,
-            ]
-        tasks = [mk_task() for mk_task in mk_tasks]
-
-        # Create task runner threads
-        task_threads = []
-        for task in tasks:
-            try:
-                rtthread = RepeatingTaskThread(task)
-                rtthread.setDaemon(True)  # don't let thread block exit
-                rtthread.start()
-                task_threads.append(rtthread)
-            except:
-                main_logger.fatal(
-                    "Error starting thread for task %s" % task.get_name(),
-                    exc_info=True
-                    )
-                all_ok = False
+        # Create tasks and task runner threads
+        tasks = make_agent_tasks()
+        all_ok = create_and_start_task_threads(tasks)
 
         # Sleep till it's time to exit
         if all_ok:
@@ -269,13 +290,7 @@ def run():
                 all_ok = False
 
         # Stop task runner threads
-        for rtthread in task_threads:
-            try:
-                rtthread.stop_and_join()
-            except:
-                main_logger.error(
-                    "Error stopping thread %s:" % rtthread, exc_info=True
-                    )
+        stop_task_threads()
 
     except SystemExit:
         all_ok = False
