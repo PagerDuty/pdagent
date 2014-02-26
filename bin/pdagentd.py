@@ -43,6 +43,13 @@ import time
 import uuid
 
 
+# Check we're running as main
+if __name__ != '__main__':
+    raise SystemExit(
+        "This module must be run as main.\n" +
+        "Agent will now quit"
+        )
+
 # Check Python version.
 if sys.version_info[0:2] not in ((2, 6), (2, 7)):
     raise SystemExit(
@@ -57,6 +64,7 @@ if os.geteuid() == 0:
         "Agent will now quit"
         )
 
+# Load config
 try:
     import pdagent.config
 except ImportError:
@@ -67,20 +75,24 @@ except ImportError:
     import pdagent.config
 
 
-# Custom modules
-from pdagent.thirdparty.daemon import daemonize
-from pdagent.pdthread import RepeatingTaskThread
-from pdagent.heartbeat import HeartbeatTask
-from pdagent.phonehome import PhoneHomeTask
-from pdagent.sendevent import SendEventTask
-
-
-# Config handling
+# Process config
 agent_config = pdagent.config.load_agent_config()
 main_config = agent_config.get_main_config()
 
+conf_dirs = agent_config.get_conf_dirs()
+pidfile_dir = conf_dirs['pidfile_dir']
+log_dir = conf_dirs['log_dir']
+data_dir = conf_dirs['data_dir']
+outqueue_dir = conf_dirs["outqueue_dir"]
+db_dir = conf_dirs["db_dir"]
 
-def _ensureWritableDirectories(make_missing_dir, *directories):
+pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
+
+pd_queue = agent_config.get_queue(dequeue_enabled=True)
+
+
+# Check directories
+def _ensure_writable_directories(make_missing_dir, *directories):
     problem_directories = []
     for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
@@ -94,7 +106,44 @@ def _ensureWritableDirectories(make_missing_dir, *directories):
     return problem_directories
 
 
+def _check_dirs():
+    problem_directories = _ensure_writable_directories(
+        agent_config.is_dev_layout(),  # create directories in development
+        pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
+        )
+    if problem_directories:
+        messages = [
+            "Directory %s: is not writable" % d
+            for d in problem_directories
+            ]
+        messages.append('Agent may be running as the wrong user.')
+        messages.append('Use: sudo service pdagent <command>')
+        messages.append('Agent will now quit')
+        raise SystemExit("\n".join(messages))
+
+    if not os.access(pidfile_dir, os.W_OK):
+        raise SystemExit(
+            'No write-access to PID file directory ' + pidfile_dir + '\n' +
+            'Agent will now quit'
+            )
+
+_check_dirs()
+
+
+# Import agent modules
+from pdagent.thirdparty.daemon import daemonize
+from pdagent.pdthread import RepeatingTaskThread
+from pdagent.heartbeat import HeartbeatTask
+from pdagent.phonehome import PhoneHomeTask
+from pdagent.sendevent import SendEventTask
+
+
+# ---- The following functions run after daemonization.
+# ---- This means they must use logging only & not stdout/stderr.
+
+# Non-config globals
 stop_signal = False
+main_logger = None
 
 
 def _sig_term_handler(signum, frame):
@@ -104,153 +153,150 @@ def _sig_term_handler(signum, frame):
         stop_signal = True
 
 
-# Override the generic daemon class to run our checks
-class Agent:
+def run():
+    global main_logger
+    init_logging(log_dir)
+    main_logger = logging.getLogger('main')
+    main_logger.info('*** pdagentd started')
 
-    def run(self, pidfile):
-        global log_dir, main_logger
-        init_logging(log_dir)
-        main_logger = logging.getLogger('main')
-        main_logger.info('*** pdagentd started')
+    all_ok = True
+    try:
+        from pdagent.constants import AGENT_VERSION
 
-        all_ok = True
+        main_logger.info('PID file: %s', pidfile)
+        main_logger.info('Agent version: %s', AGENT_VERSION)
+
+        agent_id_file = os.path.join(
+            agent_config.get_conf_dirs()['data_dir'],
+            "agent_id.txt"
+            )
         try:
-            from pdagent.constants import AGENT_VERSION
-
-            main_logger.info('PID file: %s', pidfile)
-            main_logger.info('Agent version: %s', AGENT_VERSION)
-
-            agent_id_file = os.path.join(
-                agent_config.get_conf_dirs()['data_dir'],
-                "agent_id.txt"
+            agent_id = get_or_make_agent_id(agent_id_file)
+        except IOError:
+            main_logger.fatal(
+                'Could not read from / write to agent ID file %s' %
+                agent_id_file,
+                exc_info=True
                 )
+            raise SystemExit
+        except ValueError:
+            main_logger.fatal(
+                'Invalid value in agent ID file %s' % agent_id_file,
+                exc_info=True
+                )
+            raise SystemExit
+        main_logger.info('Agent ID: ' + agent_id)
+
+        main_logger.debug('Collecting basic system stats')
+
+        # Get some basic system stats to post back in phone-home
+        system_stats = {
+            'platform_name': sys.platform,
+            'python_version': platform.python_version(),
+            'host_name': socket.getfqdn()  # to show in stats-based alerts.
+            }
+
+        if sys.platform == 'linux2':
+            system_stats['platform_version'] = platform.dist()
+
+        main_logger.info('System: ' + str(system_stats))
+
+        main_logger.debug("Setting signal handler for SIGTERM")
+        signal.signal(signal.SIGTERM, _sig_term_handler)
+
+        default_socket_timeout = 10
+        main_logger.debug(
+            "Setting default socket timeout to %d" %
+            default_socket_timeout
+            )
+        socket.setdefaulttimeout(default_socket_timeout)
+
+        def mk_sendevent_task():
+            # Send event thread config
+            send_interval_secs = main_config['send_interval_secs']
+            cleanup_interval_secs = main_config['cleanup_interval_secs']
+            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+            return SendEventTask(
+                pd_queue,
+                send_interval_secs,
+                cleanup_interval_secs,
+                cleanup_threshold_secs
+                )
+
+        def mk_phonehome_task():
+            # by default, phone-home daily
+            phonehome_interval_secs = 60 * 60 * 24
+            return PhoneHomeTask(
+                phonehome_interval_secs,
+                pd_queue,
+                agent_id,
+                system_stats
+                )
+
+        def mk_heartbeat_task():
+            # by default, heartbeat every 24 hours
+            heartbeat_interval_secs = 60 * 60 * 24
+            return HeartbeatTask(heartbeat_interval_secs, agent_id)
+
+        mk_tasks = [
+            mk_sendevent_task,
+            mk_phonehome_task,
+            mk_heartbeat_task,
+            ]
+
+        tasks = [mk_task() for mk_task in mk_tasks]
+        task_threads = []
+
+        for task in tasks:
             try:
-                agent_id = get_or_make_agent_id(agent_id_file)
-            except IOError:
+                rtthread = RepeatingTaskThread(task)
+                rtthread.setDaemon(True)  # don't let thread block exit
+                rtthread.start()
+                task_threads.append(rtthread)
+            except:
                 main_logger.fatal(
-                    'Could not read from / write to agent ID file %s' %
-                    agent_id_file,
+                    "Error starting thread for task %s" % task.get_name(),
                     exc_info=True
                     )
-                raise SystemExit
-            except ValueError:
-                main_logger.fatal(
-                    'Invalid value in agent ID file %s' % agent_id_file,
-                    exc_info=True
-                    )
-                raise SystemExit
-            main_logger.info('Agent ID: ' + agent_id)
-
-            main_logger.debug('Collecting basic system stats')
-
-            # Get some basic system stats to post back in phone-home
-            system_stats = {
-                'platform_name': sys.platform,
-                'python_version': platform.python_version(),
-                'host_name': socket.getfqdn()  # to show in stats-based alerts.
-                }
-
-            if sys.platform == 'linux2':
-                system_stats['platform_version'] = platform.dist()
-
-            main_logger.info('System: ' + str(system_stats))
-
-            main_logger.debug("Setting signal handler for SIGTERM")
-            signal.signal(signal.SIGTERM, _sig_term_handler)
-
-            default_socket_timeout = 10
-            main_logger.debug(
-                "Setting default socket timeout to %d" %
-                default_socket_timeout
-                )
-            socket.setdefaulttimeout(default_socket_timeout)
-
-            def mk_sendevent_task():
-                # Send event thread config
-                send_interval_secs = main_config['send_interval_secs']
-                cleanup_interval_secs = main_config['cleanup_interval_secs']
-                cleanup_threshold_secs = main_config['cleanup_threshold_secs']
-                return SendEventTask(
-                    pd_queue,
-                    send_interval_secs,
-                    cleanup_interval_secs,
-                    cleanup_threshold_secs
-                    )
-
-            def mk_phonehome_task():
-                # by default, phone-home daily
-                phonehome_interval_secs = 60 * 60 * 24
-                return PhoneHomeTask(
-                    phonehome_interval_secs,
-                    pd_queue,
-                    agent_id,
-                    system_stats
-                    )
-
-            def mk_heartbeat_task():
-                # by default, heartbeat every 24 hours
-                heartbeat_interval_secs = 60 * 60 * 24
-                return HeartbeatTask(heartbeat_interval_secs, agent_id)
-
-            mk_tasks = [
-                mk_sendevent_task,
-                mk_phonehome_task,
-                mk_heartbeat_task,
-                ]
-
-            tasks = [mk_task() for mk_task in mk_tasks]
-            task_threads = []
-
-            for task in tasks:
-                try:
-                    rtthread = RepeatingTaskThread(task)
-                    rtthread.setDaemon(True)  # don't let thread block exit
-                    rtthread.start()
-                    task_threads.append(rtthread)
-                except:
-                    main_logger.fatal(
-                        "Error starting thread for task %s" % task.get_name(),
-                        exc_info=True
-                        )
-                    all_ok = False
-
-            if all_ok:
-                try:
-                    main_logger.debug(
-                        "Main thread sleeping till we need to stop!"
-                        )
-                    while all_ok and not stop_signal:
-                        time.sleep(1.0)
-                        for rtthread in task_threads:
-                            if not rtthread.is_alive():
-                                main_logger.fatal(
-                                    "Thread %s is not alive!" % rtthread
-                                    )
-                                all_ok = False
-                except:
-                    main_logger.fatal("Error while sleeping", exc_info=True)
-                    all_ok = False
-
-            for rtthread in task_threads:
-                try:
-                    rtthread.stop_and_join()
-                except:
-                    main_logger.error(
-                        "Error stopping thread %s:" % rtthread, exc_info=True
-                        )
-
-        except SystemExit:
-            all_ok = False
-        except:
-            all_ok = False
-            main_logger.error("Uncaught error:", exc_info=True)
+                all_ok = False
 
         if all_ok:
-            main_logger.info('*** pdagentd exiting normally!')
-            sys.exit(0)
-        else:
-            main_logger.error('*** pdagentd exiting because of fatal errors!')
-            sys.exit(1)
+            try:
+                main_logger.debug(
+                    "Main thread sleeping till we need to stop!"
+                    )
+                while all_ok and not stop_signal:
+                    time.sleep(1.0)
+                    for rtthread in task_threads:
+                        if not rtthread.is_alive():
+                            main_logger.fatal(
+                                "Thread %s is not alive!" % rtthread
+                                )
+                            all_ok = False
+            except:
+                main_logger.fatal("Error while sleeping", exc_info=True)
+                all_ok = False
+
+        for rtthread in task_threads:
+            try:
+                rtthread.stop_and_join()
+            except:
+                main_logger.error(
+                    "Error stopping thread %s:" % rtthread, exc_info=True
+                    )
+
+    except SystemExit:
+        all_ok = False
+    except:
+        all_ok = False
+        main_logger.error("Uncaught error:", exc_info=True)
+
+    if all_ok:
+        main_logger.info('*** pdagentd exiting normally!')
+        sys.exit(0)
+    else:
+        main_logger.error('*** pdagentd exiting because of fatal errors!')
+        sys.exit(1)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
@@ -295,44 +341,6 @@ def init_logging(log_dir):
     root_logger.addHandler(handler)
 
 
-# Control of daemon
-if __name__ == '__main__':
-
-    conf_dirs = agent_config.get_conf_dirs()
-    pidfile_dir = conf_dirs['pidfile_dir']
-    log_dir = conf_dirs['log_dir']
-    data_dir = conf_dirs['data_dir']
-    outqueue_dir = conf_dirs["outqueue_dir"]
-    db_dir = conf_dirs["db_dir"]
-
-    problem_directories = _ensureWritableDirectories(
-        agent_config.is_dev_layout(),  # create directories in development
-        pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
-        )
-    if problem_directories:
-        messages = [
-            "Directory %s: is not writable" % d
-            for d in problem_directories
-            ]
-        messages.append('Agent may be running as the wrong user.')
-        messages.append('Use: sudo service pdagent <command>')
-        messages.append('Agent will now quit')
-        raise SystemExit("\n".join(messages))
-
-    pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
-
-    if not os.access(pidfile_dir, os.W_OK):
-        raise SystemExit(
-            'No write-access to PID file directory ' + pidfile_dir + '\n' +
-            'Agent will now quit'
-            )
-
-    # queue to work on.
-    pd_queue = agent_config.get_queue(dequeue_enabled=True)
-
-    # Daemonize and run agent
-    daemonize(pidfile)
-    agent = Agent()
-    agent.run(pidfile)
-
-    sys.exit(0)
+# Daemonize and run agent
+daemonize(pidfile)
+run()
