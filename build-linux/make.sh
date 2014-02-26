@@ -65,8 +65,8 @@ mkdir -p data/var/lib/pdagent/db
 mkdir -p data/var/lib/pdagent/outqueue
 
 echo = /etc/...
-mkdir -p data/etc/pdagent/
-cp ../conf/config.cfg data/etc/pdagent/
+mkdir -p data/etc/
+cp ../conf/pdagent.conf data/etc/
 mkdir -p data/etc/init.d
 cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
@@ -108,7 +108,7 @@ fpm -s dir \
     $_FPM_DEPENDS \
     --$1-user root \
     --$1-group root \
-    --config-files /etc/pdagent/config.cfg \
+    --config-files /etc/pdagent.conf \
     --post-install ../$1/postinst \
     --pre-uninstall ../$1/prerm \
     -C ../data \

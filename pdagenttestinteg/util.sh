@@ -30,7 +30,7 @@
 AGENT_VERSION=0.6
 AGENT_USER=pdagent
 BIN_PD_SEND=pd-send
-CONFIG_FILE=/etc/pdagent/config.cfg
+CONFIG_FILE=/etc/pdagent.conf
 DATA_DIR=/var/lib/pdagent
 OUTQUEUE_DIR=$DATA_DIR/outqueue
 AGENT_SVC_NAME=pdagent

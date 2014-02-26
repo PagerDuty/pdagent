@@ -44,7 +44,7 @@ def _linux_production_dirs():
         "log_dir": "/var/log/pdagent",
         "data_dir": "/var/lib/pdagent",
         }
-    return "/etc/pdagent", d
+    return "/etc", d
 
 
 def _dev_project_dirs(dev_proj_dir):
@@ -80,6 +80,6 @@ def getconfdirs(main_dir, dev_proj_dir):
         os.path.join(default_dirs["data_dir"], "outqueue")
     default_dirs["db_dir"] = \
         os.path.join(default_dirs["data_dir"], "db")
-    conf_file = os.path.join(conf_dir, "config.cfg")
+    conf_file = os.path.join(conf_dir, "pdagent.conf")
 
     return conf_file, default_dirs
