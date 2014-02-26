@@ -68,7 +68,7 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 5, False)
         try:
             time.sleep(0.1)
-            t.stop()
+            t.stop_async()
             time.sleep(0.1)
             self.assertTrue(t.is_alive())
             time.sleep(1.0)
