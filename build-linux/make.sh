@@ -52,7 +52,9 @@ mkdir data target
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
-cp ../bin/pd* data/usr/bin
+cp ../bin/pd-send data/usr/bin
+cp ../bin/pd-zabbix data/usr/bin
+cp ../bin/pdagentd.py data/usr/bin
 
 echo = /var/...
 mkdir -p data/var/log/pdagent
