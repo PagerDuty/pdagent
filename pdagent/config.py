@@ -87,7 +87,7 @@ _valid_log_levels = \
 
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
-    "send_interval_secs": 60,
+    "send_interval_secs": 10,
     "cleanup_interval_secs": 60 * 60 * 3,  # 3 hours
     "cleanup_threshold_secs": 60 * 60 * 24 * 7,  # 1 week
     "event_size_max_bytes": 4 * 1024 * 1024,  # 4MB
