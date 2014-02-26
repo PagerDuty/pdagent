@@ -1,30 +1,19 @@
 "Unix process daemonization"
 
 #
-# Author:    www.boxedice.com
-#
-# http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+# Copyright (c) 2013-2014, PagerDuty, Inc. and other authors
 #
 # License:   http://creativecommons.org/licenses/by-sa/3.0/
 #
 # Changes:
+# - See https://github.com/PagerDuty/agent/ for changes by PagerDuty, Inc.
+# - Based on https://github.com/serverdensity/sd-agent/blob/master/daemon.py
 #
-#    2013-2014 PagerDuty, Inc.
-#        - See history at https://github.com/PagerDuty/agent/
-#        - Based on the file at:
-#            https://github.com/serverdensity/sd-agent/blob/master/daemon.py
+# Original based on the article at:
+#   http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 #
-# Previous Changes:
-#
-#    23rd Jan 2009 (David Mytton <david@boxedice.com>)
-#        - Replaced hard coded '/dev/null in __init__ with os.devnull
-#        - Added OS check to conditionally remove code that doesn't work on OS X
-#        - Added output to console on completion
-#        - Tidied up formatting
-#    11th Mar 2009 (David Mytton <david@boxedice.com>)
-#        - Fixed problem with daemon exiting on Python 2.4 (before SystemExit was part of the Exception base)
-#    13th Aug 2010 (David Mytton <david@boxedice.com>
-#        - Fixed unhandled exception if PID file is empty
+# See Stevens' "Advanced Programming in the UNIX Environment" (ISBN 0201563177)
+# for details about double-forking.
 #
 
 import atexit
@@ -43,10 +32,6 @@ def daemonize(
     SystemExit (directly or via sys.exit) with an appropriate exit status.
 
     On success, it will return normally in the daemonized grand-child process.
-
-    See Stevens' "Advanced Programming in the UNIX Environment"
-    for details (ISBN 0201563177)
-    http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
     """
     # Check for a pidfile to see if the daemon already runs
     try:
