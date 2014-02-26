@@ -76,6 +76,8 @@ except ImportError:
 
 
 # Process config
+# Be careful about what we do here! The daemonization double-fork has not
+# happened yet! For example, os.getpid() cached here will be "wrong" later!
 agent_config = pdagent.config.load_agent_config()
 main_config = agent_config.get_main_config()
 
@@ -91,7 +93,6 @@ agent_id_file = os.path.join(
     )
 
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
-pid = os.getpid()
 
 pd_queue = agent_config.get_queue(dequeue_enabled=True)
 
@@ -233,6 +234,7 @@ def stop_task_threads():
 
 def run():
     global main_logger, agent_id, system_stats
+    pid = os.getpid()
     init_logging(log_dir)
     main_logger = logging.getLogger('main')
     main_logger.info("*** pdagentd starting! pid=%s" % pid)
