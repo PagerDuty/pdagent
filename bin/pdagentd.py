@@ -245,6 +245,9 @@ def run():
         agent_id = get_or_make_agent_id()
         main_logger.info('Agent ID: ' + agent_id)
 
+        # Dump main config
+        main_logger.debug("Main Config: %s" % main_config)
+
         # Get some basic system stats to post back in phone-home
         main_logger.debug('Collecting basic system stats')
         system_stats = {
