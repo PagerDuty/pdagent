@@ -148,8 +148,8 @@ class HeartbeatTest(unittest.TestCase):
 
     def test_retry_and_stop_signal(self):
         def error(*args, **kwargs):
+            hb.stop_async()
             t.append('e')
-            hb.stop()
             raise URLError(500)
         t = []
         hb = self.new_heartbeat_task()
