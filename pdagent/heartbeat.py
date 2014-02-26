@@ -93,7 +93,7 @@ class HeartbeatTask(RepeatingTask):
                     break
                 # sleep before retry
                 logger.debug("Sleeping before retry...")
-                for _ in range(self._retry_gap_secs):
+                for _ in xrange(self._retry_gap_secs):
                     if self.is_stop_invoked():
                         break
                     time.sleep(1)
