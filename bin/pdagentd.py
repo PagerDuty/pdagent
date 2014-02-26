@@ -86,6 +86,10 @@ data_dir = conf_dirs['data_dir']
 outqueue_dir = conf_dirs["outqueue_dir"]
 db_dir = conf_dirs["db_dir"]
 
+agent_id_file = os.path.join(
+    agent_config.get_conf_dirs()['data_dir'], "agent_id.txt"
+    )
+
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
 pd_queue = agent_config.get_queue(dequeue_enabled=True)
@@ -148,6 +152,7 @@ main_logger = None
 agent_id = None
 system_stats = None
 
+
 def _sig_term_handler(signum, frame):
     global stop_signal
     if not stop_signal:
@@ -197,24 +202,7 @@ def run():
         main_logger.info('Agent version: %s', AGENT_VERSION)
 
         # Load/create agent id
-        agent_id_file = os.path.join(
-            agent_config.get_conf_dirs()['data_dir'], "agent_id.txt"
-            )
-        try:
-            agent_id = get_or_make_agent_id(agent_id_file)
-        except IOError:
-            main_logger.fatal(
-                'Could not read from / write to agent ID file %s' %
-                agent_id_file,
-                exc_info=True
-                )
-            raise SystemExit
-        except ValueError:
-            main_logger.fatal(
-                'Invalid value in agent ID file %s' % agent_id_file,
-                exc_info=True
-                )
-            raise SystemExit
+        agent_id = get_or_make_agent_id()
         main_logger.info('Agent ID: ' + agent_id)
 
         # Get some basic system stats to post back in phone-home
@@ -305,29 +293,42 @@ def run():
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
-def get_or_make_agent_id(agent_id_file):
-    fd = None
+def get_or_make_agent_id():
+    try:
+        # try to load existing agent id
+        if os.path.exists(agent_id_file):
+            fd = None
+            try:
+                fd = open(agent_id_file, "r")
+                return str(uuid.UUID(fd.readline().strip()))
+            finally:
+                if fd:
+                    fd.close()
 
-    if os.path.exists(agent_id_file):
+        # no agent id persisted yet.
+        main_logger.info('Generating new agent ID')
+        agent_id = str(uuid.uuid4())
+        fd = None
         try:
-            fd = open(agent_id_file, "r")
-            return str(uuid.UUID(fd.readline().strip()))
+            fd = open(agent_id_file, "w")
+            fd.write(agent_id)
+            fd.write('\n')
         finally:
             if fd:
                 fd.close()
-
-    # no agent id persisted yet.
-    main_logger.info('Generating new agent ID')
-    agent_id = str(uuid.uuid4())
-    fd = None
-    try:
-        fd = open(agent_id_file, "w")
-        fd.write(agent_id)
-        fd.write('\n')
-    finally:
-        if fd:
-            fd.close()
-    return agent_id
+        return agent_id
+    except IOError:
+        main_logger.fatal(
+            'Could not read from / write to agent ID file %s' % agent_id_file,
+            exc_info=True
+            )
+        raise SystemExit
+    except ValueError:
+        main_logger.fatal(
+            'Invalid value in agent ID file %s' % agent_id_file,
+            exc_info=True
+            )
+        raise SystemExit
 
 
 def init_logging(log_dir):
