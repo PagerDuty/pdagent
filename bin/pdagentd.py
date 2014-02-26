@@ -235,8 +235,7 @@ def run():
         # Set default socket timeout
         default_socket_timeout = 10
         main_logger.debug(
-            "Setting default socket timeout to %d" %
-            default_socket_timeout
+            "Setting default socket timeout to %d" % default_socket_timeout
             )
         socket.setdefaulttimeout(default_socket_timeout)
 
