@@ -161,7 +161,7 @@ def _sig_term_handler(signum, frame):
         stop_signal = True
 
 
-def mk_sendevent_task():
+def make_sendevent_task():
     # Send event thread config
     send_interval_secs = main_config['send_interval_secs']
     cleanup_interval_secs = main_config['cleanup_interval_secs']
@@ -174,7 +174,7 @@ def mk_sendevent_task():
         )
 
 
-def mk_phonehome_task():
+def make_phonehome_task():
     # by default, phone-home daily
     phonehome_interval_secs = 60 * 60 * 24
     return PhoneHomeTask(
@@ -185,7 +185,7 @@ def mk_phonehome_task():
         )
 
 
-def mk_heartbeat_task():
+def make_heartbeat_task():
     # by default, heartbeat every hour
     heartbeat_interval_secs = 60 * 60
     return HeartbeatTask(heartbeat_interval_secs, agent_id)
@@ -193,9 +193,9 @@ def mk_heartbeat_task():
 
 def make_agent_tasks():
     mk_tasks = [
-        mk_sendevent_task,
-        mk_phonehome_task,
-        mk_heartbeat_task,
+        make_sendevent_task,
+        make_phonehome_task,
+        make_heartbeat_task,
         ]
     return [mk_task() for mk_task in mk_tasks]
 
@@ -347,10 +347,10 @@ def get_or_make_agent_id():
 
 
 def init_logging(log_dir):
-    logFile = os.path.join(log_dir, 'pdagentd.log')
+    log_file = os.path.join(log_dir, 'pdagentd.log')
     # 10MB files
     handler = logging.handlers.RotatingFileHandler(
-        logFile, maxBytes=10485760, backupCount=5
+        log_file, maxBytes=10485760, backupCount=5
         )
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)-7s %(threadName)-20s %(name)-20s %(message)s"
