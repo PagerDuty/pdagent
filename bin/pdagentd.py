@@ -68,7 +68,7 @@ except ImportError:
 
 
 # Custom modules
-from pdagent.thirdparty.daemon import Daemon
+from pdagent.thirdparty.daemon import daemonize
 from pdagent.pdthread import RepeatingTaskThread
 from pdagent.heartbeat import HeartbeatTask
 from pdagent.phonehome import PhoneHomeTask
@@ -105,9 +105,9 @@ def _sig_term_handler(signum, frame):
 
 
 # Override the generic daemon class to run our checks
-class Agent(Daemon):
+class Agent:
 
-    def run(self):
+    def run(self, pidfile):
         global log_dir, main_logger
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
@@ -117,7 +117,7 @@ class Agent(Daemon):
         try:
             from pdagent.constants import AGENT_VERSION
 
-            main_logger.info('PID file: %s', self.pidfile)
+            main_logger.info('PID file: %s', pidfile)
             main_logger.info('Agent version: %s', AGENT_VERSION)
 
             agent_id_file = os.path.join(
@@ -330,8 +330,9 @@ if __name__ == '__main__':
     # queue to work on.
     pd_queue = agent_config.get_queue(dequeue_enabled=True)
 
-    # Daemon instance from agent class
-    daemon = Agent(pidfile)
-    daemon.start()
+    # Daemonize and run agent
+    daemonize(pidfile)
+    agent = Agent()
+    agent.run(pidfile)
 
     sys.exit(0)
