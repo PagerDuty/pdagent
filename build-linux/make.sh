@@ -53,7 +53,6 @@ mkdir data target
 echo = /usr/bin/...
 mkdir -p data/usr/bin
 cp ../bin/pd-send data/usr/bin
-cp ../bin/pd-zabbix data/usr/bin
 
 echo = /usr/share/pdagent/bin
 mkdir -p data/usr/share/pdagent/bin

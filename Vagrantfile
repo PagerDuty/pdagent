@@ -19,9 +19,6 @@ vms = {
     "agent-minimal-centos65"    => _bento_centos65,
     "agent-minimal-ubuntu1004"  => _bento_ubuntu1004,
     "agent-minimal-ubuntu1204"  => _bento_ubuntu1204,
-    "agent-zabbix-centos65"     => _bento_centos65,
-    "agent-zabbix-ubuntu1004"   => _bento_ubuntu1004,
-    "agent-zabbix-ubuntu1204"   => _bento_ubuntu1204,
 }
 
 
@@ -36,64 +33,6 @@ Vagrant.configure("2") do |conf_outer|
 
             # Public/bridged network so VM can install packages from the internet
             config.vm.network :public_network, :bridge => "en0: Wi-Fi (AirPort)"
-
-            if name.start_with? "agent-zabbix-"
-
-                # more mem for zabbix & mysql
-                config.vm.provider :virtualbox do |vbox|
-                    vbox.customize ["modifyvm", :id, "--memory", 1024]
-                end
-
-                # vagrant-omnibus will install chef
-                config.omnibus.chef_version = :latest
-
-                server_ip = "127.0.0.1"
-
-                config.vm.provision :chef_solo do |chef|
-                    chef.json = {
-                      :mysql => {
-                        :server_root_password => 'rootpass',
-                        :server_debian_password => 'debpass',
-                        :server_repl_password => 'replpass'
-                      },
-                      'postgresql' => {
-                        'password' => {
-                          'postgres' => 'rootpass'
-                        }
-                      },
-                      'zabbix' => {
-                        'agent' => {
-                          'servers' => [server_ip],
-                          'servers_active' => [server_ip]
-                        },
-                        'web' => {
-                          'install_method' => 'apache',
-                          'fqdn' => server_ip
-                        },
-                        'server' => {
-                          'install' => true,
-                          'ipaddress' => server_ip
-                        },
-                        'database' => {
-                          #'dbport' => '5432',
-                          #'install_method' => 'postgres',
-                          'dbpassword' => 'password123'
-                        }
-                      }
-                    }
-
-                    chef.add_recipe "database::mysql"
-                    chef.add_recipe "mysql::server"
-                    chef.add_recipe "zabbix"
-                    chef.add_recipe "zabbix::database"
-                    chef.add_recipe "zabbix::server"
-                    chef.add_recipe "zabbix::web"
-                    #chef.add_recipe "zabbix::agent_registration"
-
-                    #chef.log_level = :debug
-                end
-
-            end # zabbix
 
         end # conf_outer.vm.define
 
