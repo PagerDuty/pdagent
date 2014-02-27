@@ -68,7 +68,7 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 5, False)
         try:
             time.sleep(0.1)
-            t.stop()
+            t.stop_async()
             time.sleep(0.1)
             self.assertTrue(t.is_alive())
             time.sleep(1.0)
@@ -105,6 +105,24 @@ class RepeatingTaskThreadTest(unittest.TestCase):
             self.assertEquals(trace, [42, 42])
             time.sleep(1.0)
             self.assertEquals(trace, [42, 42, 42])
+        finally:
+            t.stop_and_join()
+
+    def test_strict_first_run(self):
+        trace = []
+
+        def f():
+            trace.append(42)
+            time.sleep(1.0)
+
+        t = _start_repeating_thread(f, 2, True)
+        try:
+            time.sleep(0.1)
+            self.assertEquals(trace, [42])
+            time.sleep(1.0)
+            self.assertEquals(trace, [42])
+            time.sleep(1.0)
+            self.assertEquals(trace, [42, 42])
         finally:
             t.stop_and_join()
 

@@ -80,7 +80,7 @@ class PhoneHomeTest(unittest.TestCase):
         ph = self.new_phone_home_task()
         ph._urllib2.response = MockResponse(
             data=json.dumps({
-                "next_checkin_interval_seconds": RESPONSE_FREQUENCY_SEC
+                "phonehome_interval_secs": RESPONSE_FREQUENCY_SEC
                 })
             )
         ph.tick()

@@ -49,3 +49,6 @@ EVENTS_API_BASE = \
 
 # TODO PD phone-home end-point.
 PHONE_HOME_URI = "http://localhost:4567/phonehome"
+
+# TODO PD heartbeat end-point.
+HEARTBEAT_URI = "http://localhost:4567/heartbeat"

@@ -35,7 +35,9 @@
 # standard python modules
 import logging.handlers
 import os
+import platform
 import signal
+import socket
 import sys
 import time
 import uuid
@@ -68,6 +70,7 @@ except ImportError:
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
 from pdagent.pdthread import RepeatingTaskThread
+from pdagent.heartbeat import HeartbeatTask
 from pdagent.phonehome import PhoneHomeTask
 from pdagent.sendevent import SendEventTask
 
@@ -108,14 +111,13 @@ class Agent(Daemon):
         global log_dir, main_logger
         init_logging(log_dir)
         main_logger = logging.getLogger('main')
-
         main_logger.info('*** pdagentd started')
 
+        all_ok = True
         try:
             from pdagent.constants import AGENT_VERSION
 
             main_logger.info('PID file: %s', self.pidfile)
-
             main_logger.info('Agent version: %s', AGENT_VERSION)
 
             agent_id_file = os.path.join(
@@ -142,8 +144,6 @@ class Agent(Daemon):
             main_logger.debug('Collecting basic system stats')
 
             # Get some basic system stats to post back in phone-home
-            import platform
-            import socket
             system_stats = {
                 'platform_name': sys.platform,
                 'python_version': platform.python_version(),
@@ -155,15 +155,7 @@ class Agent(Daemon):
 
             main_logger.info('System: ' + str(system_stats))
 
-            # Send event thread config
-            send_interval_secs = main_config['send_interval_secs']
-            cleanup_interval_secs = main_config['cleanup_interval_secs']
-            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
-
-            start_ok = True
-            send_thread = None
-            phone_thread = None
-
+            main_logger.debug("Setting signal handler for SIGTERM")
             signal.signal(signal.SIGTERM, _sig_term_handler)
 
             default_socket_timeout = 10
@@ -173,66 +165,92 @@ class Agent(Daemon):
                 )
             socket.setdefaulttimeout(default_socket_timeout)
 
-            try:
-                send_task = SendEventTask(
+            def mk_sendevent_task():
+                # Send event thread config
+                send_interval_secs = main_config['send_interval_secs']
+                cleanup_interval_secs = main_config['cleanup_interval_secs']
+                cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+                return SendEventTask(
                     pd_queue,
                     send_interval_secs,
                     cleanup_interval_secs,
                     cleanup_threshold_secs
                     )
-                send_thread = RepeatingTaskThread(send_task)
-                send_thread.start()
-            except:
-                start_ok = False
-                main_logger.error("Error starting send thread", exc_info=True)
 
-            try:
-                # we'll phone-home daily, although that will change if server
-                # indicates a different frequency.
-                heartbeat_interval_secs = 60 * 60 * 24
-                phone_task = PhoneHomeTask(
-                    heartbeat_interval_secs,
+            def mk_phonehome_task():
+                # by default, phone-home daily
+                phonehome_interval_secs = 60 * 60 * 24
+                return PhoneHomeTask(
+                    phonehome_interval_secs,
                     pd_queue,
                     agent_id,
                     system_stats
                     )
-                phone_thread = RepeatingTaskThread(phone_task)
-                phone_thread.start()
-            except:
-                start_ok = False
-                main_logger.error(
-                    "Error starting phone home thread", exc_info=True
-                    )
 
-            try:
-                if start_ok:
-                    while (not stop_signal) and \
-                            send_thread.is_alive() and \
-                            phone_thread.is_alive():
+            def mk_heartbeat_task():
+                # by default, heartbeat every 24 hours
+                heartbeat_interval_secs = 60 * 60 * 24
+                return HeartbeatTask(heartbeat_interval_secs, agent_id)
+
+            mk_tasks = [
+                mk_sendevent_task,
+                mk_phonehome_task,
+                mk_heartbeat_task,
+                ]
+
+            tasks = [mk_task() for mk_task in mk_tasks]
+            task_threads = []
+
+            for task in tasks:
+                try:
+                    rtthread = RepeatingTaskThread(task)
+                    rtthread.setDaemon(True)  # don't let thread block exit
+                    rtthread.start()
+                    task_threads.append(rtthread)
+                except:
+                    main_logger.fatal(
+                        "Error starting thread for task %s" % task.get_name(),
+                        exc_info=True
+                        )
+                    all_ok = False
+
+            if all_ok:
+                try:
+                    main_logger.debug(
+                        "Main thread sleeping till we need to stop!"
+                        )
+                    while all_ok and not stop_signal:
                         time.sleep(1.0)
-            except:
-                main_logger.error("Error while sleeping", exc_info=True)
+                        for rtthread in task_threads:
+                            if not rtthread.is_alive():
+                                main_logger.fatal(
+                                    "Thread %s is not alive!" % rtthread
+                                    )
+                                all_ok = False
+                except:
+                    main_logger.fatal("Error while sleeping", exc_info=True)
+                    all_ok = False
 
-            try:
-                if phone_thread:
-                    phone_thread.stop_and_join()
-            except:
-                main_logger.error(
-                    "Error stopping phone home thread", exc_info=True
-                    )
-
-            try:
-                if send_thread:
-                    send_thread.stop_and_join()
-            except:
-                main_logger.error("Error stopping send thread", exc_info=True)
+            for rtthread in task_threads:
+                try:
+                    rtthread.stop_and_join()
+                except:
+                    main_logger.error(
+                        "Error stopping thread %s:" % rtthread, exc_info=True
+                        )
 
         except SystemExit:
-            main_logger.error('*** pdagentd exiting because of errors!')
-            sys.exit(1)
-        else:
+            all_ok = False
+        except:
+            all_ok = False
+            main_logger.error("Uncaught error:", exc_info=True)
+
+        if all_ok:
             main_logger.info('*** pdagentd exiting normally!')
             sys.exit(0)
+        else:
+            main_logger.error('*** pdagentd exiting because of fatal errors!')
+            sys.exit(1)
 
 
 # read persisted, valid agent ID, or generate (and persist) one.
