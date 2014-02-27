@@ -1,12 +1,36 @@
 #!/usr/bin/python
-'''
-    PagerDuty
-    www.pagerduty.com
-    ----
-    Monitoring system agent for PagerDuty integration.
+#
+# PagerDuty Agent daemon.
+# See https://github.com/PagerDuty/agent for details.
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
-    See https://github.com/PagerDuty/agent for licensing details.
-'''
 
 # standard python modules
 import logging.handlers
@@ -43,13 +67,14 @@ except ImportError:
 
 # Custom modules
 from pdagent.thirdparty.daemon import Daemon
-from pdagent.phonehome import PhoneHomeThread
-from pdagent.sendevent import SendEventThread
+from pdagent.pdthread import RepeatingTaskThread
+from pdagent.phonehome import PhoneHomeTask
+from pdagent.sendevent import SendEventTask
 
 
 # Config handling
-agentConfig = pdagent.config.load_agent_config()
-mainConfig = agentConfig.get_main_config()
+agent_config = pdagent.config.load_agent_config()
+main_config = agent_config.get_main_config()
 
 
 def _ensureWritableDirectories(make_missing_dir, *directories):
@@ -94,7 +119,7 @@ class Agent(Daemon):
             main_logger.info('Agent version: %s', AGENT_VERSION)
 
             agent_id_file = os.path.join(
-                agentConfig.get_conf_dirs()['data_dir'],
+                agent_config.get_conf_dirs()['data_dir'],
                 "agent_id.txt"
                 )
             try:
@@ -131,10 +156,9 @@ class Agent(Daemon):
             main_logger.info('System: ' + str(system_stats))
 
             # Send event thread config
-            check_freq_sec = mainConfig['check_freq_sec']
-            send_event_timeout_sec = mainConfig['send_event_timeout_sec']
-            cleanup_freq_sec = mainConfig['cleanup_freq_sec']
-            cleanup_before_sec = mainConfig['cleanup_before_sec']
+            send_interval_secs = main_config['send_interval_secs']
+            cleanup_interval_secs = main_config['cleanup_interval_secs']
+            cleanup_threshold_secs = main_config['cleanup_threshold_secs']
 
             start_ok = True
             send_thread = None
@@ -150,13 +174,13 @@ class Agent(Daemon):
             socket.setdefaulttimeout(default_socket_timeout)
 
             try:
-                send_thread = SendEventThread(
-                    pdQueue,
-                    check_freq_sec,
-                    send_event_timeout_sec,
-                    cleanup_freq_sec,
-                    cleanup_before_sec
+                send_task = SendEventTask(
+                    pd_queue,
+                    send_interval_secs,
+                    cleanup_interval_secs,
+                    cleanup_threshold_secs
                     )
+                send_thread = RepeatingTaskThread(send_task)
                 send_thread.start()
             except:
                 start_ok = False
@@ -165,13 +189,14 @@ class Agent(Daemon):
             try:
                 # we'll phone-home daily, although that will change if server
                 # indicates a different frequency.
-                heartbeat_frequency_sec = 60 * 60 * 24
-                phone_thread = PhoneHomeThread(
-                    heartbeat_frequency_sec,
-                    pdQueue,
+                heartbeat_interval_secs = 60 * 60 * 24
+                phone_task = PhoneHomeTask(
+                    heartbeat_interval_secs,
+                    pd_queue,
                     agent_id,
                     system_stats
                     )
+                phone_thread = RepeatingTaskThread(phone_task)
                 phone_thread.start()
             except:
                 start_ok = False
@@ -247,15 +272,15 @@ def init_logging(log_dir):
         )
     handler.setFormatter(formatter)
 
-    rootLogger = logging.getLogger()
-    rootLogger.setLevel(mainConfig['log_level'])
-    rootLogger.addHandler(handler)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(main_config['log_level'])
+    root_logger.addHandler(handler)
 
 
 # Control of daemon
 if __name__ == '__main__':
 
-    conf_dirs = agentConfig.get_conf_dirs()
+    conf_dirs = agent_config.get_conf_dirs()
     pidfile_dir = conf_dirs['pidfile_dir']
     log_dir = conf_dirs['log_dir']
     data_dir = conf_dirs['data_dir']
@@ -263,7 +288,7 @@ if __name__ == '__main__':
     db_dir = conf_dirs["db_dir"]
 
     problem_directories = _ensureWritableDirectories(
-        agentConfig.is_dev_layout(),  # create directories in development
+        agent_config.is_dev_layout(),  # create directories in development
         pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
         )
     if problem_directories:
@@ -276,77 +301,19 @@ if __name__ == '__main__':
         messages.append('Agent will now quit')
         raise SystemExit("\n".join(messages))
 
-    from pdagent.thirdparty.argparse import ArgumentParser
-    description = "PagerDuty Agent daemon process."
-    parser = ArgumentParser(description=description)
-    parser.add_argument(
-        'action', choices=['start', 'stop', 'restart', 'status']
-        )
-    parser.add_argument(
-        "--clean", action="store_true", dest="clean",
-        help="Remove old pid file"
-        )
-
-    args = parser.parse_args()
-
     pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
-    if os.access(pidfile_dir, os.W_OK) == False:
+    if not os.access(pidfile_dir, os.W_OK):
         raise SystemExit(
             'No write-access to PID file directory ' + pidfile_dir + '\n' +
             'Agent will now quit'
             )
 
     # queue to work on.
-    pdQueue = agentConfig.get_queue(dequeue_enabled=True)
+    pd_queue = agent_config.get_queue(dequeue_enabled=True)
 
     # Daemon instance from agent class
     daemon = Agent(pidfile)
-
-    # Helper method for some control options
-    def _getDaemonPID():
-        try:
-            pf = file(pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-        except SystemExit:
-            pid = None
-        return pid
-
-    # Control options
-    if args.clean:
-        try:
-            if _getDaemonPID():
-                daemon.stop()
-            os.remove(pidfile)
-        except OSError:
-            # Did not find pid file
-            pass
-
-    if 'start' == args.action:
-        daemon.start()
-
-    elif 'stop' == args.action:
-        daemon.stop()
-
-    elif 'restart' == args.action:
-        daemon.restart()
-
-    # XXX: unsafe - doesnt use pidfile, may want to log to stdout
-    #elif 'foreground' == args.action:
-    #    daemon.run()
-
-    elif 'status' == args.action:
-        pid = _getDaemonPID()
-        if pid:
-            print 'pdagentd is running as pid %s.' % pid
-        else:
-            print 'pdagentd is not running.'
-
-    else:
-        print 'Unknown command'
-        sys.exit(1)
+    daemon.start()
 
     sys.exit(0)

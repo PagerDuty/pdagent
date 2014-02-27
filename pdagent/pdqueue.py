@@ -1,3 +1,33 @@
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+
 import errno
 import os
 import logging
@@ -33,8 +63,8 @@ class PDQueue(object):
             queue_dir,
             lock_class,
             time_calc,
-            max_event_bytes,
-            backoff_secs,
+            event_size_max_bytes,
+            backoff_intervals,
             backoff_db
             ):
         from pdagentutil import \
@@ -50,11 +80,11 @@ class PDQueue(object):
             self.queue_dir, "dequeue.lock"
             )
 
-        self.max_event_bytes = max_event_bytes
+        self.event_size_max_bytes = event_size_max_bytes
         self.time = time_calc
-        if backoff_db and backoff_secs:
+        if backoff_db and backoff_intervals:
             self.backoff_info = \
-                _BackoffInfo(backoff_db, backoff_secs, time_calc)
+                _BackoffInfo(backoff_db, backoff_intervals, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -174,7 +204,7 @@ class PDQueue(object):
             f.close()
 
         # ensure that the event is not too large.
-        if len(data) > self.max_event_bytes:
+        if len(data) > self.event_size_max_bytes:
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
@@ -243,7 +273,6 @@ class PDQueue(object):
                     # invalid file-name; we'll not include it in cleanup.
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
-                    fnames.remove(fname)
                 else:
                     if enqueue_time < delete_before_time:
                         try:
@@ -355,10 +384,10 @@ class _BackoffInfo(object):
     service keys in queue.
     """
 
-    def __init__(self, backoff_db, backoff_secs, time_calc):
+    def __init__(self, backoff_db, backoff_intervals, time_calc):
         self._db = backoff_db
-        self._backoff_secs = backoff_secs
-        self._max_backoff_attempts = len(backoff_secs)
+        self._backoff_intervals = backoff_intervals
+        self._max_backoff_attempts = len(backoff_intervals)
         self._time = time_calc
         self._previous_attempts = {}
         self._current_attempts = {}
@@ -381,7 +410,7 @@ class _BackoffInfo(object):
         cur_attempt = self._previous_attempts.get(svc_key, 0) + 1
         # if backoff-seconds have been exhausted, reuse the last one.
         backoff_index = min(cur_attempt, self._max_backoff_attempts) - 1
-        backoff = self._backoff_secs[backoff_index]
+        backoff = self._backoff_intervals[backoff_index]
         logger.info(
             "Retrying events in service key %s after %d sec" %
             (svc_key, backoff)

@@ -1,10 +1,38 @@
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 import json
 import unittest
 from urllib2 import URLError
 
 from pdagent.constants import ConsumeEvent
-from pdagent.sendevent import SendEventThread
+from pdagent.sendevent import SendEventTask
 from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagenttest.mockqueue import MockQueue
@@ -32,11 +60,10 @@ SAMPLE_EVENT = json.dumps({
 
 class SendEventTest(unittest.TestCase):
 
-    def new_send_event_thread(self):
-        s = SendEventThread(
+    def new_send_event_task(self):
+        s = SendEventTask(
             self.mock_queue(),
             FREQUENCY_SEC,
-            SEND_TIMEOUT_SEC,
             CLEANUP_FREQUENCY_SEC,
             CLEANUP_AGE_SEC
         )
@@ -53,7 +80,7 @@ class SendEventTest(unittest.TestCase):
         return MockResponse(code, data)
 
     def test_send_and_cleanup(self):
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.response = self.mock_response()
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
@@ -68,7 +95,7 @@ class SendEventTest(unittest.TestCase):
             from pdagent.pdqueue import EmptyQueueError
             raise EmptyQueueError
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s.pd_queue.flush = empty_queue_flush
         s.tick()
         self.assertTrue(s.pd_queue.consume_code is None)
@@ -79,7 +106,7 @@ class SendEventTest(unittest.TestCase):
         def erroneous_queue_flush(**args):
             raise Exception
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s.pd_queue.flush = erroneous_queue_flush
         s.tick()
         self.assertTrue(s.pd_queue.consume_code is None)
@@ -89,7 +116,7 @@ class SendEventTest(unittest.TestCase):
     def test_no_cleanup(self):
         import time
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.response = self.mock_response()
         s.last_cleanup_time = int(time.time()) - 1
         s.tick()
@@ -102,7 +129,7 @@ class SendEventTest(unittest.TestCase):
         def erroneous_cleanup(**args):
             raise Exception
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.response = self.mock_response()
         s.pd_queue.cleanup = erroneous_cleanup
         s.tick()
@@ -121,7 +148,7 @@ class SendEventTest(unittest.TestCase):
         def error(*args, **kwargs):
             httpswithverify.urlopen("https://localhost/error")
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.urlopen = error
         s.tick()
         self.assertEquals(
@@ -185,7 +212,7 @@ class SendEventTest(unittest.TestCase):
 
     def test_bad_response(self):
         # bad response should not matter for our processing.
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.response = self.mock_response(data="bad")
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
@@ -195,7 +222,7 @@ class SendEventTest(unittest.TestCase):
         def error(*args, **kwargs):
             raise exception
 
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.urlopen = error
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, expected_code)
@@ -203,7 +230,7 @@ class SendEventTest(unittest.TestCase):
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def _verifyConsumeCodeForHTTPError(self, error_code, expected_code):
-        s = self.new_send_event_thread()
+        s = self.new_send_event_task()
         s._urllib2.response = self.mock_response(code=error_code)
         s.tick()
         self.assertEquals(s.pd_queue.consume_code, expected_code)

@@ -1,3 +1,31 @@
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 import json
 import logging
@@ -9,27 +37,25 @@ from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
-from pdagent.pdthread import RepeatingThread
+from pdagent.pdthread import RepeatingTask
 
 
 logger = logging.getLogger(__name__)
 
 
-class SendEventThread(RepeatingThread):
+class SendEventTask(RepeatingTask):
 
     def __init__(
             self,
             pd_queue,
-            check_freq_sec,
-            send_event_timeout_sec,
-            cleanup_freq_sec,
-            cleanup_before_sec,
+            send_interval_secs,
+            cleanup_interval_secs,
+            cleanup_threshold_secs,
             ):
-        RepeatingThread.__init__(self, check_freq_sec, False)
+        RepeatingTask.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
-        self.send_event_timeout_sec = send_event_timeout_sec
-        self.cleanup_freq_sec = cleanup_freq_sec
-        self.cleanup_before_sec = cleanup_before_sec
+        self.cleanup_interval_secs = cleanup_interval_secs
+        self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
         self._urllib2 = httpswithverify  # to ease unit testing.
 
@@ -47,9 +73,9 @@ class SendEventThread(RepeatingThread):
 
         # clean up if required.
         secs_since_cleanup = int(time.time()) - self.last_cleanup_time
-        if secs_since_cleanup >= self.cleanup_freq_sec:
+        if secs_since_cleanup >= self.cleanup_interval_secs:
             try:
-                self.pd_queue.cleanup(self.cleanup_before_sec)
+                self.pd_queue.cleanup(self.cleanup_threshold_secs)
             except:
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())
@@ -61,10 +87,7 @@ class SendEventThread(RepeatingThread):
         request.add_data(json_event_str)
 
         try:
-            response = self._urllib2.urlopen(
-                request,
-                timeout=self.send_event_timeout_sec
-                )
+            response = self._urllib2.urlopen(request)
             status_code = response.getcode()
             result_str = response.read()
         except HTTPError as e:
@@ -108,7 +131,7 @@ class SendEventThread(RepeatingThread):
                 )
             result = {}
         if result.get("status") == "success":
-            logger.info("incident_key =", result.get("incident_key"))
+            logger.info("incident_key = %s", result.get("incident_key"))
         else:
             logger.error(
                 "Error sending event %s; Error code: %d, Reason: %s" %

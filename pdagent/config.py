@@ -1,3 +1,31 @@
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 
 import ConfigParser
@@ -37,20 +65,20 @@ class AgentConfig:
         if dequeue_enabled:
             from pdagent.jsonstore import JsonStore
             backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
-            backoff_secs = [
+            backoff_intervals = [
                 int(s.strip()) for s in
-                self.main_config["backoff_secs"].split(",")
+                self.main_config["backoff_intervals"].split(",")
                 ]
         else:
             backoff_db = None
-            backoff_secs = None
+            backoff_intervals = None
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
-            max_event_bytes=self.main_config["max_event_bytes"],
+            event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_secs=backoff_secs
+            backoff_intervals=backoff_intervals
             )
 
 _valid_log_levels = \
@@ -59,11 +87,10 @@ _valid_log_levels = \
 
 _CONFIG_DEFAULTS = {
     "log_level": "INFO",
-    "check_freq_sec": 60,
-    "send_event_timeout_sec": 30,
-    "cleanup_freq_sec": 60 * 60 * 3,  # clean up every 3 hours.
-    "cleanup_before_sec": 60 * 60 * 24 * 7,  # clean up events older than 1 wk.
-    "max_event_bytes": 4 * 1024 * 1024,  # 4MB limit on request data sent out.
+    "send_interval_secs": 60,
+    "cleanup_interval_secs": 60 * 60 * 3,  # 3 hours
+    "cleanup_threshold_secs": 60 * 60 * 24 * 7,  # 1 week
+    "event_size_max_bytes": 4 * 1024 * 1024,  # 4MB
     }
 
 
@@ -124,8 +151,10 @@ def load_agent_config():
 
     # parse integer values.
     for key in [
-            "check_freq_sec", "cleanup_freq_sec", "cleanup_before_sec",
-            "send_event_timeout_sec", "max_event_bytes"
+            "send_interval_secs",
+            "cleanup_interval_secs",
+            "cleanup_threshold_secs",
+            "event_size_max_bytes",
             ]:
         try:
             cfg[key] = int(cfg[key])

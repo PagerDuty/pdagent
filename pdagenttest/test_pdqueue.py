@@ -1,3 +1,31 @@
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 import os
 import shutil
@@ -13,7 +41,7 @@ _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
-BACKOFF_SECS = [1, 2, 4]
+BACKOFF_INTERVALS = [1, 2, 4]
 
 
 class NoOpLock:
@@ -66,8 +94,8 @@ class PDQueueTest(unittest.TestCase):
             queue_dir=TEST_QUEUE_DIR,
             lock_class=NoOpLock,
             time_calc=MockTime(),
-            max_event_bytes=10,
-            backoff_secs=BACKOFF_SECS,
+            event_size_max_bytes=10,
+            backoff_intervals=BACKOFF_INTERVALS,
             backoff_db=MockBackupDB())
 
     def test__open_creat_excl_with_retry(self):
@@ -177,7 +205,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = len(BACKOFF_SECS) + 1
+        max_total_attempts = len(BACKOFF_INTERVALS) + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)
@@ -217,7 +245,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
-            q.time.sleep(BACKOFF_SECS[i-2])
+            q.time.sleep(BACKOFF_INTERVALS[i-2])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -228,7 +256,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry now. there should be no more backoffs, bad event should be
         # kicked out, and next event should finally be processed.
-        q.time.sleep(BACKOFF_SECS[-1])
+        q.time.sleep(BACKOFF_INTERVALS[-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff, lambda: False)
@@ -260,7 +288,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = len(BACKOFF_SECS) + 1
+        max_total_attempts = len(BACKOFF_INTERVALS) + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)
@@ -300,7 +328,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
-            q.time.sleep(BACKOFF_SECS[i-2])
+            q.time.sleep(BACKOFF_INTERVALS[i-2])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -312,7 +340,7 @@ class PDQueueTest(unittest.TestCase):
         # try a couple more times (we exceed max attempts going forward) --
         # bad event is still processed.
         for i in [0, 1]:
-            q.time.sleep(BACKOFF_SECS[-1])
+            q.time.sleep(BACKOFF_INTERVALS[-1])
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -325,7 +353,7 @@ class PDQueueTest(unittest.TestCase):
                 )
 
         # retry now (much after max_backoff_attempts), with no bad event.
-        q.time.sleep(BACKOFF_SECS[-1])
+        q.time.sleep(BACKOFF_INTERVALS[-1])
         count += 1
         events_processed = []
         q.flush(consume_with_backoff, lambda: False)
@@ -656,7 +684,7 @@ class PDQueueTest(unittest.TestCase):
             for (svc_key, count, backoff_index) in data:
                 attempts[svc_key] = count
                 retries[svc_key] = int(
-                    q.time.time() + BACKOFF_SECS[backoff_index])
+                    q.time.time() + BACKOFF_INTERVALS[backoff_index])
 
         self.assertEqual(backup_data, {
             "attempts": attempts,
