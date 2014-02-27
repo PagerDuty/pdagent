@@ -34,6 +34,7 @@ import subprocess
 import sys
 
 
+_DEB_BUILD_VM = "agent-minimal-ubuntu1204"
 _RPM_BUILD_VM = "agent-minimal-centos65"
 
 
@@ -49,12 +50,13 @@ def create_dist(target, source, env):
 
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
+    env.Execute(Mkdir(tmp_dir))
     env.Execute(Mkdir(target_dir))
     virts = env.get("virts")
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
-        ret_code += _create_deb_package()
+        ret_code += _create_deb_package(_DEB_BUILD_VM)
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
         ret_code += _create_rpm_package(_RPM_BUILD_VM)
@@ -127,11 +129,21 @@ def destroy_virtual_boxes(target, source, env):
     return subprocess.call(destroy_cmd)
 
 
-def _create_deb_package():
-    # Assuming that all requisite packages are available.
+def _create_deb_package(virt):
+    # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
+    make_file = os.path.join(tmp_dir, "make_deb")
+    _create_text_file(make_file, [
+        'set -e',
+        'sudo apt-get update -qq',
+        'sudo apt-get install -y -q ruby ruby-dev libopenssl-ruby rubygems',
+        'sudo gem install -q fpm',
+        'cd %s' % os.path.join(remote_project_root, build_linux_dir),
+        'sh make.sh deb'
+    ])
+    make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .deb package..."
-    r = subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
+    r = _run_on_virts("sh %s" % make_file_on_vm, [virt])
     if not r:
         pkg = env.Glob(os.path.join(build_linux_target_dir, "*.deb"))[0].path
         return subprocess.call(["cp", pkg, target_dir])
@@ -139,10 +151,9 @@ def _create_deb_package():
 
 
 def _create_rpm_package(virt):
-    # Assuming that all requisite packages are available on virts.
+    # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
     # Create a temporary file to cd to required directory and make rpm.
-    env.Execute(Mkdir(tmp_dir))
     make_file = os.path.join(tmp_dir, "make_rpm")
     _create_text_file(make_file, [
         'set -e',
