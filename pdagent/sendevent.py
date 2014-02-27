@@ -131,7 +131,7 @@ class SendEventTask(RepeatingTask):
                 )
             result = {}
         if result.get("status") == "success":
-            logger.info("incident_key =", result.get("incident_key"))
+            logger.info("incident_key = %s", result.get("incident_key"))
         else:
             logger.error(
                 "Error sending event %s; Error code: %d, Reason: %s" %

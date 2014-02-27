@@ -69,6 +69,7 @@ def queue_event(
         event_type, service_key, incident_key, description, details
         )
     queue.enqueue(service_key, event)
+    return incident_key
 
 
 def resurrect_events(queue, service_key):

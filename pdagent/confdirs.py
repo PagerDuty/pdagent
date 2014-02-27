@@ -40,6 +40,7 @@ _PRODUCTION_MAIN_DIRS = [
 
 def _linux_production_dirs():
     d = {
+        "pidfile_dir": "/var/run/pdagent",
         "log_dir": "/var/log/pdagent",
         "data_dir": "/var/lib/pdagent",
         }
@@ -49,6 +50,7 @@ def _linux_production_dirs():
 def _dev_project_dirs(dev_proj_dir):
     dev_tmp_dir = os.path.join(dev_proj_dir, "tmp")
     d = {
+        "pidfile_dir": dev_tmp_dir,
         "log_dir": dev_tmp_dir,
         "data_dir": dev_tmp_dir,
         }
