@@ -34,27 +34,28 @@
 
 import json
 import os
+import sys
 
 
 def find_in_sys_path(file_path):
-    import os
-    import sys
     for directory in sys.path:
         abs_path = os.path.join(directory, file_path)
         if os.access(abs_path, os.R_OK):
             return abs_path
     return None
 
-def ensure_readable_directory(dir):
-    if not os.access(dir, os.R_OK):
+
+def ensure_readable_directory(d):
+    if not os.access(d, os.R_OK):
         raise Exception(
-            "Can't read directory %s, please check permissions" % dir
+            "Can't read directory %s, please check permissions" % d
             )
 
-def ensure_writable_directory(dir):
-    if not os.access(dir, os.W_OK):
+
+def ensure_writable_directory(d):
+    if not os.access(d, os.W_OK):
         raise Exception(
-            "Can't write to directory %s, please check permissions" % dir
+            "Can't write to directory %s, please check permissions" % d
             )
 
 
@@ -78,6 +79,7 @@ def resurrect_events(queue, service_key):
 
 def get_status(queue, service_key):
     return queue.get_status(service_key)
+
 
 def _build_event_json_str(
     event_type, service_key, incident_key, description, details
