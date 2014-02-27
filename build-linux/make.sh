@@ -32,15 +32,17 @@
 set -e  # fail on errors
 
 # params
+pkg_type=""
 case "$1" in
   deb|rpm)
+        pkg_type=$1
         ;;
   *)
         echo "Usage: $0 {deb|rpm}"
         exit 2
 esac
 
-echo = BUILD TYPE: $1
+echo = BUILD TYPE: $pkg_type
 
 # ensure we're in the build directory
 cd $(dirname "$0")
@@ -70,7 +72,7 @@ mkdir -p data/etc/init.d
 cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
 
-if [[ "$1" == "deb" ]]; then
+if [[ "$pkg_type" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
 else
     _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
@@ -82,7 +84,7 @@ mkdir -p $_PY_SITE_PACKAGES
 (cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 (cd .. && find pdagent -type f -name "ca_certs.pem" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 
-if [[ "$1" == "deb" ]]; then
+if [[ "$pkg_type" == "deb" ]]; then
     echo = deb python-support...
     mkdir -p data/usr/share/python-support
     _PD_PUBLIC=data/usr/share/python-support/python-pdagent.public
@@ -94,22 +96,22 @@ fi
 
 echo = FPM!
 _FPM_DEPENDS="--depends python"
-if [[ "$1" == "deb" ]]; then
+if [[ "$pkg_type" == "deb" ]]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
 
 cd target
 fpm -s dir \
-    -t $1 \
+    -t $pkg_type \
     --name "pdagent" \
     --version "0.6" \
     --architecture all \
     $_FPM_DEPENDS \
-    --$1-user root \
-    --$1-group root \
+    --${pkg_type}-user root \
+    --${pkg_type}-group root \
     --config-files /etc/pdagent.conf \
-    --post-install ../$1/postinst \
-    --pre-uninstall ../$1/prerm \
+    --post-install ../$pkg_type/postinst \
+    --pre-uninstall ../$pkg_type/prerm \
     -C ../data \
     etc usr var
 
