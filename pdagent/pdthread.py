@@ -95,7 +95,7 @@ class RepeatingTask:
                 % (self.get_name(), interval_secs)
                 )
 
-    def stop(self):
+    def stop_async(self):
         "Ask a task to exit early from a tick()."
         self._stop = True
 
@@ -137,10 +137,10 @@ class RepeatingTaskThread(Thread):
         Thread.__init__(self, name=repeating_task.get_name())
         self._rtask = repeating_task
         self._stop = False
-        logger.info("RepeatingTaskThread %s created" % self.getName())
+        logger.info("RepeatingTaskThread created for %s" % self.getName())
 
     def run(self):
-        next_run_time = 0
+        next_run_time = time.time()
         try:
             while not self._stop:
                 s = next_run_time - time.time()
@@ -163,7 +163,7 @@ class RepeatingTaskThread(Thread):
         except:
             logger.error("Error in run(); Stopping.", exc_info=True)
 
-    def stop(self):
+    def stop_async(self):
         """
         Ask the thread to stop.
 
@@ -174,10 +174,10 @@ class RepeatingTaskThread(Thread):
         tick() is complete.
         """
         self._stop = True
-        self._rtask.stop()
+        self._rtask.stop_async()
 
     def stop_and_join(self):
         "Helper function - equivalent to calling stop() and then join()"
-        self.stop()
+        self.stop_async()
         self.join()
 
