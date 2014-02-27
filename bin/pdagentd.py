@@ -306,7 +306,7 @@ def run():
 
     # Exit
     if all_ok:
-        main_logger.warn("*** pdagentd exiting normally! pid=%s" % pid)
+        main_logger.info("*** pdagentd exiting normally! pid=%s" % pid)
         sys.exit(0)
     else:
         main_logger.error(
