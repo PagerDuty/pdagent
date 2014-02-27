@@ -72,7 +72,7 @@ mkdir -p data/etc/init.d
 cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
 
-if [[ "$pkg_type" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
 else
     _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
@@ -84,7 +84,7 @@ mkdir -p $_PY_SITE_PACKAGES
 (cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 (cd .. && find pdagent -type f -name "ca_certs.pem" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
 
-if [[ "$pkg_type" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     echo = deb python-support...
     mkdir -p data/usr/share/python-support
     _PD_PUBLIC=data/usr/share/python-support/python-pdagent.public
@@ -96,7 +96,7 @@ fi
 
 echo = FPM!
 _FPM_DEPENDS="--depends python"
-if [[ "$pkg_type" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
 
@@ -124,4 +124,3 @@ fpm -s dir \
     etc usr var
 
 exit 0
-
