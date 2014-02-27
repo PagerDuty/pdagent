@@ -101,17 +101,25 @@ if [[ "$pkg_type" == "deb" ]]; then
 fi
 
 cd target
+_DESC="The PagerDuty Agent package
+The PagerDuty Agent is a helper program that you install on your
+monitoring system to integrate your monitoring tools with PagerDuty."
 fpm -s dir \
     -t $pkg_type \
     --name "pdagent" \
-    --version "0.6" \
+    --description "$_DESC" \
+    --version "1.0" \
     --architecture all \
+    --url "http://www.pagerduty.com" \
+    --license 'Open Source' \
+    --vendor 'PagerDuty, Inc.' \
+    --maintainer 'PagerDuty Build System <http://support.pagerduty.com>' \
     $_FPM_DEPENDS \
     --${pkg_type}-user root \
     --${pkg_type}-group root \
     --config-files /etc/pdagent.conf \
-    --post-install ../$pkg_type/postinst \
-    --pre-uninstall ../$pkg_type/prerm \
+    --after-install ../$pkg_type/postinst \
+    --before-remove ../$pkg_type/prerm \
     -C ../data \
     etc usr var
 
