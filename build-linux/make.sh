@@ -28,7 +28,6 @@ mkdir -p data/usr/bin
 cp ../bin/pd* data/usr/bin
 
 echo = /var/...
-mkdir -p data/var/run/pdagent
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/db
 mkdir -p data/var/lib/pdagent/outqueue
@@ -37,8 +36,8 @@ echo = /etc/...
 mkdir -p data/etc/pdagent/
 cp ../conf/config.cfg data/etc/pdagent/
 mkdir -p data/etc/init.d
-cp init-script.sh data/etc/init.d/pdagentd
-chmod 755 data/etc/init.d/pdagentd
+cp init-script.sh data/etc/init.d/pdagent
+chmod 755 data/etc/init.d/pdagent
 
 if [[ "$1" == "deb" ]]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
@@ -77,13 +76,11 @@ fpm -s dir \
     $_FPM_DEPENDS \
     --$1-user root \
     --$1-group root \
+    --config-files /etc/pdagent/config.cfg \
     --post-install ../$1/postinst \
     --pre-uninstall ../$1/prerm \
     -C ../data \
     etc usr var
-
-# TODO:
-# --config-files /etc/redis/redis.conf -v 2.6.10 ./src/redis-server=/usr/bin redis.conf=/etc/redis
 
 exit 0
 

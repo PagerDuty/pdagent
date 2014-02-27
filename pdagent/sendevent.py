@@ -18,9 +18,12 @@ logger = logging.getLogger(__name__)
 class SendEventThread(RepeatingThread):
 
     def __init__(
-            self, pd_queue, check_freq_sec,
+            self,
+            pd_queue,
+            check_freq_sec,
             send_event_timeout_sec,
-            cleanup_freq_sec, cleanup_before_sec,
+            cleanup_freq_sec,
+            cleanup_before_sec,
             ):
         RepeatingThread.__init__(self, check_freq_sec, False)
         self.pd_queue = pd_queue
@@ -51,7 +54,7 @@ class SendEventThread(RepeatingThread):
                 logger.error("Error while cleaning up queue:", exc_info=True)
             self.last_cleanup_time = int(time.time())
 
-    def send_event(self, json_event_str):
+    def send_event(self, json_event_str, event_id):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
@@ -71,37 +74,46 @@ class SendEventThread(RepeatingThread):
         except CertificateError:
             logger.error(
                 "Server certificate validation error while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             return ConsumeEvent.STOP_ALL
+        except socket.timeout:
+            logger.error("Timeout while sending event:", exc_info=True)
+            # This could be real issue with PD, or just some anomaly in
+            # processing this service key or event. We'll retry this
+            # service key a few more times, and then decide that this
+            # event is possibly a bad entry.
+            return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         except URLError as e:
             if isinstance(e.reason, socket.timeout):
                 logger.error("Timeout while sending event:", exc_info=True)
-                # This could be real issue with PD, or just some anomaly in
-                # processing this service key or event. We'll retry this
-                # service key a few more times, and then decide that this
-                # event is possibly a bad entry.
+                # see above socket.timeout catch-block for details.
                 return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
             else:
                 logger.error(
                     "Error establishing a connection for sending event:",
-                    exc_info=True)
-                return ConsumeEvent.NOT_CONSUMED
+                    exc_info=True
+                    )
+                return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)
-            return ConsumeEvent.NOT_CONSUMED
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
 
         try:
             result = json.loads(result_str)
         except:
             logger.warning(
                 "Error reading response data while sending event:",
-                exc_info=True)
+                exc_info=True
+                )
             result = {}
         if result.get("status") == "success":
             logger.info("incident_key =", result.get("incident_key"))
         else:
-            logger.error("Error sending event %s; Error code: %d, Reason: %s" %
-                (json_event_str, status_code, result_str))
+            logger.error(
+                "Error sending event %s; Error code: %d, Reason: %s" %
+                (event_id, status_code, result_str)
+                )
 
         if status_code < 300:
             return ConsumeEvent.CONSUMED
@@ -117,5 +129,5 @@ class SendEventThread(RepeatingThread):
             # this event is possibly a bad entry.
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         else:
-            # anything 3xx and >= 600
-            return ConsumeEvent.NOT_CONSUMED
+            # anything 3xx and >= 600 -- we don't know what this means!!
+            return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED

@@ -61,24 +61,27 @@ class RepeatingThread(Thread):
 
     def run(self):
         next_run_time = 0
-        while not self._stop:
-            s = next_run_time - time.time()
-            if s <= 0:
-                self.tick()
-                if self._is_absolute:
-                    # drop extra missed ticks if we fall behind
-                    next_run_time = max(
-                        next_run_time + self._delay_secs, time.time()
-                        )
-                    # the above logic ruins clock alignment but it's
-                    # simpler than trying to do float modulo math :)
+        try:
+            while not self._stop:
+                s = next_run_time - time.time()
+                if s <= 0:
+                    self.tick()
+                    if self._is_absolute:
+                        # drop extra missed ticks if we fall behind
+                        next_run_time = max(
+                            next_run_time + self._delay_secs, time.time()
+                            )
+                        # the above logic ruins clock alignment but it's
+                        # simpler than trying to do float modulo math :)
+                    else:
+                        next_run_time = time.time() + self._delay_secs
+                elif s < 1.0:
+                    time.sleep(s)
                 else:
-                    next_run_time = time.time() + self._delay_secs
-            elif s < 1.0:
-                time.sleep(s)
-            else:
-                # Sleep for only 1 sec to allow graceful stop
-                time.sleep(1.0)
+                    # Sleep for only 1 sec to allow graceful stop
+                    time.sleep(1.0)
+        except:
+            logger.error("Error in run(); Stopping.", exc_info=True)
 
     def set_delay_secs(self, delay_secs):
         """
@@ -90,9 +93,7 @@ class RepeatingThread(Thread):
         assert delay_secs >= 1.0
         if delay_secs != self._delay_secs:
             self._delay_secs = delay_secs
-            logger.info(
-                "%s changed delay_secs to %s" % (self.getName(), delay_secs)
-            )
+            logger.info("Changed delay_secs to %s" % delay_secs)
 
     def stop(self):
         """

@@ -4,10 +4,10 @@ set -e
 
 if [ "$1" = "remove" ]; then  # remove-only; not upgrade.
     # Stop daemon
-    service pdagentd stop
+    service pdagent stop
 
     # Unregister daemon
-    update-rc.d -f pdagentd remove
+    update-rc.d -f pdagent remove
 
     # Clean up module .pyc
     if which update-python-modules >/dev/null 2>&1; then
