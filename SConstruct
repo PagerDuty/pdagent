@@ -55,7 +55,7 @@ def create_packages(target, source, env):
         print "No gpghome was provided!"
         return 1
 
-    if not subprocess.call(["which", "s3cmd"]):
+    if subprocess.call(["which", "s3cmd"]):
         print "No s3cmd found!\nInstall from http://s3tools.org/download"
         return 1
 
