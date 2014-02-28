@@ -59,7 +59,7 @@ IntelliJ IDEA 13 Community Edition setup notes for OS X 10.8 (Mountain Lion).
 - Launch IDEA. Click `Create New Project`.
 
 - Choose `Python` project-type. Choose your agent install directory as location,
-  e.g. `~/workspace/agent`.
+  e.g. `~/workspace/pdagent`.
 
 - Click `Configure` to set up a Python Interpretor.
 
