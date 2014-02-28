@@ -61,7 +61,6 @@ echo = cleaning build directories
 rm -fr data target
 mkdir data target
 
-
 echo = /usr/bin/...
 mkdir -p data/usr/bin
 cp ../bin/pd-send data/usr/bin
@@ -115,22 +114,6 @@ fi
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then
     _SIGN_OPTS="--rpm-sign"
-
-    gpg_key_file=/tmp/GPG-KEY-$$
-    gpg --homedir $gpg_home --lock-never --export --armor >$gpg_key_file
-    sudo rpm --import $gpg_key_file
-    rm $gpg_key_file
-
-    fp=$(gpg --homedir $gpg_home --lock-never --fingerprint | \
-         grep '=' | \
-         head -n1 | \
-         cut -d= -f2 | \
-         tr -d ' ')
-    cat >$HOME/.rpmmacros <<EOF
-%_signature gpg
-%_gpg_path $gpg_home
-%_gpg_name $fp
-EOF
 fi
 
 cd target
