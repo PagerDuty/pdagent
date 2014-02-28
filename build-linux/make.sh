@@ -90,9 +90,11 @@ fi
 
 echo = python modules...
 mkdir -p $_PY_SITE_PACKAGES
-(cd .. && find pdagent -type d -exec mkdir build-linux/$_PY_SITE_PACKAGES/{} \;)
-(cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
-(cd .. && find pdagent -type f -name "ca_certs.pem" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
+cd ..
+find pdagent -type d -exec mkdir -p build-linux/$_PY_SITE_PACKAGES/{} \;
+find pdagent -type f -name "*.py" -o -name "ca_certs.pem" \
+    -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
+cd -
 
 if [ "$pkg_type" = "deb" ]; then
     echo = deb python-support...
@@ -119,8 +121,7 @@ if [ "$pkg_type" = "rpm" ]; then
     sudo rpm --import $gpg_key_file
     rm $gpg_key_file
 
-    fingerprint=\
-        $(gpg --homedir $gpg_home --lock-never --fingerprint | \
+    fp=$(gpg --homedir $gpg_home --lock-never --fingerprint | \
          grep '=' | \
          head -n1 | \
          cut -d= -f2 | \
@@ -128,7 +129,7 @@ if [ "$pkg_type" = "rpm" ]; then
     cat >$HOME/.rpmmacros <<EOF
 %_signature gpg
 %_gpg_path $gpg_home
-%_gpg_name $fingerprint
+%_gpg_name $fp
 EOF
 fi
 
