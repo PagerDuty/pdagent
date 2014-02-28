@@ -54,6 +54,8 @@ def create_packages(target, source, env):
     if not gpg_home:
         print "No gpghome was provided!"
         return 1
+    else:
+        gpg_home = gpg_home[0]
 
     if subprocess.call(["which", "s3cmd"]):
         print "No s3cmd found!\nInstall from http://s3tools.org/download"
@@ -61,14 +63,25 @@ def create_packages(target, source, env):
 
     env.Execute(Mkdir(tmp_dir))
     env.Execute(Mkdir(target_dir))
+
+    if subprocess.call(["cp", "-r", gpg_home, tmp_dir]):
+        print "Cannot copy %s to %s" % (gpg_home, tmp_dir)
+        return 1
+    else:
+        gpg_home = os.path.join(
+            remote_project_root,
+            tmp_dir,
+            os.path.basename(gpg_home)
+            )
+
     virts = env.get("virts")
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
-        ret_code += _create_deb_package(_DEB_BUILD_VM)
+        ret_code += _create_deb_package(_DEB_BUILD_VM, gpg_home)
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
-        ret_code += _create_rpm_package(_RPM_BUILD_VM)
+        ret_code += _create_rpm_package(_RPM_BUILD_VM, gpg_home)
 
     return ret_code
 
@@ -138,7 +151,7 @@ def destroy_virtual_boxes(target, source, env):
     return subprocess.call(destroy_cmd)
 
 
-def _create_deb_package(virt):
+def _create_deb_package(virt, gpg_home):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
     make_file = os.path.join(tmp_dir, "make_deb")
@@ -148,7 +161,7 @@ def _create_deb_package(virt):
         'sudo apt-get install -y -q ruby ruby-dev libopenssl-ruby rubygems',
         'sudo gem install -q fpm',
         'cd %s' % os.path.join(remote_project_root, build_linux_dir),
-        'sh make.sh deb'
+        'sh make.sh deb %s' % gpg_home
     ])
     make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .deb package..."
@@ -159,7 +172,7 @@ def _create_deb_package(virt):
     return r
 
 
-def _create_rpm_package(virt):
+def _create_rpm_package(virt, gpg_home):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
     # Create a temporary file to cd to required directory and make rpm.
@@ -169,7 +182,7 @@ def _create_rpm_package(virt):
         'sudo yum install -y -q rpm-build ruby-devel rubygems',
         'sudo gem install -q fpm',
         'cd %s' % os.path.join(remote_project_root, build_linux_dir),
-        'sh make.sh rpm'
+        'sh make.sh rpm %s' % gpg_home
     ])
     make_file_on_vm = os.path.join(remote_project_root, make_file)
     print "\nCreating .rpm package..."
