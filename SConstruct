@@ -50,6 +50,15 @@ def create_dist(target, source, env):
 
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
+    gpg_home = env.get("gpghome")
+    if not gpg_home:
+        print "No gpghome was provided!"
+        return 1
+
+    if not subprocess.call(["which", "s3cmd"]):
+        print "No s3cmd found!\nInstall from http://s3tools.org/download"
+        return 1
+
     env.Execute(Mkdir(tmp_dir))
     env.Execute(Mkdir(target_dir))
     virts = env.get("virts")
@@ -341,7 +350,8 @@ create_packages_task = env.Command(
     "package",
     None,
     env.Action(create_packages, "\n--- Creating install packages"),
-    virts=_get_arg_values("virt"))
+    virts=_get_arg_values("virt"),
+    gpghome=_get_arg_values("gpghome"))
 env.Requires(create_packages_task, [unit_test_task, start_virts_task])
 
 integration_test_task = env.Command(
