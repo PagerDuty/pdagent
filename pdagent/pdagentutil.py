@@ -32,6 +32,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+from datetime import datetime
 import json
 import os
 import sys
@@ -60,6 +61,10 @@ def ensure_writable_directory(d):
             )
 
 
+def utcnow_isoformat():
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def queue_event(
         queue,
         event_type, service_key, incident_key, description, details,
@@ -72,7 +77,7 @@ def queue_event(
         "agent": {
             "id": agent_id,
             "queued_by": queued_by,
-            "time": time.time()
+            "queued_at": utcnow_isoformat()
             }
         }
     event = _build_event_json_str(
