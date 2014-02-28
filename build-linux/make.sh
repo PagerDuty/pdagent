@@ -33,17 +33,27 @@ set -e  # fail on errors
 
 # params
 pkg_type=""
+
+print_usage_and_exit() {
+    echo "Usage: $0 {deb|rpm} {path-to-gpg-home}"
+    exit 2
+}
+
+if [ $# -ne 2 ]; then
+    print_usage_and_exit
+fi
+
 case "$1" in
-  deb|rpm)
+    deb|rpm)
         pkg_type=$1
         ;;
-  *)
-        echo "Usage: $0 {deb|rpm}"
-        exit 2
+    *)
+        print_usage_and_exit
 esac
 
 echo = BUILD TYPE: $pkg_type
 
+gpg_home=$2
 # ensure we're in the build directory
 cd $(dirname "$0")
 
@@ -100,7 +110,30 @@ if [ "$pkg_type" = "deb" ]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
 
+_SIGN_OPTS=""
+if [ "$pkg_type" = "rpm" ]; then
+    _SIGN_OPTS="--rpm-sign"
+
+    gpg_key_file=/tmp/GPG-KEY-$$
+    gpg --homedir $gpg_home --lock-never --export --armor >$gpg_key_file
+    sudo rpm --import $gpg_key_file
+    rm $gpg_key_file
+
+    fingerprint=\
+        $(gpg --homedir $gpg_home --lock-never --fingerprint | \
+         grep '=' | \
+         head -n1 | \
+         cut -d= -f2 | \
+         tr -d ' ')
+    cat >$HOME/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path $gpg_home
+%_gpg_name $fingerprint
+EOF
+fi
+
 cd target
+
 _DESC="The PagerDuty Agent package
 The PagerDuty Agent is a helper program that you install on your
 monitoring system to integrate your monitoring tools with PagerDuty."
@@ -115,6 +148,7 @@ fpm -s dir \
     --vendor 'PagerDuty, Inc.' \
     --maintainer 'PagerDuty Build System <http://support.pagerduty.com>' \
     $_FPM_DEPENDS \
+    $_SIGN_OPTS \
     --${pkg_type}-user root \
     --${pkg_type}-group root \
     --config-files /etc/pdagent.conf \
