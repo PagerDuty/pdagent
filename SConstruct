@@ -38,16 +38,6 @@ _DEB_BUILD_VM = "agent-minimal-ubuntu1204"
 _RPM_BUILD_VM = "agent-minimal-centos65"
 
 
-def create_dist(target, source, env):
-    """Create distributable for agent."""
-    env.Execute(Mkdir(dist_dir))
-    pkgs = [p.path for p in env.Glob(os.path.join(target_dir, "*.*"))]
-    cp_pkgs_cmd = ["cp"]
-    cp_pkgs_cmd.extend(pkgs)
-    cp_pkgs_cmd.append(dist_dir)
-    return subprocess.call(cp_pkgs_cmd)
-
-
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
     gpg_home = env.get("gpg_home")
@@ -341,7 +331,6 @@ build_linux_dir = "build-linux"
 build_linux_target_dir = os.path.join(build_linux_dir, "target")
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
-dist_dir = "dist"
 remote_project_root = os.sep + "vagrant"
 
 unit_test_local_task = env.Command(
@@ -393,26 +382,21 @@ integration_test_task = env.Command(
     )
 env.Requires(integration_test_task, [start_virts_task])
 
-dist_task = env.Command(
-    "dist",
-    None,
-    env.Action(create_dist, "\n--- Creating distributables")
     )
-env.Depends(
-    dist_task,
-    [destroy_virts_task, create_packages_task, integration_test_task]
     )
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
 env.Clean([create_packages_task], target_dir)
-env.Clean([dist_task], dist_dir)
 
 build_task = env.Alias(
     "build",
     [unit_test_task, create_packages_task, integration_test_task]
     )
-env.Alias("all", ["."])
+publish_task = env.Alias(
+    "publish",
+    [destroy_virts_task, create_packages_task, integration_test_task]
+    )
 
 # task to run if no command is specified.
 if env.GetOption("clean"):
