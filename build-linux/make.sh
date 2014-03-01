@@ -94,7 +94,7 @@ if [[ "$1" == "deb" ]]; then
 fi
 
 echo = FPM!
-_FPM_DEPENDS="--depends python"
+_FPM_DEPENDS="--depends sudo --depends python"
 if [[ "$1" == "deb" ]]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
