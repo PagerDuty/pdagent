@@ -37,14 +37,22 @@ set -x
 # install agent.
 case $(os_type) in
   debian)
-    # FIXME: Ubuntu 12.04 does not include python-support.
-    # We need to test that it is pulled in automatically when
-    # pdagent is installed from repo rather than from .deb
-    sudo apt-get install python-support
-    sudo dpkg -i /vagrant/target/pdagent_${AGENT_VERSION}_all.deb
+    sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
+    sudo sh -c 'echo "deb file:///vagrant/target deb/" \
+      >/etc/apt/sources.list.d/pdagent.list'
+    sudo apt-get update
+    sudo apt-get install -y pdagent
     ;;
   redhat)
-    sudo rpm -i /vagrant/target/pdagent-${AGENT_VERSION}-1.noarch.rpm
+    sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
+[pdagent]
+name=PDAgent
+baseurl=file:///vagrant/target/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
+EOF'
+    sudo yum install -y pdagent
     ;;
   *)
     echo "Unknown os_type " $(os_type) >&2

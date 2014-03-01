@@ -52,7 +52,11 @@ def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
     gpg_home = env.get("gpghome")
     if not gpg_home:
-        print "No gpghome was provided!"
+        print (
+            "No gpghome was provided!\n" +
+            "If required, run this command to create a new gpghome:\n" +
+            "gpg --homedir=/desired/path --gen-key"
+            )
         return 1
     else:
         gpg_home = gpg_home[0]
@@ -70,7 +74,7 @@ def create_packages(target, source, env):
         return 1
     else:
         # ... and /vagrant-ify the new gpg-home path.
-        gpg_home = os.path.join(
+        remote_gpg_home = os.path.join(
             remote_project_root,
             tmp_dir,
             os.path.basename(gpg_home)
@@ -83,16 +87,23 @@ def create_packages(target, source, env):
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
         ret_code += _create_deb_package(
             _DEB_BUILD_VM,
-            gpg_home,
+            remote_gpg_home,
             pkg_installation_root
             )
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
         ret_code += _create_rpm_package(
             _RPM_BUILD_VM,
-            gpg_home,
+            remote_gpg_home,
             pkg_installation_root
             )
+
+    if not ret_code:
+        # export public key into a temporary location to help installation.
+        export_cmd = ["gpg", "--homedir", gpg_home, "--export", "--armor"]
+        fd = open(os.path.join(tmp_dir, "GPG-KEY-pagerduty"), "w")
+        fd.writelines(subprocess.check_output(export_cmd))
+        fd.close()
 
     return ret_code
 
