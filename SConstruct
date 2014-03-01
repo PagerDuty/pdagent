@@ -34,6 +34,7 @@ import subprocess
 import sys
 
 
+_PACKAGE_TYPES = ["deb", "rpm"]
 _DEB_BUILD_VM = "agent-minimal-ubuntu1204"
 _RPM_BUILD_VM = "agent-minimal-centos65"
 
@@ -50,10 +51,6 @@ def create_packages(target, source, env):
         return 1
     else:
         gpg_home = gpg_home[0]
-
-    if subprocess.call(["which", "s3cmd"]):
-        print "No s3cmd found!\nInstall from http://s3tools.org/download"
-        return 1
 
     env.Execute(Mkdir(tmp_dir))
     env.Execute(Mkdir(target_dir))
@@ -163,6 +160,45 @@ def destroy_virtual_boxes(target, source, env):
     return subprocess.call(destroy_cmd)
 
 
+def sync_from_remote_repo(target, source, env):
+    repo_root = _pre_sync_checks(env)
+    if not repo_root:
+        return 1
+
+    env.Execute(Mkdir(target_dir))
+    for pkg_type in _PACKAGE_TYPES:
+        pkg_root = os.path.join(target_dir, pkg_type)
+        if not os.path.isdir(pkg_root):
+            env.Execute(Mkdir(pkg_root))
+
+    if repo_root.startswith("s3://"):
+        return _sync_s3_package_repo(repo_root, target_dir, outbound=False)
+
+
+def sync_to_remote_repo(target, source, env):
+    repo_root = _pre_sync_checks(env)
+    if not repo_root:
+        return 1
+
+    for pkg_type in _PACKAGE_TYPES:
+        pkg_root = os.path.join(target_dir, pkg_type)
+        if not (os.path.isdir(pkg_root) and os.listdir(pkg_root)):
+            print "No content to sync from: %s" % pkg_root
+            print "Sync-to-remote was NOT STARTED."
+            return 1
+
+    pkg_types_str = "{%s}" % ",".join(_PACKAGE_TYPES)
+    print "This will copy <project_root>/%s/%s to %s/%s" % \
+        (target_dir, pkg_types_str, repo_root, pkg_types_str)
+    print "All other content in %s/%s will be DELETED." % \
+        (repo_root, pkg_types_str)
+    if raw_input("Are you sure? [y/N] ").lower() not in ["y", "yes"]:
+        return 1
+
+    if repo_root.startswith("s3://"):
+        return _sync_s3_package_repo(repo_root, target_dir, outbound=True)
+
+
 def _create_deb_package(virt, gpg_home, pkg_installation_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
@@ -192,6 +228,45 @@ def _create_rpm_package(virt, gpg_home, pkg_installation_root):
         "sh %s %s %s" % (make_file, gpg_home, pkg_installation_root),
         [virt]
         )
+
+
+def _pre_sync_checks(env):
+    repo_root = env.get("repo_root")
+    if not repo_root:
+        print "No repo-root was provided!"
+        return None
+    else:
+        repo_root = repo_root[0]
+
+    if repo_root.startswith("s3://"):
+        if subprocess.call(["which", "s3cmd"]):
+            print "No s3cmd found!\nInstall from http://s3tools.org/download"
+            return None
+    else:
+        print "Unrecognized remote repository type for location: " + repo_root
+        return None
+
+    return repo_root
+
+
+def _sync_s3_package_repo(
+        s3_root,
+        local_root,
+        pkg_types=_PACKAGE_TYPES,
+        outbound=False
+        ):
+    r = 0
+    for pkg_type in pkg_types:
+        # note that both src and dest locations need to end with '/'
+        if outbound:
+            src = os.path.join(local_root, pkg_type, "")
+            dest = "%s/%s/" % (s3_root, pkg_type)
+        else:
+            src = "%s/%s/" % (s3_root, pkg_type)
+            dest = os.path.join(local_root, pkg_type, "")
+        print "Syncing %s -> %s..." % (src, dest)
+        r += subprocess.call(["s3cmd", "sync", "--delete-removed", src, dest])
+    return r
 
 
 def _generate_remote_test_runner_file(
@@ -382,7 +457,24 @@ integration_test_task = env.Command(
     )
 env.Requires(integration_test_task, [start_virts_task])
 
+sync_from_remote_repo_task = env.Command(
+    "sync-from-remote-repo",
+    None,
+    env.Action(
+        sync_from_remote_repo,
+        "\n--- Syncing packages from remote package repository"
+        ),
+    repo_root=_get_arg_values("repo-root")
     )
+
+sync_to_remote_repo_task = env.Command(
+    "sync-to-remote-repo",
+    None,
+    env.Action(
+        sync_to_remote_repo,
+        "\n--- Syncing packages to remote package repository"
+        ),
+    repo_root=_get_arg_values("repo-root")
     )
 
 # specify directories to be cleaned up for various targets
@@ -395,7 +487,13 @@ build_task = env.Alias(
     )
 publish_task = env.Alias(
     "publish",
-    [destroy_virts_task, create_packages_task, integration_test_task]
+    [
+    destroy_virts_task,
+    sync_from_remote_repo_task,
+    create_packages_task,
+    integration_test_task,
+    sync_to_remote_repo_task
+    ]
     )
 
 # task to run if no command is specified.
