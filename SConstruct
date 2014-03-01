@@ -50,11 +50,11 @@ def create_dist(target, source, env):
 
 def create_packages(target, source, env):
     """Create installable packages for supported operating systems."""
-    gpg_home = env.get("gpghome")
+    gpg_home = env.get("gpg_home")
     if not gpg_home:
         print (
-            "No gpghome was provided!\n" +
-            "If required, run this command to create a new gpghome:\n" +
+            "No gpg-home was provided!\n" +
+            "If required, run this command to create a new gpg-home:\n" +
             "gpg --homedir=/desired/path --gen-key"
             )
         return 1
@@ -347,27 +347,30 @@ remote_project_root = os.sep + "vagrant"
 unit_test_local_task = env.Command(
     "test-local",
     _get_arg_values("test", ["pdagenttest"]),
-    env.Action(run_unit_tests_local, "\n--- Running unit tests locally"))
+    env.Action(run_unit_tests_local, "\n--- Running unit tests locally")
+    )
 
 start_virts_task = env.Command(
     "start-virt",
     None,
     env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
-    virts=_get_arg_values("virt"))
+    virts=_get_arg_values("virt")
+    )
 
 destroy_virts_task = env.Command(
     "destroy-virt",
     None,
     env.Action(destroy_virtual_boxes, "\n--- Destroying virtual boxes"),
     virts=_get_arg_values("virt"),
-    force=_get_arg_values("force-destroy"))  # e.g. force-destroy=true
+    force=_get_arg_values("force-destroy")  # e.g. force-destroy=true
+    )
 
 unit_test_task = env.Command(
     "test",
     _get_arg_values("test", ["pdagenttest"]),
-    env.Action(run_unit_tests,
-        "\n--- Running unit tests on virtual boxes"),
-    virts=_get_arg_values("virt"))
+    env.Action(run_unit_tests, "\n--- Running unit tests on virtual boxes"),
+    virts=_get_arg_values("virt")
+    )
 env.Requires(unit_test_task, start_virts_task)
 
 create_packages_task = env.Command(
@@ -375,32 +378,40 @@ create_packages_task = env.Command(
     None,
     env.Action(create_packages, "\n--- Creating install packages"),
     virts=_get_arg_values("virt"),
-    gpghome=_get_arg_values("gpghome"))
+    gpg_home=_get_arg_values("gpg-home")
+    )
 env.Requires(create_packages_task, [unit_test_task, start_virts_task])
 
 integration_test_task = env.Command(
     "test-integration",
     _get_arg_values("test", ["pdagenttestinteg"]),
-    env.Action(run_integration_tests,
-        "\n--- Running integration tests on virtual boxes"),
-    virts=_get_arg_values("virt"))
+    env.Action(
+        run_integration_tests,
+        "\n--- Running integration tests on virtual boxes"
+        ),
+    virts=_get_arg_values("virt")
+    )
 env.Requires(integration_test_task, [start_virts_task])
 
 dist_task = env.Command(
     "dist",
     None,
-    env.Action(create_dist, "\n--- Creating distributables"))
+    env.Action(create_dist, "\n--- Creating distributables")
+    )
 env.Depends(
     dist_task,
-    [destroy_virts_task, create_packages_task, integration_test_task])
+    [destroy_virts_task, create_packages_task, integration_test_task]
+    )
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
 env.Clean([create_packages_task], target_dir)
 env.Clean([dist_task], dist_dir)
 
-build_task = env.Alias("build",
-    [unit_test_task, create_packages_task, integration_test_task])
+build_task = env.Alias(
+    "build",
+    [unit_test_task, create_packages_task, integration_test_task]
+    )
 env.Alias("all", ["."])
 
 # task to run if no command is specified.
