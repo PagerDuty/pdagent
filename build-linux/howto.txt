@@ -5,22 +5,29 @@ These instructions assume you're running this on a Mac with Vagrant installed,
 and that the project directory ends up mounted in the VM at `/vagrant`. (this
 should happen automatically)
 
+## One-time setup:
+
+    cd /my/agent/workspace
+    gpg --homedir=build-linux/gnupg --gen-key
+    gpg --export --armor >build-linux/gnupg/build-GPG-KEY
+
 ## Ubuntu
-
-Dev Setup: (one-time for your development Mac)
-
-    gem install fpm
 
 Building the .deb:
 
-    cd agent/build-linux/
-    sh make.sh deb
+    scons local-repo \
+        gpg-home=build-linux/gnupg \
+        virt=agent-minimal-ubuntu1204
 
 Install & test the .deb:
 
     vagrant ssh agent-minimal-ubuntu1004 # or agent-minimal-ubuntu1204
- 
-    sudo dpkg -i /vagrant/build-linux/target/pdagent_0.1_all.deb
+
+    sudo apt-key add /vagrant/build-linux/gnupg/build-GPG-KEY
+    sudo sh -c 'echo "deb file:///vagrant/target deb/" \
+      >/etc/apt/sources.list.d/pdagent.list'
+    sudo apt-get update
+    sudo apt-get install pdagent
 
     sudo service pdagent status
     which pd-send
@@ -35,27 +42,25 @@ Uninstall & test cleanup:
 
 ## CentOS / RHEL
 
-Dev Setup: (one-time for the CentOS VM)
-
-    vagrant up agent-minimal-centos65
-    vagrant ssh agent-minimal-centos65
-
-    sudo yum install rpm-build ruby-devel rubygems
-    sudo gem install fpm
-
 Building the .rpm:
 
-    vagrant ssh agent-minimal-centos65
-
-    cd
-    rm -fr agent
-    cp -r /vagrant agent
-    cd agent/build-linux/
-    sh make.sh rpm
+    scons local-repo \
+        gpg-home=/gpg/path/used/earlier \
+        virt=agent-minimal-centos65
 
 Install & test the .rpm:
 
-    sudo rpm -i target/pdagent-0.1-1.noarch.rpm
+    vagrant ssh agent-minimal-centos65
+
+    sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
+[pdagent]
+name=PDAgent
+baseurl=file:///vagrant/target/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///vagrant/build-linux/gnupg/build-GPG-KEY
+EOF'
+    sudo yum install pdagent
 
     sudo service pdagent status
     which pd-send
@@ -63,7 +68,7 @@ Install & test the .rpm:
 
 Uninstall & test cleanup:
 
-    sudo rpm -e pdagent
+    sudo yum remove --yes pdagent
 
     # rerun the test commands to ensure files are gone
 

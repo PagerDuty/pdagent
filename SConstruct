@@ -367,8 +367,19 @@ build               Runs unit tests on virtual machines, creates local
 --clean|-c          Removes generated artifacts.
 publish             Uploads local repository contents for agent into
                     remote repository.
+                    You will need to pass a repo-root argument for this,
+                    which is the location of remote repository. Location
+                    types supported, and corresponding syntax:
+                    S3: s3://<bucket>/<path>  [requires `s3cmd`.]
+                    Also, the required arguments for 'local-repo' need to
+                    be passed in.
 local-repo          Creates installable local repository for supported OS
                     distributions.
+                    You will need to pass a gpg-home argument for this,
+                    where gpg-home contains the key rings to sign the
+                    Agent packages with. You could run this command to
+                    generate required content:
+                    gpg --homedir=/desired/path --gen-key
 test                Runs unit tests on specific virtual machines, bringing
                     the virtual machine up if required.
                     By default, runs on all virtual machines. Specific
