@@ -360,13 +360,14 @@ env = Environment()
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
-all                 Runs all commands.
-build               Runs unit tests on virtual machines, creates packages
-                    and then runs integration tests on virtual machines.
+build               Runs unit tests on virtual machines, creates local
+                    repos and then runs integration tests on virtual
+                    machines.
                     This is the default command if none is specified.
 --clean|-c          Removes generated artifacts.
-dist                Creates distributable artifacts for agent.
-package             Creates installable packages for supported OS
+publish             Uploads local repository contents for agent into
+                    remote repository.
+local-repo          Creates installable local repository for supported OS
                     distributions.
 test                Runs unit tests on specific virtual machines, bringing
                     the virtual machine up if required.
