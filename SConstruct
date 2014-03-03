@@ -39,8 +39,8 @@ _DEB_BUILD_VM = "agent-minimal-ubuntu1204"
 _RPM_BUILD_VM = "agent-minimal-centos65"
 
 
-def create_packages(target, source, env):
-    """Create installable packages for supported operating systems."""
+def create_repo(target, source, env):
+    """Create installable local repository for supported operating systems."""
     gpg_home = env.get("gpg_home")
     if not gpg_home:
         print (
@@ -72,14 +72,14 @@ def create_packages(target, source, env):
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
-        ret_code += _create_deb_package(
+        ret_code += _create_deb_repo(
             _DEB_BUILD_VM,
             remote_gpg_home,
             pkg_installation_root
             )
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
-        ret_code += _create_rpm_package(
+        ret_code += _create_rpm_repo(
             _RPM_BUILD_VM,
             remote_gpg_home,
             pkg_installation_root
@@ -199,10 +199,10 @@ def sync_to_remote_repo(target, source, env):
         return _sync_s3_package_repo(repo_root, target_dir, outbound=True)
 
 
-def _create_deb_package(virt, gpg_home, pkg_installation_root):
+def _create_deb_repo(virt, gpg_home, pkg_installation_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
-    print "\nCreating .deb package..."
+    print "\nCreating local debian repository..."
     make_file = os.path.join(
         remote_project_root,
         build_linux_dir,
@@ -214,11 +214,10 @@ def _create_deb_package(virt, gpg_home, pkg_installation_root):
         )
 
 
-def _create_rpm_package(virt, gpg_home, pkg_installation_root):
+def _create_rpm_repo(virt, gpg_home, pkg_installation_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
-    # Create a temporary file to cd to required directory and make rpm.
-    print "\nCreating .rpm package..."
+    print "\nCreating local redhat repository..."
     make_file = os.path.join(
         remote_project_root,
         build_linux_dir,
@@ -437,14 +436,14 @@ unit_test_task = env.Command(
     )
 env.Requires(unit_test_task, start_virts_task)
 
-create_packages_task = env.Command(
-    "package",
+create_repo_task = env.Command(
+    "local-repo",
     None,
-    env.Action(create_packages, "\n--- Creating install packages"),
+    env.Action(create_repo, "\n--- Creating installable local repository"),
     virts=_get_arg_values("virt"),
     gpg_home=_get_arg_values("gpg-home")
     )
-env.Requires(create_packages_task, [unit_test_task, start_virts_task])
+env.Requires(create_repo_task, [unit_test_task, start_virts_task])
 
 integration_test_task = env.Command(
     "test-integration",
@@ -479,18 +478,18 @@ sync_to_remote_repo_task = env.Command(
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
-env.Clean([create_packages_task], target_dir)
+env.Clean([create_repo_task], target_dir)
 
 build_task = env.Alias(
     "build",
-    [unit_test_task, create_packages_task, integration_test_task]
+    [unit_test_task, create_repo_task, integration_test_task]
     )
 publish_task = env.Alias(
     "publish",
     [
     destroy_virts_task,
     sync_from_remote_repo_task,
-    create_packages_task,
+    create_repo_task,
     integration_test_task,
     sync_to_remote_repo_task
     ]
