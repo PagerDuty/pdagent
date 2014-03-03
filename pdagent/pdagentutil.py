@@ -68,18 +68,22 @@ def utcnow_isoformat():
 def queue_event(
         queue,
         event_type, service_key, incident_key, description, details,
+        include_agent_context,
         agent_id, queued_by,
         ):
     if not incident_key and event_type == "trigger":
         import uuid
         incident_key = "pdagent-%s" % str(uuid.uuid4())
-    context = {
-        "agent": {
-            "id": agent_id,
-            "queued_by": queued_by,
-            "queued_at": utcnow_isoformat()
+    if include_agent_context:
+        context = {
+            "agent": {
+                "id": agent_id,
+                "queued_by": queued_by,
+                "queued_at": utcnow_isoformat()
+                }
             }
-        }
+    else:
+        context = None
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details,
         context
