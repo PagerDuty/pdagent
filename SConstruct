@@ -68,21 +68,21 @@ def create_repo(target, source, env):
             )
 
     virts = env.get("virts")
-    pkg_installation_root = os.path.join(remote_project_root, target_dir)
+    remote_target_dir = os.path.join(remote_project_root, target_dir)
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
         ret_code += _create_deb_repo(
             _DEB_BUILD_VM,
             remote_gpg_home,
-            pkg_installation_root
+            remote_target_dir
             )
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
         ret_code += _create_rpm_repo(
             _RPM_BUILD_VM,
             remote_gpg_home,
-            pkg_installation_root
+            remote_target_dir
             )
 
     if not ret_code:
@@ -199,7 +199,7 @@ def sync_to_remote_repo(target, source, env):
         return _sync_s3_package_repo(repo_root, target_dir, outbound=True)
 
 
-def _create_deb_repo(virt, gpg_home, pkg_installation_root):
+def _create_deb_repo(virt, gpg_home, local_repo_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
     print "\nCreating local debian repository..."
@@ -209,12 +209,12 @@ def _create_deb_repo(virt, gpg_home, pkg_installation_root):
         "deb",
         "make.sh")
     return _run_on_virts(
-        "sh %s %s %s" % (make_file, gpg_home, pkg_installation_root),
+        "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
         [virt]
         )
 
 
-def _create_rpm_repo(virt, gpg_home, pkg_installation_root):
+def _create_rpm_repo(virt, gpg_home, local_repo_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
     print "\nCreating local redhat repository..."
@@ -224,7 +224,7 @@ def _create_rpm_repo(virt, gpg_home, pkg_installation_root):
         "rpm",
         "make.sh")
     return _run_on_virts(
-        "sh %s %s %s" % (make_file, gpg_home, pkg_installation_root),
+        "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
         [virt]
         )
 
