@@ -1,5 +1,5 @@
 #
-# Uninstalls the agent.
+# See howto.txt for instructions.
 #
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
@@ -29,41 +29,56 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-. $(dirname $0)/util.sh
-
 set -e
-set -x
 
-# get agent to run.
-test -n "$(agent_pid)" || start_agent
+# do stuff in the parent directory.
+basedir=$(dirname $(dirname $(echo $0 | sed "s'^\.'$PWD'")))
+cd $basedir
 
-# uninstall agent.
-case $(os_type) in
-  debian)
-    sudo apt-get -y remove pdagent
-    ;;
-  redhat)
-    sudo yum remove -y pdagent
-    ;;
-  *)
-    echo "Unknown os_type " $(os_type) >&2
-    exit 1
-esac
+if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
+    echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
+    exit 2
+fi
+gpg_home="$1"
+install_root="$2"
+rpm_install_root=$install_root/rpm
+[ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
-# for the 'negative = success' commands below, (i.e. we expect the command to
-# fail), we are going to remove the 'set -e' condition, and check the exit code
-# ourselves.
-set +e
+# install required packages.
+installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
+    grep -vc 'not installed')
+[ $installed -eq 4 ] || {
+    echo "Installing required packages. This may take a few minutes..."
+    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
+    echo "Done installing."
+}
+{ gem list fpm | grep fpm >/dev/null ; } || {
+    echo "Installing fpm gem..."
+    sudo gem install -q fpm
+    echo "Done installing."
+}
 
-# check uninstallation status -- no components must be present.
-# no binaries...
-which $BIN_PD_SEND
-test $? -ne 0 || exit 1
-# no libraries...
-python -c "import pdagent; print pdagent.__file__" && exit 1
-test $? -ne 0 || exit 1
-# no configuration files...
-test ! -e $CONFIG_FILE
+echo "Setting up GPG information for RPM..."
+# fingerprint to use for signing = first fingerprint in GPG keyring
+fp=$(gpg --homedir $gpg_home --lock-never --fingerprint | \
+     grep '=' | \
+     head -n1 | \
+     cut -d= -f2 | \
+     tr -d ' ')
+cat >$HOME/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path $gpg_home
+%_gpg_name $fp
+EOF
 
-# ensure that agent is not running.
-test -z "$(agent_pid)"
+sh make_package.sh rpm $gpg_home
+
+echo "Creating an installable local package repository..."
+cp target/*.rpm $rpm_install_root/
+cd $rpm_install_root
+# the next command cleanly (re)creates repodata and repodata/*
+createrepo .
+
+echo "Local install-worthy repository created at: $rpm_install_root"
+
+exit 0

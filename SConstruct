@@ -34,30 +34,63 @@ import subprocess
 import sys
 
 
+_PACKAGE_TYPES = ["deb", "rpm"]
+_DEB_BUILD_VM = "agent-minimal-ubuntu1204"
 _RPM_BUILD_VM = "agent-minimal-centos65"
 
 
-def create_dist(target, source, env):
-    """Create distributable for agent."""
-    env.Execute(Mkdir(dist_dir))
-    pkgs = [p.path for p in env.Glob(os.path.join(target_dir, "*.*"))]
-    cp_pkgs_cmd = ["cp"]
-    cp_pkgs_cmd.extend(pkgs)
-    cp_pkgs_cmd.append(dist_dir)
-    return subprocess.call(cp_pkgs_cmd)
+def create_repo(target, source, env):
+    """Create installable local repository for supported operating systems."""
+    gpg_home = env.get("gpg_home")
+    if not gpg_home:
+        print (
+            "No gpg-home was provided!\n" +
+            "If required, run this command to create a new gpg-home:\n" +
+            "gpg --homedir=/desired/path --gen-key"
+            )
+        return 1
+    else:
+        gpg_home = gpg_home[0]
 
-
-def create_packages(target, source, env):
-    """Create installable packages for supported operating systems."""
+    env.Execute(Mkdir(tmp_dir))
     env.Execute(Mkdir(target_dir))
+
+    # copy gpg-home to VM-accessible location.
+    if subprocess.call(["cp", "-r", gpg_home, tmp_dir]):
+        print "Cannot copy %s to %s" % (gpg_home, tmp_dir)
+        return 1
+    else:
+        # ... and /vagrant-ify the new gpg-home path.
+        remote_gpg_home = os.path.join(
+            remote_project_root,
+            tmp_dir,
+            os.path.basename(gpg_home)
+            )
+
     virts = env.get("virts")
+    remote_target_dir = os.path.join(remote_project_root, target_dir)
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
-        ret_code += _create_deb_package()
+        ret_code += _create_deb_repo(
+            _DEB_BUILD_VM,
+            remote_gpg_home,
+            remote_target_dir
+            )
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
-        ret_code += _create_rpm_package(_RPM_BUILD_VM)
+        ret_code += _create_rpm_repo(
+            _RPM_BUILD_VM,
+            remote_gpg_home,
+            remote_target_dir
+            )
+
+    if not ret_code:
+        # export public key into a temporary location to help installation.
+        export_cmd = ["gpg", "--homedir", gpg_home, "--export", "--armor"]
+        fd = open(os.path.join(tmp_dir, "GPG-KEY-pagerduty"), "w")
+        fd.writelines(subprocess.check_output(export_cmd))
+        fd.close()
 
     return ret_code
 
@@ -65,10 +98,15 @@ def create_packages(target, source, env):
 def run_integration_tests(target, source, env):
     """Run integration tests on running virts."""
     source_paths = [s.path for s in source]
+    pre_cmds = []
+    prev_ver = env.get("upgrade_from")
+    if (prev_ver):
+        pre_cmds.append("export UPGRADE_FROM_VERSION=%s" % prev_ver[0])
     test_runner_file = _generate_remote_test_runner_file(
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".sh"),
-        executable="sh")
+        executable="sh",
+        pre_cmds=pre_cmds)
     return _run_on_virts("sh %s" % test_runner_file, env.get("virts"))
 
 
@@ -127,43 +165,119 @@ def destroy_virtual_boxes(target, source, env):
     return subprocess.call(destroy_cmd)
 
 
-def _create_deb_package():
-    # Assuming that all requisite packages are available.
-    # (see build-linux/howto.txt)
-    print "\nCreating .deb package..."
-    r = subprocess.call(['sh', 'make.sh', 'deb'], cwd=build_linux_dir)
-    if not r:
-        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.deb"))[0].path
-        return subprocess.call(["cp", pkg, target_dir])
-    return r
+def sync_from_remote_repo(target, source, env):
+    repo_root = _pre_sync_checks(env)
+    if not repo_root:
+        return 1
+
+    env.Execute(Mkdir(target_dir))
+    for pkg_type in _PACKAGE_TYPES:
+        pkg_root = os.path.join(target_dir, pkg_type)
+        if not os.path.isdir(pkg_root):
+            env.Execute(Mkdir(pkg_root))
+
+    if repo_root.startswith("s3://"):
+        return _sync_s3_package_repo(repo_root, target_dir, outbound=False)
 
 
-def _create_rpm_package(virt):
-    # Assuming that all requisite packages are available on virts.
+def sync_to_remote_repo(target, source, env):
+    repo_root = _pre_sync_checks(env)
+    if not repo_root:
+        return 1
+
+    for pkg_type in _PACKAGE_TYPES:
+        pkg_root = os.path.join(target_dir, pkg_type)
+        if not (os.path.isdir(pkg_root) and os.listdir(pkg_root)):
+            print "No content to sync from: %s" % pkg_root
+            print "Sync-to-remote was NOT STARTED."
+            return 1
+
+    pkg_types_str = "{%s}" % ",".join(_PACKAGE_TYPES)
+    print "This will copy <project_root>/%s/%s to %s/%s" % \
+        (target_dir, pkg_types_str, repo_root, pkg_types_str)
+    print "All other content in %s/%s will be DELETED." % \
+        (repo_root, pkg_types_str)
+    if raw_input("Are you sure? [y/N] ").lower() not in ["y", "yes"]:
+        return 1
+
+    if repo_root.startswith("s3://"):
+        return _sync_s3_package_repo(repo_root, target_dir, outbound=True)
+
+
+def _create_deb_repo(virt, gpg_home, local_repo_root):
+    # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
-    # Create a temporary file to cd to required directory and make rpm.
-    env.Execute(Mkdir(tmp_dir))
-    make_file = os.path.join(tmp_dir, "make_rpm")
-    _create_text_file(make_file, [
-        'set -e',
-        'sudo yum install -y -q rpm-build ruby-devel rubygems',
-        'sudo gem install -q fpm',
-        'cd %s' % os.path.join(remote_project_root, build_linux_dir),
-        'sh make.sh rpm'
-    ])
-    make_file_on_vm = os.path.join(remote_project_root, make_file)
-    print "\nCreating .rpm package..."
-    r = _run_on_virts("sh %s" % make_file_on_vm, [virt])
-    if not r:
-        pkg = env.Glob(os.path.join(build_linux_target_dir, "*.rpm"))[0].path
-        return subprocess.call(["cp", pkg, target_dir])
+    print "\nCreating local debian repository..."
+    make_file = os.path.join(
+        remote_project_root,
+        build_linux_dir,
+        "deb",
+        "make.sh")
+    return _run_on_virts(
+        "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
+        [virt]
+        )
+
+
+def _create_rpm_repo(virt, gpg_home, local_repo_root):
+    # Assuming that all requisite packages are available on virt.
+    # (see build-linux/howto.txt)
+    print "\nCreating local redhat repository..."
+    make_file = os.path.join(
+        remote_project_root,
+        build_linux_dir,
+        "rpm",
+        "make.sh")
+    return _run_on_virts(
+        "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
+        [virt]
+        )
+
+
+def _pre_sync_checks(env):
+    repo_root = env.get("repo_root")
+    if not repo_root:
+        print "No repo-root was provided!"
+        return None
+    else:
+        repo_root = repo_root[0]
+
+    if repo_root.startswith("s3://"):
+        if subprocess.call(["which", "s3cmd"]):
+            print "No s3cmd found!\nInstall from http://s3tools.org/download"
+            return None
+    else:
+        print "Unrecognized remote repository type for location: " + repo_root
+        return None
+
+    return repo_root
+
+
+def _sync_s3_package_repo(
+        s3_root,
+        local_root,
+        pkg_types=_PACKAGE_TYPES,
+        outbound=False
+        ):
+    r = 0
+    for pkg_type in pkg_types:
+        # note that both src and dest locations need to end with '/'
+        if outbound:
+            src = os.path.join(local_root, pkg_type, "")
+            dest = "%s/%s/" % (s3_root, pkg_type)
+        else:
+            src = "%s/%s/" % (s3_root, pkg_type)
+            dest = os.path.join(local_root, pkg_type, "")
+        print "Syncing %s -> %s..." % (src, dest)
+        r += subprocess.call(["s3cmd", "sync", "--delete-removed", src, dest])
     return r
 
 
 def _generate_remote_test_runner_file(
     source_paths,
     test_filename_matcher,
-    executable=sys.executable):
+    executable=sys.executable,
+    pre_cmds=None):
 
     env.Execute(Mkdir(tmp_dir))
     test_runner_file = os.path.join(tmp_dir, "run_tests")
@@ -174,6 +288,8 @@ def _generate_remote_test_runner_file(
     test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
     run_commands = ["aggr_e=0"]
+    if pre_cmds:
+        run_commands.extend(pre_cmds)
     for test in test_run_paths:
         # using printf because sh's echo in ubuntu1004 does not support
         # interpreting backslash escapes.
@@ -242,7 +358,7 @@ def _run_on_virts(remote_command, virts=None):
         virts = _get_minimal_virt_names(running=True)
     for virt in virts:
         command = ["vagrant", "ssh", virt, "-c", remote_command]
-        print "Running on %s..." % virt
+        print "Running %s" % command
         exit_code += subprocess.call(command)
     return exit_code
 
@@ -252,14 +368,26 @@ env = Environment()
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
-all                 Runs all commands.
-build               Runs unit tests on virtual machines, creates packages
-                    and then runs integration tests on virtual machines.
+build               Runs unit tests on virtual machines, creates local
+                    repos and then runs integration tests on virtual
+                    machines.
                     This is the default command if none is specified.
 --clean|-c          Removes generated artifacts.
-dist                Creates distributable artifacts for agent.
-package             Creates installable packages for supported OS
+publish             Uploads local repository contents for agent into
+                    remote repository.
+                    You will need to pass a repo-root argument for this,
+                    which is the location of remote repository. Location
+                    types supported, and corresponding syntax:
+                    S3: s3://<bucket>/<path>  [requires `s3cmd`.]
+                    Also, the required arguments for 'local-repo' need to
+                    be passed in.
+local-repo          Creates installable local repository for supported OS
                     distributions.
+                    You will need to pass a gpg-home argument for this,
+                    where gpg-home contains the key rings to sign the
+                    Agent packages with. You could run this command to
+                    generate required content:
+                    gpg --homedir=/desired/path --gen-key
 test                Runs unit tests on specific virtual machines, bringing
                     the virtual machine up if required.
                     By default, runs on all virtual machines. Specific
@@ -288,6 +416,10 @@ test-integration    Runs integration tests on specific virtual machines,
                     e.g.
                     scons test-integration test=pdagenttestinteg/test_foo.sh \\
                                            virt=agent-minimal-centos
+                    If you want your tests to install a previous version
+                    of the agent, upgrade it to this version, and then run
+                    integration tests on the upgraded version, provide the
+                    upgrade-from option. (e.g. upgrade-from=1.0)
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details about using the
                     `test` option to run specific unit tests.
@@ -297,66 +429,96 @@ build_linux_dir = "build-linux"
 build_linux_target_dir = os.path.join(build_linux_dir, "target")
 target_dir = "target"
 tmp_dir = os.path.join(target_dir, "tmp")
-dist_dir = "dist"
 remote_project_root = os.sep + "vagrant"
 
 unit_test_local_task = env.Command(
     "test-local",
     _get_arg_values("test", ["pdagenttest"]),
-    env.Action(run_unit_tests_local, "\n--- Running unit tests locally"))
+    env.Action(run_unit_tests_local, "\n--- Running unit tests locally")
+    )
 
 start_virts_task = env.Command(
     "start-virt",
     None,
     env.Action(start_virtual_boxes, "\n--- Starting virtual boxes"),
-    virts=_get_arg_values("virt"))
+    virts=_get_arg_values("virt")
+    )
 
 destroy_virts_task = env.Command(
     "destroy-virt",
     None,
     env.Action(destroy_virtual_boxes, "\n--- Destroying virtual boxes"),
     virts=_get_arg_values("virt"),
-    force=_get_arg_values("force-destroy"))  # e.g. force-destroy=true
+    force=_get_arg_values("force-destroy")  # e.g. force-destroy=true
+    )
 
 unit_test_task = env.Command(
     "test",
     _get_arg_values("test", ["pdagenttest"]),
-    env.Action(run_unit_tests,
-        "\n--- Running unit tests on virtual boxes"),
-    virts=_get_arg_values("virt"))
+    env.Action(run_unit_tests, "\n--- Running unit tests on virtual boxes"),
+    virts=_get_arg_values("virt")
+    )
 env.Requires(unit_test_task, start_virts_task)
 
-create_packages_task = env.Command(
-    "package",
+create_repo_task = env.Command(
+    "local-repo",
     None,
-    env.Action(create_packages, "\n--- Creating install packages"),
-    virts=_get_arg_values("virt"))
-env.Requires(create_packages_task, [unit_test_task, start_virts_task])
+    env.Action(create_repo, "\n--- Creating installable local repository"),
+    virts=_get_arg_values("virt"),
+    gpg_home=_get_arg_values("gpg-home")
+    )
+env.Requires(create_repo_task, [unit_test_task, start_virts_task])
 
 integration_test_task = env.Command(
     "test-integration",
     _get_arg_values("test", ["pdagenttestinteg"]),
-    env.Action(run_integration_tests,
-        "\n--- Running integration tests on virtual boxes"),
-    virts=_get_arg_values("virt"))
+    env.Action(
+        run_integration_tests,
+        "\n--- Running integration tests on virtual boxes"
+        ),
+    virts=_get_arg_values("virt"),
+    upgrade_from=_get_arg_values("upgrade-from")
+    )
 env.Requires(integration_test_task, [start_virts_task])
 
-dist_task = env.Command(
-    "dist",
+sync_from_remote_repo_task = env.Command(
+    "sync-from-remote-repo",
     None,
-    env.Action(create_dist, "\n--- Creating distributables"))
-env.Depends(
-    dist_task,
-    [destroy_virts_task, create_packages_task, integration_test_task])
+    env.Action(
+        sync_from_remote_repo,
+        "\n--- Syncing packages from remote package repository"
+        ),
+    repo_root=_get_arg_values("repo-root")
+    )
+
+sync_to_remote_repo_task = env.Command(
+    "sync-to-remote-repo",
+    None,
+    env.Action(
+        sync_to_remote_repo,
+        "\n--- Syncing packages to remote package repository"
+        ),
+    repo_root=_get_arg_values("repo-root")
+    )
 
 # specify directories to be cleaned up for various targets
 env.Clean([unit_test_task, integration_test_task], tmp_dir)
-env.Clean([create_packages_task], target_dir)
-env.Clean([dist_task], dist_dir)
+env.Clean([create_repo_task], target_dir)
 
-build_task = env.Alias("build",
-    [unit_test_task, create_packages_task, integration_test_task])
-env.Alias("all", ["."])
+build_task = env.Alias(
+    "build",
+    [unit_test_task, create_repo_task, integration_test_task]
+    )
+publish_task = env.Alias(
+    "publish",
+    [
+    destroy_virts_task,
+    sync_from_remote_repo_task,
+    create_repo_task,
+    integration_test_task,
+    sync_to_remote_repo_task
+    ]
+    )
 
 # task to run if no command is specified.
 if env.GetOption("clean"):
