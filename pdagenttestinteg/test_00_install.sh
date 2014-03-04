@@ -41,7 +41,13 @@ case $(os_type) in
     sudo sh -c 'echo "deb file:///vagrant/target deb/" \
       >/etc/apt/sources.list.d/pdagent.list'
     sudo apt-get update
-    sudo apt-get install -y pdagent
+
+    if [ -z "$UPGRADE_FROM_VERSION" ]; then
+        sudo apt-get install -y pdagent
+    else
+        sudo apt-get install -y pdagent=$UPGRADE_FROM_VERSION
+        sudo apt-get install -y pdagent  # 'install', not 'upgrade'.
+    fi
     ;;
   redhat)
     sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
@@ -52,7 +58,13 @@ enabled=1
 gpgcheck=1
 gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
 EOF'
-    sudo yum install -y pdagent
+
+    if [ -z "$UPGRADE_FROM_VERSION" ]; then
+        sudo yum install -y pdagent
+    else
+        sudo yum install -y pdagent-$UPGRADE_FROM_VERSION
+        sudo yum upgrade -y pdagent
+    fi
     ;;
   *)
     echo "Unknown os_type " $(os_type) >&2

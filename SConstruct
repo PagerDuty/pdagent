@@ -98,10 +98,15 @@ def create_repo(target, source, env):
 def run_integration_tests(target, source, env):
     """Run integration tests on running virts."""
     source_paths = [s.path for s in source]
+    pre_cmds = []
+    prev_ver = env.get("upgrade_from")
+    if (prev_ver):
+        pre_cmds.append("export UPGRADE_FROM_VERSION=%s" % prev_ver[0])
     test_runner_file = _generate_remote_test_runner_file(
         source_paths,
         lambda f: f.startswith("test_") and f.endswith(".sh"),
-        executable="sh")
+        executable="sh",
+        pre_cmds=pre_cmds)
     return _run_on_virts("sh %s" % test_runner_file, env.get("virts"))
 
 
@@ -271,7 +276,8 @@ def _sync_s3_package_repo(
 def _generate_remote_test_runner_file(
     source_paths,
     test_filename_matcher,
-    executable=sys.executable):
+    executable=sys.executable,
+    pre_cmds=None):
 
     env.Execute(Mkdir(tmp_dir))
     test_runner_file = os.path.join(tmp_dir, "run_tests")
@@ -282,6 +288,8 @@ def _generate_remote_test_runner_file(
     test_run_paths = [os.path.join(remote_project_root, t) for t in test_files]
 
     run_commands = ["aggr_e=0"]
+    if pre_cmds:
+        run_commands.extend(pre_cmds)
     for test in test_run_paths:
         # using printf because sh's echo in ubuntu1004 does not support
         # interpreting backslash escapes.
@@ -408,6 +416,10 @@ test-integration    Runs integration tests on specific virtual machines,
                     e.g.
                     scons test-integration test=pdagenttestinteg/test_foo.sh \\
                                            virt=agent-minimal-centos
+                    If you want your tests to install a previous version
+                    of the agent, upgrade it to this version, and then run
+                    integration tests on the upgraded version, provide the
+                    upgrade-from option. (e.g. upgrade-from=1.0)
 test-local          Runs unit tests on the local machine.
                     Please see 'test' command for more details about using the
                     `test` option to run specific unit tests.
@@ -464,7 +476,8 @@ integration_test_task = env.Command(
         run_integration_tests,
         "\n--- Running integration tests on virtual boxes"
         ),
-    virts=_get_arg_values("virt")
+    virts=_get_arg_values("virt"),
+    upgrade_from=_get_arg_values("upgrade-from")
     )
 env.Requires(integration_test_task, [start_virts_task])
 
