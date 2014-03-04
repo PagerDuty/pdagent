@@ -51,7 +51,7 @@ class HeartbeatTask(RepeatingTask):
     def __init__(self, heartbeat_interval_secs, agent_id):
         RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self.agent_id = agent_id
-        # to ease unit testing
+        # The following variables exist to ease unit testing:
         self._urllib2 = httpswithverify
         self._retry_gap_secs = RETRY_GAP_SECS
         self._heartbeat_max_retries = HEARTBEAT_MAX_RETRIES
