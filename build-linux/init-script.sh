@@ -42,7 +42,7 @@
 # Description:       PagerDuty Agent daemon process.
 ### END INIT INFO
 
-EXEC=/usr/bin/pdagentd.py
+EXEC=/usr/share/pdagent/bin/pdagentd.py
 EXEC_NAME=$(basename "$EXEC")
 PID_DIR=/var/run/pdagent
 PID_FILE=$PID_DIR/pdagentd.pid

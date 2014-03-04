@@ -76,6 +76,8 @@ except ImportError:
 
 
 # Process config
+# Be careful about what we do here! The daemonization double-fork has not
+# happened yet! For example, os.getpid() cached here will be "wrong" later!
 agent_config = pdagent.config.load_agent_config()
 main_config = agent_config.get_main_config()
 
@@ -232,9 +234,10 @@ def stop_task_threads():
 
 def run():
     global main_logger, agent_id, system_stats
+    pid = os.getpid()
     init_logging(log_dir)
     main_logger = logging.getLogger('main')
-    main_logger.info('*** pdagentd started')
+    main_logger.info("*** pdagentd starting! pid=%s" % pid)
 
     all_ok = True
     try:
@@ -244,6 +247,9 @@ def run():
         # Load/create agent id
         agent_id = get_or_make_agent_id()
         main_logger.info('Agent ID: ' + agent_id)
+
+        # Dump main config
+        main_logger.debug("Main Config: %s" % main_config)
 
         # Get some basic system stats to post back in phone-home
         main_logger.debug('Collecting basic system stats')
@@ -300,10 +306,12 @@ def run():
 
     # Exit
     if all_ok:
-        main_logger.info('*** pdagentd exiting normally!')
+        main_logger.info("*** pdagentd exiting normally! pid=%s" % pid)
         sys.exit(0)
     else:
-        main_logger.error('*** pdagentd exiting because of fatal errors!')
+        main_logger.error(
+            "*** pdagentd exiting due to fatal errors! pid=%s" % pid
+            )
         sys.exit(1)
 
 

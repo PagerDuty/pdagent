@@ -52,7 +52,12 @@ mkdir data target
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
-cp ../bin/pd* data/usr/bin
+cp ../bin/pd-send data/usr/bin
+cp ../bin/pd-zabbix data/usr/bin
+
+echo = /usr/share/pdagent/bin
+mkdir -p data/usr/share/pdagent/bin
+cp ../bin/pdagentd.py data/usr/share/pdagent/bin
 
 echo = /var/...
 mkdir -p data/var/log/pdagent
@@ -60,8 +65,8 @@ mkdir -p data/var/lib/pdagent/db
 mkdir -p data/var/lib/pdagent/outqueue
 
 echo = /etc/...
-mkdir -p data/etc/pdagent/
-cp ../conf/config.cfg data/etc/pdagent/
+mkdir -p data/etc/
+cp ../conf/pdagent.conf data/etc/
 mkdir -p data/etc/init.d
 cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
@@ -89,7 +94,7 @@ if [[ "$1" == "deb" ]]; then
 fi
 
 echo = FPM!
-_FPM_DEPENDS="--depends python"
+_FPM_DEPENDS="--depends sudo --depends python"
 if [[ "$1" == "deb" ]]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
@@ -103,7 +108,7 @@ fpm -s dir \
     $_FPM_DEPENDS \
     --$1-user root \
     --$1-group root \
-    --config-files /etc/pdagent/config.cfg \
+    --config-files /etc/pdagent.conf \
     --post-install ../$1/postinst \
     --pre-uninstall ../$1/prerm \
     -C ../data \
