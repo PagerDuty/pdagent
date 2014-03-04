@@ -197,14 +197,15 @@ class PDQueue(object):
 
     # Returns true if processing can continue for service key, false if not.
     def _process_event(self, fname, consume_func, svc_key):
-        f = open(self._abspath(fname))
-        try:
-            data = f.read()
-        finally:
-            f.close()
+
+        fname_abs = self._abspath(fname)
+        data = None
+        if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
+            with open(self._abspath(fname_abs)) as f:
+                data = f.read()
 
         # ensure that the event is not too large.
-        if len(data) > self.event_size_max_bytes:
+        if data is None or len(data) > self.event_size_max_bytes:
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
