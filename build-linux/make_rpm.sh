@@ -77,7 +77,7 @@ echo "Creating an installable local package repository..."
 cp target/*.rpm $rpm_install_root/
 cd $rpm_install_root
 # the next command cleanly (re)creates repodata and repodata/*
-createrepo .
+createrepo --simple-md-filenames .
 
 echo "Local install-worthy repository created at: $rpm_install_root"
 

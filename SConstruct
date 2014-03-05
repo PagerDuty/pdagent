@@ -197,7 +197,7 @@ def sync_to_remote_repo(target, source, env):
     pkg_types_str = "{%s}" % ",".join(_PACKAGE_TYPES)
     print "This will copy <project_root>/%s/%s to %s/%s" % \
         (target_dir, pkg_types_str, repo_root, pkg_types_str)
-    print "All other content in %s/%s will be DELETED." % \
+    print "All existing content in %s/%s will remain as is." % \
         (repo_root, pkg_types_str)
     if raw_input("Are you sure? [y/N] ").lower() not in ["y", "yes"]:
         return 1
@@ -255,7 +255,7 @@ def _sync_s3_package_repo(
             src = "%s/%s/" % (s3_root, pkg_type)
             dest = os.path.join(local_root, pkg_type, "")
         print "Syncing %s -> %s..." % (src, dest)
-        r += subprocess.call(["s3cmd", "sync", "--delete-removed", src, dest])
+        r += subprocess.call(["s3cmd", "sync", src, dest])
     return r
 
 
