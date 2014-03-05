@@ -106,7 +106,7 @@ if [ "$pkg_type" = "deb" ]; then
 fi
 
 echo = FPM!
-_FPM_DEPENDS="--depends python"
+_FPM_DEPENDS="--depends sudo --depends python"
 if [ "$pkg_type" = "deb" ]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
