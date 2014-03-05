@@ -7,7 +7,7 @@ should happen automatically)
 
 ## One-time setup:
 
-    cd /my/agent/workspace
+    cd /my/workspace/pdagent
     gpg --homedir=build-linux/gnupg --gen-key
     gpg --export --armor >build-linux/gnupg/build-GPG-KEY
 
