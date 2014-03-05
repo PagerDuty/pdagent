@@ -46,7 +46,9 @@ case $(os_type) in
         sudo apt-get install -y pdagent
     else
         sudo apt-get install -y pdagent=$UPGRADE_FROM_VERSION
-        sudo apt-get install -y pdagent  # 'install', not 'upgrade'.
+        # to upgrade pdagent pkg, run `apt-get install`, not `apt-get upgrade`.
+        # 'install' updates one pkg, 'upgrade' updates all installed pkgs.
+        sudo apt-get install -y pdagent
     fi
     ;;
   redhat)
