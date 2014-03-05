@@ -32,7 +32,7 @@
 set -e
 
 # do stuff in the script's directory.
-basedir=$(dirname $(echo $0 | sed "s'^\.'$PWD'"))
+basedir=$(dirname $0)
 cd $basedir
 
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
