@@ -31,8 +31,8 @@
 
 set -e
 
-# do stuff in the parent directory.
-basedir=$(dirname $(dirname $(echo $0 | sed "s'^\.'$PWD'")))
+# do stuff in the script's directory.
+basedir=$(dirname $0)
 cd $basedir
 
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
@@ -77,7 +77,7 @@ echo "Creating an installable local package repository..."
 cp target/*.rpm $rpm_install_root/
 cd $rpm_install_root
 # the next command cleanly (re)creates repodata and repodata/*
-createrepo .
+createrepo --simple-md-filenames .
 
 echo "Local install-worthy repository created at: $rpm_install_root"
 

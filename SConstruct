@@ -72,15 +72,17 @@ def create_repo(target, source, env):
     ret_code = 0
 
     if virts is None or [v for v in virts if v.find("ubuntu") != -1]:
-        ret_code += _create_deb_repo(
+        ret_code += _create_repo(
             _DEB_BUILD_VM,
+            "deb",
             remote_gpg_home,
             remote_target_dir
             )
 
     if virts is None or [v for v in virts if v.find("centos") != -1]:
-        ret_code += _create_rpm_repo(
+        ret_code += _create_repo(
             _RPM_BUILD_VM,
+            "rpm",
             remote_gpg_home,
             remote_target_dir
             )
@@ -195,7 +197,7 @@ def sync_to_remote_repo(target, source, env):
     pkg_types_str = "{%s}" % ",".join(_PACKAGE_TYPES)
     print "This will copy <project_root>/%s/%s to %s/%s" % \
         (target_dir, pkg_types_str, repo_root, pkg_types_str)
-    print "All other content in %s/%s will be DELETED." % \
+    print "All existing content in %s/%s will remain as is." % \
         (repo_root, pkg_types_str)
     if raw_input("Are you sure? [y/N] ").lower() not in ["y", "yes"]:
         return 1
@@ -204,30 +206,14 @@ def sync_to_remote_repo(target, source, env):
         return _sync_s3_package_repo(repo_root, target_dir, outbound=True)
 
 
-def _create_deb_repo(virt, gpg_home, local_repo_root):
+def _create_repo(virt, virt_type, gpg_home, local_repo_root):
     # Assuming that all requisite packages are available on virt.
     # (see build-linux/howto.txt)
-    print "\nCreating local debian repository..."
+    print "\nCreating local %s repository..." % virt_type
     make_file = os.path.join(
         remote_project_root,
         build_linux_dir,
-        "deb",
-        "make.sh")
-    return _run_on_virts(
-        "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
-        [virt]
-        )
-
-
-def _create_rpm_repo(virt, gpg_home, local_repo_root):
-    # Assuming that all requisite packages are available on virt.
-    # (see build-linux/howto.txt)
-    print "\nCreating local redhat repository..."
-    make_file = os.path.join(
-        remote_project_root,
-        build_linux_dir,
-        "rpm",
-        "make.sh")
+        "make_%s.sh" % virt_type)
     return _run_on_virts(
         "sh %s %s %s" % (make_file, gpg_home, local_repo_root),
         [virt]
@@ -269,7 +255,7 @@ def _sync_s3_package_repo(
             src = "%s/%s/" % (s3_root, pkg_type)
             dest = os.path.join(local_root, pkg_type, "")
         print "Syncing %s -> %s..." % (src, dest)
-        r += subprocess.call(["s3cmd", "sync", "--delete-removed", src, dest])
+        r += subprocess.call(["s3cmd", "sync", src, dest])
     return r
 
 
