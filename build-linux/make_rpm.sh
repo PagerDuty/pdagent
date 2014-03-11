@@ -1,5 +1,5 @@
 #
-# Installs the agent.
+# See howto.txt for instructions.
 #
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
@@ -29,56 +29,56 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-. $(dirname $0)/util.sh
-
 set -e
-set -x
 
-# install agent.
-case $(os_type) in
-  debian)
-    sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
-    sudo sh -c 'echo "deb file:///vagrant/target deb/" \
-      >/etc/apt/sources.list.d/pdagent.list'
-    sudo apt-get update
+# do stuff in the script's directory.
+basedir=$(dirname $0)
+cd $basedir
 
-    if [ -z "$UPGRADE_FROM_VERSION" ]; then
-        sudo apt-get install -y pdagent
-    else
-        sudo apt-get install -y pdagent=$UPGRADE_FROM_VERSION
-        # to upgrade pdagent pkg, run `apt-get install`, not `apt-get upgrade`.
-        # 'install' updates one pkg, 'upgrade' updates all installed pkgs.
-        sudo apt-get install -y pdagent
-    fi
-    ;;
-  redhat)
-    sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
-[pdagent]
-name=PDAgent
-baseurl=file:///vagrant/target/rpm
-enabled=1
-gpgcheck=1
-gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
-EOF'
+if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
+    echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
+    exit 2
+fi
+gpg_home="$1"
+install_root="$2"
+rpm_install_root=$install_root/rpm
+[ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
-    if [ -z "$UPGRADE_FROM_VERSION" ]; then
-        sudo yum install -y pdagent
-    else
-        sudo yum install -y pdagent-$UPGRADE_FROM_VERSION
-        sudo yum upgrade -y pdagent
-    fi
-    ;;
-  *)
-    echo "Unknown os_type " $(os_type) >&2
-    exit 1
-esac
+# install required packages.
+installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
+    grep -vc 'not installed')
+[ $installed -eq 4 ] || {
+    echo "Installing required packages. This may take a few minutes..."
+    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
+    echo "Done installing."
+}
+{ gem list fpm | grep fpm >/dev/null ; } || {
+    echo "Installing fpm gem..."
+    sudo gem install -q fpm
+    echo "Done installing."
+}
 
-# check installation status.
-which $BIN_PD_SEND
-python -c "import pdagent; print pdagent.__file__"
+echo "Setting up GPG information for RPM..."
+# fingerprint to use for signing = first fingerprint in GPG keyring
+fp=$(gpg --homedir $gpg_home --no-tty --lock-never --fingerprint | \
+     grep '=' | \
+     head -n1 | \
+     cut -d= -f2 | \
+     tr -d ' ')
+cat >$HOME/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path $gpg_home
+%_gpg_name $fp
+EOF
 
-# check that agent has started up.
-test -n "$(agent_pid)"
+sh make_package.sh rpm
 
-# check that there is an agent id file created.
-test -e $DATA_DIR/agent_id.txt
+echo "Creating an installable local package repository..."
+cp target/*.rpm $rpm_install_root/
+cd $rpm_install_root
+# the next command cleanly (re)creates repodata and repodata/*
+createrepo --simple-md-filenames .
+
+echo "Local install-worthy repository created at: $rpm_install_root"
+
+exit 0
