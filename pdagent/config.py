@@ -33,6 +33,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 
 from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
@@ -59,6 +60,21 @@ class AgentConfig:
 
     def get_db_dir(self):
         return os.path.join(self.default_dirs["data_dir"], "db")
+
+    def get_agent_id_file(self):
+        return os.path.join(self.default_dirs['data_dir'], "agent_id.txt")
+
+    def get_agent_id(self):
+        # returns None if agent_id is not available or readable
+        fd = None
+        try:
+            fd = open(self.get_agent_id_file(), "r")
+            return str(uuid.UUID(fd.readline().strip()))
+        except (IOError, ValueError):
+            return None
+        finally:
+            if fd:
+                fd.close()
 
     def get_queue(self, dequeue_enabled=False):
         from pdagent.pdqueue import PDQueue

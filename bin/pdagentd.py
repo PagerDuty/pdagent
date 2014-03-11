@@ -88,9 +88,7 @@ data_dir = conf_dirs['data_dir']
 outqueue_dir = conf_dirs["outqueue_dir"]
 db_dir = conf_dirs["db_dir"]
 
-agent_id_file = os.path.join(
-    agent_config.get_conf_dirs()['data_dir'], "agent_id.txt"
-    )
+agent_id_file = agent_config.get_agent_id_file()
 
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 

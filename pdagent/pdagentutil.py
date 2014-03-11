@@ -32,41 +32,55 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+from datetime import datetime
 import json
 import os
+import sys
+import time
 
 
 def find_in_sys_path(file_path):
-    import os
-    import sys
     for directory in sys.path:
         abs_path = os.path.join(directory, file_path)
         if os.access(abs_path, os.R_OK):
             return abs_path
     return None
 
-def ensure_readable_directory(dir):
-    if not os.access(dir, os.R_OK):
+
+def ensure_readable_directory(d):
+    if not os.access(d, os.R_OK):
         raise Exception(
-            "Can't read directory %s, please check permissions" % dir
+            "Can't read directory %s, please check permissions" % d
             )
 
-def ensure_writable_directory(dir):
-    if not os.access(dir, os.W_OK):
+
+def ensure_writable_directory(d):
+    if not os.access(d, os.W_OK):
         raise Exception(
-            "Can't write to directory %s, please check permissions" % dir
+            "Can't write to directory %s, please check permissions" % d
             )
+
+
+def utcnow_isoformat():
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def queue_event(
         queue,
-        event_type, service_key, incident_key, description, details
+        event_type, service_key, incident_key, description, details,
+        agent_id, queued_by,
         ):
     if not incident_key and event_type == "trigger":
         import uuid
         incident_key = "pdagent-%s" % str(uuid.uuid4())
+    agent_context = {
+        "agent_id": agent_id,
+        "queued_by": queued_by,
+        "queued_at": utcnow_isoformat()
+        }
     event = _build_event_json_str(
-        event_type, service_key, incident_key, description, details
+        event_type, service_key, incident_key, description, details,
+        agent_context
         )
     queue.enqueue(service_key, event)
     return incident_key
@@ -79,8 +93,10 @@ def resurrect_events(queue, service_key):
 def get_status(queue, service_key):
     return queue.get_status(service_key)
 
+
 def _build_event_json_str(
-    event_type, service_key, incident_key, description, details
+    event_type, service_key, incident_key, description, details,
+    agent_context=None
     ):
     d = {
         "service_key": service_key,
@@ -91,6 +107,8 @@ def _build_event_json_str(
         d["incident_key"] = incident_key
     if description is not None:
         d["description"] = description
+    if agent_context is not None:
+        d["agent"] = agent_context
 
     return json.dumps(
         d,
