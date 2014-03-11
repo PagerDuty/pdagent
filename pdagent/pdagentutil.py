@@ -73,16 +73,14 @@ def queue_event(
     if not incident_key and event_type == "trigger":
         import uuid
         incident_key = "pdagent-%s" % str(uuid.uuid4())
-    context = {
-        "agent": {
-            "id": agent_id,
-            "queued_by": queued_by,
-            "queued_at": utcnow_isoformat()
-            }
+    agent_context = {
+        "agent_id": agent_id,
+        "queued_by": queued_by,
+        "queued_at": utcnow_isoformat()
         }
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, details,
-        context
+        agent_context
         )
     queue.enqueue(service_key, event)
     return incident_key
@@ -98,7 +96,7 @@ def get_status(queue, service_key):
 
 def _build_event_json_str(
     event_type, service_key, incident_key, description, details,
-    context=None
+    agent_context=None
     ):
     d = {
         "service_key": service_key,
@@ -109,8 +107,8 @@ def _build_event_json_str(
         d["incident_key"] = incident_key
     if description is not None:
         d["description"] = description
-    if context is not None:
-        d["context"] = context
+    if agent_context is not None:
+        d["agent"] = agent_context
 
     return json.dumps(
         d,
