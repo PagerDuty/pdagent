@@ -60,7 +60,7 @@ installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
 
 echo "Setting up GPG information for RPM..."
 # fingerprint to use for signing = first fingerprint in GPG keyring
-fp=$(gpg --homedir $gpg_home --lock-never --fingerprint | \
+fp=$(gpg --homedir $gpg_home --no-tty --lock-never --fingerprint | \
      grep '=' | \
      head -n1 | \
      cut -d= -f2 | \
@@ -71,7 +71,7 @@ cat >$HOME/.rpmmacros <<EOF
 %_gpg_name $fp
 EOF
 
-sh make_package.sh rpm $gpg_home
+sh make_package.sh rpm
 
 echo "Creating an installable local package repository..."
 cp target/*.rpm $rpm_install_root/
