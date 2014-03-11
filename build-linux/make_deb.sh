@@ -56,7 +56,7 @@ deb_install_root=$install_root/deb
     echo "Done installing."
 }
 
-sh make_package.sh deb $gpg_home
+sh make_package.sh deb
 
 echo "Creating an installable local package repository..."
 cp target/*.deb $deb_install_root/
@@ -81,7 +81,7 @@ EOF
 apt-ftparchive -c /tmp/apt-ftparchive.conf release deb >Release
 mv Release deb/
 [ ! -e deb/Release.gpg ] || rm deb/Release.gpg
-gpg --homedir $gpg_home --lock-never \
+gpg --homedir $gpg_home --no-tty --lock-never \
     --output deb/Release.gpg \
     --detach-sign --armor deb/Release
 
