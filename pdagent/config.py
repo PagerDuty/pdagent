@@ -64,7 +64,8 @@ class AgentConfig:
     def get_agent_id_file(self):
         return os.path.join(self.default_dirs['data_dir'], "agent_id.txt")
 
-    def get_agent_id_or_None(self):
+    def get_agent_id(self):
+        # returns None if agent_id is not available or readable
         fd = None
         try:
             fd = open(self.get_agent_id_file(), "r")
