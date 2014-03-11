@@ -32,13 +32,19 @@ import json
 import unittest
 from urllib2 import URLError, HTTPError
 
+from pdagent.constants import AGENT_VERSION
 from pdagent.heartbeat import HeartbeatTask
 from pdagent.thirdparty import httpswithverify
+from pdagenttest.mockqueue import MockQueue
 from pdagenttest.mockresponse import MockResponse
 from pdagenttest.mockurllib import MockUrlLib
 
 
 AGENT_ID = "test123"
+SYSTEM_INFO = {
+    "name": "Test",
+    "version": "Infinity"
+}
 RESPONSE_FREQUENCY_SEC = 30
 
 
@@ -47,16 +53,28 @@ class HeartbeatTest(unittest.TestCase):
     def new_heartbeat_task(self):
         hb = HeartbeatTask(
             RESPONSE_FREQUENCY_SEC + 10,  # something different from response.
-            AGENT_ID
+            AGENT_ID,
+            self.mock_queue(),
+            SYSTEM_INFO
             )
         hb._urllib2 = MockUrlLib()
         return hb
+
+    def mock_queue(self):
+        return MockQueue(
+            status={"foo": "bar"},
+            aggregated=True,
+            throttle_info=True
+        )
 
     def test_data(self):
         hb = self.new_heartbeat_task()
         hb.tick()
         expected = {
             "agent_id": AGENT_ID,
+            "agent_version": AGENT_VERSION,
+            "system_info": SYSTEM_INFO,
+            "agent_stats": hb._pd_queue.status
             }
         self.assertEqual(json.loads(hb._urllib2.request.get_data()), expected)
 
