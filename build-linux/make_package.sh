@@ -35,11 +35,11 @@ set -e  # fail on errors
 pkg_type=""
 
 print_usage_and_exit() {
-    echo "Usage: $0 {deb|rpm} {path-to-gpg-home}"
+    echo "Usage: $0 {deb|rpm}"
     exit 2
 }
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
     print_usage_and_exit
 fi
 
@@ -53,7 +53,6 @@ esac
 
 echo = BUILD TYPE: $pkg_type
 
-gpg_home=$2
 # ensure we're in the build directory
 cd $(dirname "$0")
 
