@@ -33,7 +33,7 @@ import logging
 import time
 from urllib2 import Request, URLError, HTTPError
 
-from pdagent.constants import HEARTBEAT_URI
+from pdagent.constants import AGENT_VERSION, HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
 from pdagent.thirdparty import httpswithverify
 from httplib import HTTPException
@@ -48,9 +48,16 @@ HEARTBEAT_MAX_RETRIES = 10
 
 class HeartbeatTask(RepeatingTask):
 
-    def __init__(self, heartbeat_interval_secs, agent_id):
+    def __init__(
+            self,
+            heartbeat_interval_secs,
+            agent_id,
+            pd_queue,
+            system_info):
         RepeatingTask.__init__(self, heartbeat_interval_secs, True)
-        self.agent_id = agent_id
+        self._agent_id = agent_id
+        self._pd_queue = pd_queue
+        self._system_info = system_info
         # The following variables exist to ease unit testing:
         self._urllib2 = httpswithverify
         self._retry_gap_secs = RETRY_GAP_SECS
@@ -62,12 +69,13 @@ class HeartbeatTask(RepeatingTask):
             # max time is half an interval
             retry_time_limit = time.time() + (self.get_interval_secs() / 2)
             attempt_number = 0
-            heartbeat_json = self._make_heartbeat_json()
             while not self.is_stop_invoked():
                 attempt_number += 1
                 try:
+                    heartbeat_json = self._make_heartbeat_json()
                     response_str = self._heartbeat(heartbeat_json)
                     logger.debug("Heartbeat successful!")
+                    self._system_info = None  # only send in first heartbeat.
                     if response_str:
                         self._process_response(response_str)
                     break
@@ -106,14 +114,21 @@ class HeartbeatTask(RepeatingTask):
                 )
 
     def _make_heartbeat_json(self):
-        return {
-            "agent_id": self.agent_id
+        hb_json = {
+            "agent_id": self._agent_id,
+            "agent_version": AGENT_VERSION,
+            "agent_stats": self._pd_queue.get_status(
+                throttle_info=True, aggregated=True
+                )
             }
+        if self._system_info:
+            hb_json["system_info"] = self._system_info
+        return hb_json
 
     def _heartbeat(self, heartbeat_json):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(HEARTBEAT_URI)
-        request.add_header("Content-type", "application/json")
+        request.add_header("Content-Type", "application/json")
         heartbeat_data = json.dumps(heartbeat_json)
         request.add_data(heartbeat_data)
         response = self._urllib2.urlopen(request)
