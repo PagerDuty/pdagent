@@ -1,1 +1,1 @@
-{"description":"\u00e9","details":{},"event_type":"acknowledge","incident_key":"server.fire","service_key":"DUMMY_SERVICE_KEY"}
+{"agent":{"agent_id":"SOME_ID","queued_at":"SOME_TIME","queued_by":"pd-send"},"description":"\u00e9","details":{},"event_type":"acknowledge","incident_key":"server.fire","service_key":"DUMMY_SERVICE_KEY"}
