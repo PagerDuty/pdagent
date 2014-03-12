@@ -23,7 +23,8 @@ import sys
 
 def daemonize(
         pidfile,
-        stdin=os.devnull, stdout=os.devnull, stderr=os.devnull
+        stdin=os.devnull, stdout=os.devnull, stderr=os.devnull,
+        zero_umask=True
         ):
     """
     Do the UNIX double-fork magic.
@@ -61,7 +62,8 @@ def daemonize(
     # Decouple from parent environment
     os.chdir("/")
     os.setsid()
-    os.umask(0)
+    if zero_umask:
+        os.umask(0)
 
     # Do second fork
     try:
