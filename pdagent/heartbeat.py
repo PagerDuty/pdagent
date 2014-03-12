@@ -73,8 +73,8 @@ class HeartbeatTask(RepeatingTask):
             while not self.is_stop_invoked():
                 attempt_number += 1
                 try:
-                    heartbeat_json = self._make_heartbeat_json()
-                    response_str = self._heartbeat(heartbeat_json)
+                    heartbeat_data = self._make_heartbeat_data()
+                    response_str = self._heartbeat(heartbeat_data)
                     logger.debug("Heartbeat successful!")
                     self._system_info = None  # only send in first heartbeat.
                     if response_str:
@@ -114,8 +114,8 @@ class HeartbeatTask(RepeatingTask):
                 exc_info=True
                 )
 
-    def _make_heartbeat_json(self):
-        hb_json = {
+    def _make_heartbeat_data(self):
+        hb_data = {
             "agent_id": self._agent_id,
             "agent_version": AGENT_VERSION,
             "agent_stats": self._pd_queue.get_status(
@@ -123,15 +123,15 @@ class HeartbeatTask(RepeatingTask):
                 )
             }
         if self._system_info:
-            hb_json["system_info"] = self._system_info
-        return hb_json
+            hb_data["system_info"] = self._system_info
+        return hb_data
 
-    def _heartbeat(self, heartbeat_json):
+    def _heartbeat(self, heartbeat_data):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(HEARTBEAT_URI)
         request.add_header("Content-Type", "application/json")
-        heartbeat_data = json.dumps(heartbeat_json)
-        request.add_data(heartbeat_data)
+        heartbeat_json_str = json.dumps(heartbeat_data)
+        request.add_data(heartbeat_json_str)
         response = self._urllib2.urlopen(request)
         return response.read()
 
