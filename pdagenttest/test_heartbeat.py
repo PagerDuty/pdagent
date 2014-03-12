@@ -44,7 +44,7 @@ AGENT_ID = "test123"
 SYSTEM_INFO = {
     "name": "Test",
     "version": "Infinity"
-}
+    }
 RESPONSE_FREQUENCY_SEC = 30
 
 
@@ -65,7 +65,7 @@ class HeartbeatTest(unittest.TestCase):
             status={"foo": "bar"},
             aggregated=True,
             throttle_info=True
-        )
+            )
 
     def test_data(self):
         hb = self.new_heartbeat_task()

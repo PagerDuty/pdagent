@@ -53,7 +53,8 @@ class HeartbeatTask(RepeatingTask):
             heartbeat_interval_secs,
             agent_id,
             pd_queue,
-            system_info):
+            system_info
+            ):
         RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self._agent_id = agent_id
         self._pd_queue = pd_queue
