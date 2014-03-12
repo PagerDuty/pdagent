@@ -370,5 +370,5 @@ def init_logging(log_dir):
 
 # ---- Daemonize and run agent
 
-daemonize(pidfile)
+daemonize(pidfile, zero_umask=False)
 run()
