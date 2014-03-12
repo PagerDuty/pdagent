@@ -176,7 +176,12 @@ def make_sendevent_task():
 def make_heartbeat_task():
     # by default, heartbeat every hour
     heartbeat_interval_secs = 60 * 60
-    return HeartbeatTask(heartbeat_interval_secs, agent_id)
+    return HeartbeatTask(
+        heartbeat_interval_secs,
+        agent_id,
+        pd_queue,
+        system_stats
+        )
 
 
 def make_agent_tasks():
