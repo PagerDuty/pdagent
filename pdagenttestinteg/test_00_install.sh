@@ -62,6 +62,6 @@ test -n "$(agent_pid)"
 test -e $DATA_DIR/agent_id.txt
 
 # check permissions of files created by agent
-test `stat -c %a $DATA_DIR/agent_id.txt` -eq "644"
-test `stat -c %a $LOG_FILE` -eq "644"
+test $(stat -c %a $DATA_DIR/agent_id.txt) = "644"
+test $(stat -c %a $LOG_FILE) = "644"
 
