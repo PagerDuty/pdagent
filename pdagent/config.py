@@ -84,16 +84,19 @@ class AgentConfig:
                 int(s.strip()) for s in
                 self.main_config["backoff_intervals"].split(",")
                 ]
+            counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         else:
             backoff_db = None
             backoff_intervals = None
+            counter_db = None
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_intervals=backoff_intervals
+            backoff_intervals=backoff_intervals,
+            counter_db=counter_db
             )
 
 _valid_log_levels = \

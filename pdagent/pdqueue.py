@@ -65,7 +65,8 @@ class PDQueue(object):
             time_calc,
             event_size_max_bytes,
             backoff_intervals,
-            backoff_db
+            backoff_db,
+            counter_db
             ):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
@@ -85,6 +86,7 @@ class PDQueue(object):
         if backoff_db and backoff_intervals:
             self.backoff_info = \
                 _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+        self.counter_info = _CounterInfo(counter_db)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -171,6 +173,7 @@ class PDQueue(object):
             # reload back-off info, in case there are external changes to it.
             now = self.time.time()
             self.backoff_info.load(now)
+            self.counter_info.load()
             err_svc_keys = set()
 
             for fname in file_names:
@@ -192,12 +195,12 @@ class PDQueue(object):
                         break
 
             self.backoff_info.store()
+            self.counter_info.store()
         finally:
             lock.release()
 
     # Returns true if processing can continue for service key, false if not.
     def _process_event(self, fname, consume_func, svc_key):
-
         fname_abs = self._abspath(fname)
         data = None
         if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
@@ -210,6 +213,7 @@ class PDQueue(object):
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self.counter_info.increment("failure")
             return True
 
         logger.info("Processing event " + fname)
@@ -220,12 +224,14 @@ class PDQueue(object):
             # was not specified, i.e. if event was enqueued in a non-standard
             # manner (e.g. not using the pd* scripts.)
             self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
+            self.counter_info.increment("success")
             return True
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self.counter_info.increment("failure")
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             logger.info("Backing off service key " + svc_key)
@@ -239,6 +245,7 @@ class PDQueue(object):
                     svc_key
                     )
                 self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                self.counter_info.increment("failure")
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
@@ -462,3 +469,37 @@ class _BackoffInfo(object):
             logger.warning(
                 "Unable to save service-key back-off history",
                 exc_info=True)
+
+
+
+class _CounterInfo(object):
+    """
+    Loads, accesses, modifies and saves counters for processed events.
+    """
+
+    def __init__(self, counter_db):
+        self._db = counter_db
+        self._data = {}
+
+    # increments count of given type by given delta (1 by default.)
+    def increment(self, counter_type, delta=1):
+        self._data[counter_type] = self._data.get(counter_type, 0) + delta
+
+    # loads persisted counter history.
+    def load(self):
+        try:
+            self._data = self._db.get()
+        except:
+            logger.warning(
+                "Unable to load counter history, resetting",
+                exc_info=True
+                )
+        if not self._data:
+            self._data = {}
+
+    # persists current counter history.
+    def store(self):
+        try:
+            self._db.set(self._data)
+        except:
+            logger.warning("Unable to save counter history", exc_info=True)
