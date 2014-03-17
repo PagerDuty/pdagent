@@ -98,7 +98,7 @@ class AgentConfig:
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
             backoff_intervals=backoff_intervals,
-            qfile_mode=_ENQUEUE_FILE_MODE
+            enqueue_file_mode=_ENQUEUE_FILE_MODE
             )
 
 _valid_log_levels = \
