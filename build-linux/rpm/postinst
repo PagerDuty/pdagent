@@ -35,6 +35,9 @@ set -e
     /usr/sbin/adduser --system --shell /bin/false --no-create-home pdagent
 
 # Fix ownership of data and log dirs
+# outqueue directory world permission is set to -wx to allow any user to
+# write events but not list the directory so that service keys of other
+# users cannot be seen
 chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
 chmod 773 /var/lib/pdagent/outqueue
 
