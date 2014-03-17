@@ -39,6 +39,9 @@ from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
 
 
+_ENQUEUE_FILE_MODE = 0644  # rw-r--r--
+
+
 class AgentConfig:
 
     def __init__(self, dev_layout, default_dirs, main_config):
@@ -94,7 +97,8 @@ class AgentConfig:
             time_calc=time,
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_intervals=backoff_intervals
+            backoff_intervals=backoff_intervals,
+            qfile_mode=_ENQUEUE_FILE_MODE
             )
 
 _valid_log_levels = \
