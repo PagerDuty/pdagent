@@ -53,7 +53,7 @@ test_startup() {
 
   test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
   QUEUED_FILE=$(sudo find $OUTQUEUE_DIR -type f )
-  test $(sudo stat -c %a $QUEUED_FILE) = "640"
+  test $(sudo stat -c %a $QUEUED_FILE) = "644"
 
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i test$$_1 -d "Testing"
 
