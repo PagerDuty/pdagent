@@ -38,7 +38,7 @@ if [ "$1" = "configure" ]; then
 
     # Fix ownership of data and log dirs
     chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
-    chmod 777 /var/lib/pdagent/outqueue
+    chmod 773 /var/lib/pdagent/outqueue
 
     # Compile module .py to .pyc
     if which update-python-modules >/dev/null 2>&1; then
