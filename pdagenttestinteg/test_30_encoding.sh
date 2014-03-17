@@ -41,6 +41,7 @@ test -z "$(agent_pid)" || stop_agent
 test_utf8_trigger() {
 
   # clear outqueue
+  test -d $OUTQUEUE_DIR
   sudo find $OUTQUEUE_DIR -type f -exec rm -f {} \;
 
   /bin/bash -c "$BIN_PD_SEND -k DUMMY_SERVICE_KEY -t acknowledge -i server.fire -d $'\xC3\xA9'"

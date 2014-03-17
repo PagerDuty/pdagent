@@ -41,6 +41,7 @@ test "$SVC_KEY" != "CHANGEME" || {
 
 # stop agent and clear outqueue if required.
 test -z "$(agent_pid)" || stop_agent
+test -d $OUTQUEUE_DIR
 sudo find $OUTQUEUE_DIR -type f -exec rm -f {} \;
 
 
