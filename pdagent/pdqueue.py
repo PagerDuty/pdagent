@@ -32,6 +32,7 @@ import errno
 import os
 import logging
 from constants import ConsumeEvent
+from pdagentutil import utcnow_isoformat
 
 
 logger = logging.getLogger(__name__)
@@ -479,7 +480,7 @@ class _CounterInfo(object):
 
     def __init__(self, counter_db):
         self._db = counter_db
-        self._data = {}
+        self._data = None
 
     # increments count of given type by given delta (1 by default.)
     def increment(self, counter_type, delta=1):
@@ -495,7 +496,9 @@ class _CounterInfo(object):
                 exc_info=True
                 )
         if not self._data:
-            self._data = {}
+            self._data = {
+                "valid_since": utcnow_isoformat()
+                }
 
     # persists current counter history.
     def store(self):

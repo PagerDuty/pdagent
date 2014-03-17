@@ -715,7 +715,8 @@ class PDQueueTest(unittest.TestCase):
 
 
     def _assertCounterData(self, q, data):
-        counter_data = q.counter_info._db.get()
+        counter_db = q.counter_info._db
+        counter_data = counter_db.get()
         expected = None
 
         if data:
@@ -725,6 +726,14 @@ class PDQueueTest(unittest.TestCase):
                 expected["success"] = success
             if failure != 0:
                 expected["failure"] = failure
+            try:
+                counter_db.cached_valid_since
+            except AttributeError:
+                # "valid_since" must be generated if not present already.
+                self.assertNotEquals(counter_data["valid_since"], None)
+                counter_db.cached_valid_since = counter_data["valid_since"]
+            # "valid_since" must not change once generated.
+            expected["valid_since"] = counter_db.cached_valid_since
 
         self.assertEqual(counter_data, expected)
 
