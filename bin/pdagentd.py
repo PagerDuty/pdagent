@@ -43,8 +43,11 @@ import time
 import uuid
 
 
-_DEFAULT_UMASK = 0137
-_AGENT_ID_FILE_UMASK = 0133
+# Agent file permission masks:
+# files written by agent should be private since they contain service keys
+_DEFAULT_UMASK = 0137  # rw-r-----
+# except for agent_id since pd-send needs it for agent context
+_AGENT_ID_FILE_UMASK = 0133  # rw-r--r--
 
 
 # Check we're running as main
