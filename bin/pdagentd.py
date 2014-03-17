@@ -43,6 +43,10 @@ import time
 import uuid
 
 
+_DEFAULT_UMASK = 0137
+_AGENT_ID_FILE_UMASK = 0133
+
+
 # Check we're running as main
 if __name__ != '__main__':
     raise SystemExit(
@@ -330,11 +334,13 @@ def get_or_make_agent_id():
         main_logger.info('Generating new agent ID')
         agent_id = str(uuid.uuid4())
         fd = None
+        orig_umask = os.umask(_AGENT_ID_FILE_UMASK)
         try:
             fd = open(agent_id_file, "w")
             fd.write(agent_id)
             fd.write('\n')
         finally:
+            os.umask(orig_umask)
             if fd:
                 fd.close()
         return agent_id
@@ -370,5 +376,5 @@ def init_logging(log_dir):
 
 # ---- Daemonize and run agent
 
-daemonize(pidfile, zero_umask=False)
+daemonize(pidfile, umask=_DEFAULT_UMASK)
 run()
