@@ -71,7 +71,7 @@ def main():
     agent_config = load_agent_config()
 
     incident_key = queue_event(
-        agent_config.get_queue(),
+        agent_config.get_enqueuer(),
         args.event_type, args.service_key, args.incident_key, args.description,
         details,
         agent_config.get_agent_id(), "pd-send",

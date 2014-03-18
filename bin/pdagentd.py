@@ -99,7 +99,7 @@ agent_id_file = agent_config.get_agent_id_file()
 
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
-pd_queue = agent_config.get_queue(dequeue_enabled=True)
+pd_queue = agent_config.get_queue()
 
 
 # Check directories
