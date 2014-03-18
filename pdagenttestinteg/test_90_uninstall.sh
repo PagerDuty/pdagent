@@ -40,10 +40,10 @@ test -n "$(agent_pid)" || start_agent
 # uninstall agent.
 case $(os_type) in
   debian)
-    sudo apt-get --yes remove pdagent
+    sudo apt-get -y remove pdagent
     ;;
   redhat)
-    sudo rpm -e pdagent
+    sudo yum remove -y pdagent
     ;;
   *)
     echo "Unknown os_type " $(os_type) >&2

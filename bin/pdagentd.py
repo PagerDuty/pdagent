@@ -146,7 +146,6 @@ from pdagent.constants import AGENT_VERSION
 from pdagent.thirdparty.daemon import daemonize
 from pdagent.pdthread import RepeatingTaskThread
 from pdagent.heartbeat import HeartbeatTask
-from pdagent.phonehome import PhoneHomeTask
 from pdagent.sendevent import SendEventTask
 
 
@@ -181,27 +180,20 @@ def make_sendevent_task():
         )
 
 
-def make_phonehome_task():
-    # by default, phone-home daily
-    phonehome_interval_secs = 60 * 60 * 24
-    return PhoneHomeTask(
-        phonehome_interval_secs,
-        pd_queue,
-        agent_id,
-        system_stats
-        )
-
-
 def make_heartbeat_task():
     # by default, heartbeat every hour
     heartbeat_interval_secs = 60 * 60
-    return HeartbeatTask(heartbeat_interval_secs, agent_id)
+    return HeartbeatTask(
+        heartbeat_interval_secs,
+        agent_id,
+        pd_queue,
+        system_stats
+        )
 
 
 def make_agent_tasks():
     mk_tasks = [
         make_sendevent_task,
-        make_phonehome_task,
         make_heartbeat_task,
         ]
     return [mk_task() for mk_task in mk_tasks]
