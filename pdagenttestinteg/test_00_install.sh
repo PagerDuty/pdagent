@@ -37,14 +37,36 @@ set -x
 # install agent.
 case $(os_type) in
   debian)
-    # FIXME: Ubuntu 12.04 does not include python-support.
-    # We need to test that it is pulled in automatically when
-    # pdagent is installed from repo rather than from .deb
-    sudo apt-get install python-support
-    sudo dpkg -i /vagrant/target/pdagent_${AGENT_VERSION}_all.deb
+    sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
+    sudo sh -c 'echo "deb file:///vagrant/target deb/" \
+      >/etc/apt/sources.list.d/pdagent.list'
+    sudo apt-get update
+
+    if [ -z "$UPGRADE_FROM_VERSION" ]; then
+        sudo apt-get install -y pdagent
+    else
+        sudo apt-get install -y pdagent=$UPGRADE_FROM_VERSION
+        # to upgrade pdagent pkg, run `apt-get install`, not `apt-get upgrade`.
+        # 'install' updates one pkg, 'upgrade' updates all installed pkgs.
+        sudo apt-get install -y pdagent
+    fi
     ;;
   redhat)
-    sudo rpm -i /vagrant/target/pdagent-${AGENT_VERSION}-1.noarch.rpm
+    sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
+[pdagent]
+name=PDAgent
+baseurl=file:///vagrant/target/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
+EOF'
+
+    if [ -z "$UPGRADE_FROM_VERSION" ]; then
+        sudo yum install -y pdagent
+    else
+        sudo yum install -y pdagent-$UPGRADE_FROM_VERSION
+        sudo yum upgrade -y pdagent
+    fi
     ;;
   *)
     echo "Unknown os_type " $(os_type) >&2
@@ -60,3 +82,9 @@ test -n "$(agent_pid)"
 
 # check that there is an agent id file created.
 test -e $DATA_DIR/agent_id.txt
+
+# check permissions of files created by agent
+test $(stat -c %a $PID_FILE) = "640"
+test $(stat -c %a $LOG_FILE) = "640"
+test $(stat -c %a $DATA_DIR/agent_id.txt) = "644"
+

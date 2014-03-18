@@ -43,6 +43,13 @@ import time
 import uuid
 
 
+# Agent file permission masks:
+# files written by agent should be private since they contain service keys
+_DEFAULT_UMASK = 0137  # rw-r-----
+# except for agent_id since pd-send needs it for agent context
+_AGENT_ID_FILE_UMASK = 0133  # rw-r--r--
+
+
 # Check we're running as main
 if __name__ != '__main__':
     raise SystemExit(
@@ -139,7 +146,6 @@ from pdagent.constants import AGENT_VERSION
 from pdagent.thirdparty.daemon import daemonize
 from pdagent.pdthread import RepeatingTaskThread
 from pdagent.heartbeat import HeartbeatTask
-from pdagent.phonehome import PhoneHomeTask
 from pdagent.sendevent import SendEventTask
 
 
@@ -174,27 +180,20 @@ def make_sendevent_task():
         )
 
 
-def make_phonehome_task():
-    # by default, phone-home daily
-    phonehome_interval_secs = 60 * 60 * 24
-    return PhoneHomeTask(
-        phonehome_interval_secs,
-        pd_queue,
-        agent_id,
-        system_stats
-        )
-
-
 def make_heartbeat_task():
     # by default, heartbeat every hour
     heartbeat_interval_secs = 60 * 60
-    return HeartbeatTask(heartbeat_interval_secs, agent_id)
+    return HeartbeatTask(
+        heartbeat_interval_secs,
+        agent_id,
+        pd_queue,
+        system_stats
+        )
 
 
 def make_agent_tasks():
     mk_tasks = [
         make_sendevent_task,
-        make_phonehome_task,
         make_heartbeat_task,
         ]
     return [mk_task() for mk_task in mk_tasks]
@@ -330,11 +329,13 @@ def get_or_make_agent_id():
         main_logger.info('Generating new agent ID')
         agent_id = str(uuid.uuid4())
         fd = None
+        orig_umask = os.umask(_AGENT_ID_FILE_UMASK)
         try:
             fd = open(agent_id_file, "w")
             fd.write(agent_id)
             fd.write('\n')
         finally:
+            os.umask(orig_umask)
             if fd:
                 fd.close()
         return agent_id
@@ -370,5 +371,5 @@ def init_logging(log_dir):
 
 # ---- Daemonize and run agent
 
-daemonize(pidfile)
+daemonize(pidfile, umask=_DEFAULT_UMASK)
 run()

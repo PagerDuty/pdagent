@@ -1,4 +1,6 @@
 #
+# See howto.txt for instructions.
+#
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
 #
@@ -27,56 +29,56 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-AGENT_VERSION=0.6
-AGENT_USER=pdagent
-BIN_PD_SEND=pd-send
-CONFIG_FILE=/etc/pdagent.conf
-PID_FILE=/var/run/pdagent/pdagentd.pid
-LOG_FILE=/var/log/pdagent/pdagentd.log
-DATA_DIR=/var/lib/pdagent
-OUTQUEUE_DIR=$DATA_DIR/outqueue
-AGENT_SVC_NAME=pdagent
-SEND_INTERVAL_SECS=5
-# The service key to use for testing commands like pd-send etc.
-SVC_KEY=CHANGEME
+set -e
 
-# return OS type of current system.
-os_type() {
-  if [ -e /etc/debian_version ]; then
-    echo "debian"
-  elif [ -e /etc/redhat-release ]; then
-    echo "redhat"
-  fi
+# do stuff in the script's directory.
+basedir=$(dirname $0)
+cd $basedir
+
+if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
+    echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
+    exit 2
+fi
+gpg_home="$1"
+install_root="$2"
+rpm_install_root=$install_root/rpm
+[ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
+
+# install required packages.
+installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
+    grep -vc 'not installed')
+[ $installed -eq 4 ] || {
+    echo "Installing required packages. This may take a few minutes..."
+    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
+    echo "Done installing."
+}
+{ gem list fpm | grep fpm >/dev/null ; } || {
+    echo "Installing fpm gem..."
+    sudo gem install -q fpm
+    echo "Done installing."
 }
 
-# return pid if agent is running, or empty string if not running.
-agent_pid() {
-  sudo service $AGENT_SVC_NAME status | egrep -o 'pid [0-9]+' | cut -d' ' -f2
-}
+echo "Setting up GPG information for RPM..."
+# fingerprint to use for signing = first fingerprint in GPG keyring
+fp=$(gpg --homedir $gpg_home --no-tty --lock-never --fingerprint | \
+     grep '=' | \
+     head -n1 | \
+     cut -d= -f2 | \
+     tr -d ' ')
+cat >$HOME/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path $gpg_home
+%_gpg_name $fp
+EOF
 
-# start agent if not running.
-start_agent() {
-  if [ -z "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME start
-  else
-    return 1
-  fi
-}
+sh make_package.sh rpm
 
-# stop agent if running.
-stop_agent() {
-  if [ -n "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME stop
-  else
-    return 1
-  fi
-}
+echo "Creating an installable local package repository..."
+cp target/*.rpm $rpm_install_root/
+cd $rpm_install_root
+# the next command cleanly (re)creates repodata and repodata/*
+createrepo --simple-md-filenames .
 
-# restart agent if running.
-restart_agent() {
-  if [ -n "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME restart
-  else
-    return 1
-  fi
-}
+echo "Local install-worthy repository created at: $rpm_install_root"
+
+exit 0
