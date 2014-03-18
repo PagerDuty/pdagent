@@ -32,15 +32,26 @@
 set -e  # fail on errors
 
 # params
+pkg_type=""
+
+print_usage_and_exit() {
+    echo "Usage: $0 {deb|rpm}"
+    exit 2
+}
+
+if [ $# -ne 1 ]; then
+    print_usage_and_exit
+fi
+
 case "$1" in
-  deb|rpm)
+    deb|rpm)
+        pkg_type=$1
         ;;
-  *)
-        echo "Usage: $0 {deb|rpm}"
-        exit 2
+    *)
+        print_usage_and_exit
 esac
 
-echo = BUILD TYPE: $1
+echo = BUILD TYPE: $pkg_type
 
 # ensure we're in the build directory
 cd $(dirname "$0")
@@ -48,7 +59,6 @@ cd $(dirname "$0")
 echo = cleaning build directories
 rm -fr data target
 mkdir data target
-
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
@@ -70,7 +80,7 @@ mkdir -p data/etc/init.d
 cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
 
-if [[ "$1" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
 else
     _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
@@ -78,11 +88,13 @@ fi
 
 echo = python modules...
 mkdir -p $_PY_SITE_PACKAGES
-(cd .. && find pdagent -type d -exec mkdir build-linux/$_PY_SITE_PACKAGES/{} \;)
-(cd .. && find pdagent -type f -name "*.py" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
-(cd .. && find pdagent -type f -name "ca_certs.pem" -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;)
+cd ..
+find pdagent -type d -exec mkdir -p build-linux/$_PY_SITE_PACKAGES/{} \;
+find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
+    -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
+cd -
 
-if [[ "$1" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     echo = deb python-support...
     mkdir -p data/usr/share/python-support
     _PD_PUBLIC=data/usr/share/python-support/python-pdagent.public
@@ -94,24 +106,38 @@ fi
 
 echo = FPM!
 _FPM_DEPENDS="--depends sudo --depends python"
-if [[ "$1" == "deb" ]]; then
+if [ "$pkg_type" = "deb" ]; then
     _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
 fi
 
+_SIGN_OPTS=""
+if [ "$pkg_type" = "rpm" ]; then
+    _SIGN_OPTS="--rpm-sign"
+fi
+
 cd target
+
+_DESC="The PagerDuty Agent package
+The PagerDuty Agent is a helper program that you install on your
+monitoring system to integrate your monitoring tools with PagerDuty."
 fpm -s dir \
-    -t $1 \
+    -t $pkg_type \
     --name "pdagent" \
-    --version "0.6" \
+    --description "$_DESC" \
+    --version "1.0" \
     --architecture all \
+    --url "http://www.pagerduty.com" \
+    --license 'Open Source' \
+    --vendor 'PagerDuty, Inc.' \
+    --maintainer 'PagerDuty Build System <http://support.pagerduty.com>' \
     $_FPM_DEPENDS \
-    --$1-user root \
-    --$1-group root \
+    $_SIGN_OPTS \
+    --${pkg_type}-user root \
+    --${pkg_type}-group root \
     --config-files /etc/pdagent.conf \
-    --post-install ../$1/postinst \
-    --pre-uninstall ../$1/prerm \
+    --after-install ../$pkg_type/postinst \
+    --before-remove ../$pkg_type/prerm \
     -C ../data \
     etc usr var
 
 exit 0
-

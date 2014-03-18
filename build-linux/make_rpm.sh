@@ -1,4 +1,6 @@
 #
+# See howto.txt for instructions.
+#
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
 #
@@ -27,25 +29,56 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+set -e
 
-from pdagent import enum
+# do stuff in the script's directory.
+basedir=$(dirname $0)
+cd $basedir
 
+if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
+    echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
+    exit 2
+fi
+gpg_home="$1"
+install_root="$2"
+rpm_install_root=$install_root/rpm
+[ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
-# Agent version.
-AGENT_VERSION = "0.6"
+# install required packages.
+installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
+    grep -vc 'not installed')
+[ $installed -eq 4 ] || {
+    echo "Installing required packages. This may take a few minutes..."
+    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
+    echo "Done installing."
+}
+{ gem list fpm | grep fpm >/dev/null ; } || {
+    echo "Installing fpm gem..."
+    sudo gem install -q fpm
+    echo "Done installing."
+}
 
-# PDQueue event consumption function return codes.
-ConsumeEvent = enum(
-    'CONSUMED',
-    'BAD_ENTRY',
-    'STOP_ALL',
-    'BACKOFF_SVCKEY_BAD_ENTRY',
-    'BACKOFF_SVCKEY_NOT_CONSUMED',
-)
+echo "Setting up GPG information for RPM..."
+# fingerprint to use for signing = first fingerprint in GPG keyring
+fp=$(gpg --homedir $gpg_home --no-tty --lock-never --fingerprint | \
+     grep '=' | \
+     head -n1 | \
+     cut -d= -f2 | \
+     tr -d ' ')
+cat >$HOME/.rpmmacros <<EOF
+%_signature gpg
+%_gpg_path $gpg_home
+%_gpg_name $fp
+EOF
 
-# PD event integration API.
-EVENTS_API_BASE = \
-    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+sh make_package.sh rpm
 
-# TODO PD heartbeat end-point.
-HEARTBEAT_URI = "http://localhost:4567/heartbeat"
+echo "Creating an installable local package repository..."
+cp target/*.rpm $rpm_install_root/
+cd $rpm_install_root
+# the next command cleanly (re)creates repodata and repodata/*
+createrepo --simple-md-filenames .
+
+echo "Local install-worthy repository created at: $rpm_install_root"
+
+exit 0
