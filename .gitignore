@@ -16,6 +16,7 @@
 
 /target/
 
+/build-linux/gnupg/
 /build-linux/data/
 /build-linux/target/
 
