@@ -382,7 +382,7 @@ class PDQueue(PDQueueBase):
 
         # if throttle info is required, compute from pre-loaded info.
         # (we don't want to reload info if queue processing is underway.)
-        if self.backoff_info and self.backoff_info._current_retry_at:
+        if self.backoff_info._current_retry_at:
             throttled_keys = set()
             now = int(self.time.time())
             for key, retry_at in \
@@ -396,7 +396,7 @@ class PDQueue(PDQueueBase):
             }
 
         # historical counter data for completed events (success, failure)
-        if self.counter_info and self.counter_info._data:
+        if self.counter_info._data:
             stats["aggregate"] = self.counter_info._data
 
         return stats
