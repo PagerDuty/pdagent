@@ -38,7 +38,7 @@ Notes:
 - Each entry in the queue is written to a separate file in the
     queue directory.
 - Files are named so that sorting by file name is queue order.
-- Concurrent enqueues use exclusive file create & retries to avoid
+- Concurrent enqueues use exclusive file create and retries to avoid
     using the same file name.
 - Concurrent dequeues are serialized with an exclusive dequeue lock.
 - A dequeue will hold the exclusive lock until the consume callback
