@@ -78,6 +78,15 @@ class MockTime:
     def sleep(self, duration_sec):
         self._time_sec += duration_sec
 
+    def gmtime(self):
+        return "some_utc_time"
+
+    def strftime(self, fmt, t):
+        if fmt == "%Y-%m-%dT%H:%M:%SZ":
+            return t
+        else:
+            raise Exception("Expected format-string in ISO format, got " + fmt)
+
 
 class PDQueueTest(unittest.TestCase):
 
@@ -582,6 +591,7 @@ class PDQueueTest(unittest.TestCase):
             # events are in the form e<svckey#><event#>
             k = e[1]
             fnames.append(q.enqueue("svckey%s" % k, e))
+            q.time.sleep(5)
         # 1 error for svckey1; 2 for svckey2
         for i in [0, 3, 4]:
             q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
@@ -590,60 +600,45 @@ class PDQueueTest(unittest.TestCase):
             q._unsafe_change_event_type(fnames[i], "pdq_", "suc_")
         # that leaves 1 pending for svckey1; 2 for svckey3
 
-        # also, let's throttle svckey2.
+        # also, let's throttle svckey2...
         q.backoff_info.increment("svckey2")
-
-        self.assertEqual(q.get_status("svckey1"), {
-            "service_keys": 1,
-            "events": {
-                "svckey1": {
-                    "pending": 1,
-                    "failed": 1,
-                    "succeeded": 1
-                    }
-                }
-            })
-
-        self.assertEqual(q.get_status("non_existent_key"), {
-            "service_keys": 0,
-            "events": {}
-            })
+        # ... and increment some counters.
+        q.counter_info.increment_success(20)
+        q.counter_info.increment_failure(2)
 
         expected_stats = {
-            "service_keys": 4,
-            "events": {
-                "svckey1": {
-                    "pending": 1, "succeeded": 1, "failed": 1
+            "snapshot": {
+                "pending_events": {
+                    "count": 3,
+                    "newest_age_secs": 15,
+                    "oldest_age_secs": 40,
+                    "service_keys_count": 2
                     },
-                "svckey2": {
-                    "pending": 0, "succeeded": 0, "failed": 2
+                "succeeded_events": {
+                    "count": 3,
+                    "newest_age_secs": 5,
+                    "oldest_age_secs": 35,
+                    "service_keys_count": 2
                     },
-                "svckey3": {
-                    "pending": 2, "succeeded": 0, "failed": 0
+                "failed_events": {
+                    "count": 3,
+                    "newest_age_secs": 25,
+                    "oldest_age_secs": 45,
+                    "service_keys_count": 2
                     },
-                "svckey4": {
-                    "pending": 0, "succeeded": 2, "failed": 0
-                    }
+                "throttled_service_keys_count": 1
+                },
+            "aggregated": {
+                "successful_events_count": 20,
+                "failed_events_count": 2,
+                "started_on": "some_utc_time"
                 }
             }
+        self.assertEqual(q.get_status(detailed_snapshot=True), expected_stats)
+
+        expected_stats["snapshot"].pop("succeeded_events")
+        expected_stats["snapshot"].pop("failed_events")
         self.assertEqual(q.get_status(), expected_stats)
-
-        expected_stats["service_keys_throttled"] = 1
-        self.assertEqual(q.get_status(throttle_info=True), expected_stats)
-
-        expected_aggr_stats = {
-            "service_keys": 4,
-            "events_pending": 3,
-            "events_succeeded": 3,
-            "events_failed": 3
-            }
-        self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
-
-        expected_aggr_stats["service_keys_throttled"] = 1
-        self.assertEqual(
-            q.get_status(throttle_info=True, aggregated=True),
-            expected_aggr_stats
-            )
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
@@ -723,17 +718,17 @@ class PDQueueTest(unittest.TestCase):
             success, failure = data
             expected = dict()
             if success != 0:
-                expected["success"] = success
+                expected["successful_events_count"] = success
             if failure != 0:
-                expected["failure"] = failure
+                expected["failed_events_count"] = failure
             try:
                 counter_db.cached_valid_since
             except AttributeError:
-                # "valid_since" must be generated if not present already.
-                self.assertNotEquals(counter_data["valid_since"], None)
-                counter_db.cached_valid_since = counter_data["valid_since"]
-            # "valid_since" must not change once generated.
-            expected["valid_since"] = counter_db.cached_valid_since
+                # "started_on" must be generated if not present already.
+                self.assertNotEquals(counter_data["started_on"], None)
+                counter_db.cached_started_on = counter_data["started_on"]
+            # "started_on" must not change once generated.
+            expected["started_on"] = counter_db.cached_started_on
 
         self.assertEqual(counter_data, expected)
 

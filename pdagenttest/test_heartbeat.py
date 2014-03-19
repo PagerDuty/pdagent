@@ -63,8 +63,7 @@ class HeartbeatTest(unittest.TestCase):
     def mock_queue(self):
         return MockQueue(
             status={"foo": "bar"},
-            aggregated=True,
-            throttle_info=True
+            detailed_snapshot=False
             )
 
     def test_data(self):

@@ -61,9 +61,10 @@ def ensure_writable_directory(d):
             )
 
 
-def utcnow_isoformat():
-    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
+def utcnow_isoformat(time_calc=None):
+    if not time_calc:
+        time_calc = time
+    return time_calc.strftime("%Y-%m-%dT%H:%M:%SZ", time_calc.gmtime())
 
 def queue_event(
         queue,
