@@ -82,3 +82,9 @@ test -n "$(agent_pid)"
 
 # check that there is an agent id file created.
 test -e $DATA_DIR/agent_id.txt
+
+# check permissions of files created by agent
+test $(stat -c %a $PID_FILE) = "640"
+test $(stat -c %a $LOG_FILE) = "640"
+test $(stat -c %a $DATA_DIR/agent_id.txt) = "644"
+

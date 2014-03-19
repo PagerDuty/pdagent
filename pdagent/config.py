@@ -39,6 +39,9 @@ from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
 
 
+_ENQUEUE_FILE_MODE = 0644  # rw-r--r--
+
+
 class AgentConfig:
 
     def __init__(self, dev_layout, default_dirs, main_config):
@@ -76,20 +79,24 @@ class AgentConfig:
             if fd:
                 fd.close()
 
-    def get_queue(self, dequeue_enabled=False):
+    def get_enqueuer(self):
+        from pdagent.pdqueue import PDQEnqueuer
+        return PDQEnqueuer(
+            lock_class=FileLock,
+            queue_dir=self.default_dirs["outqueue_dir"],
+            time_calc=time,
+            enqueue_file_mode=_ENQUEUE_FILE_MODE
+            )
+
+    def get_queue(self):
         from pdagent.pdqueue import PDQueue
-        if dequeue_enabled:
-            from pdagent.jsonstore import JsonStore
-            backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
-            backoff_intervals = [
-                int(s.strip()) for s in
-                self.main_config["backoff_intervals"].split(",")
-                ]
-            counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
-        else:
-            backoff_db = None
-            backoff_intervals = None
-            counter_db = None
+        from pdagent.jsonstore import JsonStore
+        backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
+        backoff_intervals = [
+            int(s.strip()) for s in
+            self.main_config["backoff_intervals"].split(",")
+            ]
+        counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
@@ -99,6 +106,7 @@ class AgentConfig:
             backoff_intervals=backoff_intervals,
             counter_db=counter_db
             )
+
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']

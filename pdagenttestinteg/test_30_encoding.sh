@@ -41,16 +41,21 @@ test -z "$(agent_pid)" || stop_agent
 test_utf8_trigger() {
 
   # clear outqueue
-  test $(ls $OUTQUEUE_DIR | wc -l) -eq 0 || sudo rm -r $OUTQUEUE_DIR/*
+  test -d $OUTQUEUE_DIR
+  sudo find $OUTQUEUE_DIR -type f -exec rm -f {} \;
 
   /bin/bash -c "$BIN_PD_SEND -k DUMMY_SERVICE_KEY -t acknowledge -i server.fire -d $'\xC3\xA9'"
 
-  test $(ls $OUTQUEUE_DIR | wc -l) -eq 1
+  test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
 
-  sed -i -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g' $OUTQUEUE_DIR/pdq_*.txt
-  sed -i -r 's/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g' $OUTQUEUE_DIR/pdq_*.txt
+  sudo find $OUTQUEUE_DIR -type f -name "pdq_*" \
+    | xargs sudo sed -i -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g'
+  sudo find $OUTQUEUE_DIR -type f -name "pdq_*" \
+    | xargs sudo sed -i -r 's/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g'
 
-  diff -q $OUTQUEUE_DIR/pdq_*.txt $(dirname $0)/test_30_encoding.pdq1.txt
+  sudo diff \
+    $(dirname $0)/test_30_encoding.pdq1.txt \
+    $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | tail -n1)
 
 }
 

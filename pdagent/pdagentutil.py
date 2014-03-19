@@ -67,7 +67,7 @@ def utcnow_isoformat(time_calc=None):
     return time_calc.strftime("%Y-%m-%dT%H:%M:%SZ", time_calc.gmtime())
 
 def queue_event(
-        queue,
+        enqueuer,
         event_type, service_key, incident_key, description, details,
         agent_id, queued_by,
         ):
@@ -83,7 +83,7 @@ def queue_event(
         event_type, service_key, incident_key, description, details,
         agent_context
         )
-    queue.enqueue(service_key, event)
+    enqueuer.enqueue(service_key, event)
     return incident_key
 
 
