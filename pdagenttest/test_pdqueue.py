@@ -614,8 +614,10 @@ class PDQueueTest(unittest.TestCase):
         # also, let's throttle svckey2...
         q.backoff_info.increment("svckey2")
         # ... and increment some counters.
-        q.counter_info.increment_success(20)
-        q.counter_info.increment_failure(2)
+        for _ in range(20):
+            q.counter_info.increment_success()
+        for _ in range(2):
+            q.counter_info.increment_failure()
 
         expected_stats = {
             "snapshot": {

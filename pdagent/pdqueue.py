@@ -524,17 +524,17 @@ class _CounterInfo(object):
         self._data = {}
         self._time = time_calc
 
-    # increments success count by given delta (1 by default.)
-    def increment_success(self, delta=1):
-        self._increment("successful_events_count", delta)
+    # increments success count by 1.
+    def increment_success(self):
+        self._increment("successful_events_count")
 
-    # increments failure count by given delta (1 by default.)
-    def increment_failure(self, delta=1):
-        self._increment("failed_events_count", delta)
+    # increments failure count by 1.
+    def increment_failure(self):
+        self._increment("failed_events_count")
 
-    # increments count of given type by given delta (1 by default.)
-    def _increment(self, counter_type, delta=1):
-        self._data[counter_type] = self._data.get(counter_type, 0) + delta
+    # increments count of given type by 1.
+    def _increment(self, counter_type):
+        self._data[counter_type] = self._data.get(counter_type, 0) + 1
 
     # loads persisted counter history.
     def load(self):
