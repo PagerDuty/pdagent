@@ -528,6 +528,14 @@ class _CounterInfo(object):
         # potentially resulting in incorrect values, we'll just consider the
         # persisted data invalid.
         self.load()
+        # validate that counter values are indeed integers. If not, reset them.
+        for key in (k for k in self._data if k != "started_on"):
+            if type(self._data[key]) is not int:
+                logger.error(
+                    "Invalid counter value %s=%s" % (key, self._data[key])
+                    )
+                logger.warning("Resetting counter history")
+                self._reset_data()
         self.store(reset_data_if_failed=True)
 
     # increments success count by 1.
