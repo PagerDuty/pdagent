@@ -79,27 +79,32 @@ class AgentConfig:
             if fd:
                 fd.close()
 
-    def get_queue(self, dequeue_enabled=False):
+    def get_enqueuer(self):
+        from pdagent.pdqueue import PDQEnqueuer
+        return PDQEnqueuer(
+            lock_class=FileLock,
+            queue_dir=self.default_dirs["outqueue_dir"],
+            time_calc=time,
+            enqueue_file_mode=_ENQUEUE_FILE_MODE
+            )
+
+    def get_queue(self):
         from pdagent.pdqueue import PDQueue
-        if dequeue_enabled:
-            from pdagent.jsonstore import JsonStore
-            backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
-            backoff_intervals = [
-                int(s.strip()) for s in
-                self.main_config["backoff_intervals"].split(",")
-                ]
-        else:
-            backoff_db = None
-            backoff_intervals = None
+        from pdagent.jsonstore import JsonStore
+        backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
+        backoff_intervals = [
+            int(s.strip()) for s in
+            self.main_config["backoff_intervals"].split(",")
+            ]
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_intervals=backoff_intervals,
-            enqueue_file_mode=_ENQUEUE_FILE_MODE
+            backoff_intervals=backoff_intervals
             )
+
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
