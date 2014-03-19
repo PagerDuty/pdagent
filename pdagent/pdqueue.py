@@ -546,6 +546,9 @@ class _CounterInfo(object):
                 exc_info=True
                 )
         if not self._data:
+            # only reset if loading for the first time fails or returns no data.
+            # If, instead, we failed loading when we already have valid `_data`
+            # in this instance, we'll reuse the `_data`.
             self._data = {
                 "started_on": utcnow_isoformat(self._time)
                 }
