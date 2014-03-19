@@ -118,7 +118,7 @@ class HeartbeatTask(RepeatingTask):
         hb_data = {
             "agent_id": self._agent_id,
             "agent_version": AGENT_VERSION,
-            "agent_stats": self._pd_queue.get_status()
+            "agent_stats": self._pd_queue.get_stats()
             }
         if self._system_info:
             hb_data["system_info"] = self._system_info

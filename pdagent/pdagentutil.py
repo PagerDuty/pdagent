@@ -91,8 +91,8 @@ def resurrect_events(queue, service_key):
     queue.resurrect(service_key)
 
 
-def get_status(queue, service_key):
-    return queue.get_status(service_key)
+def get_stats(queue, service_key):
+    return queue.get_stats(service_key)
 
 
 def _build_event_json_str(

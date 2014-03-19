@@ -593,7 +593,7 @@ class PDQueueTest(unittest.TestCase):
         # counters should not be touched.
         self._assertCounterData(q, None)
 
-    def test_status(self):
+    def test_stats(self):
         eq, q = self.new_queue()
         events = ["e11", "e12", "e13", "e21", "e22", "e31", "e32", "e41", "e42"]
         fnames = []
@@ -645,11 +645,11 @@ class PDQueueTest(unittest.TestCase):
                 "started_on": "some_utc_time"
                 }
             }
-        self.assertEqual(q.get_status(detailed_snapshot=True), expected_stats)
+        self.assertEqual(q.get_stats(detailed_snapshot=True), expected_stats)
 
         expected_stats["snapshot"].pop("succeeded_events")
         expected_stats["snapshot"].pop("failed_events")
-        self.assertEqual(q.get_status(), expected_stats)
+        self.assertEqual(q.get_stats(), expected_stats)
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.

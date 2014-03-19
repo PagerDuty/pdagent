@@ -39,14 +39,14 @@ def build_arg_parser(description):
     return parser
 
 def main():
-    from pdagent.pdagentutil import get_status
+    from pdagent.pdagentutil import get_stats
     from pdagent.config import load_agent_config
 
     description = "Print out status of events that agent knows of."
     parser = build_arg_parser(description)
     args = parser.parse_args()
 
-    status = get_status(
+    status = get_stats(
         load_agent_config().get_queue(),
         args.service_key)  # 'None' for all-keys.
     if not status.get("service_keys"):

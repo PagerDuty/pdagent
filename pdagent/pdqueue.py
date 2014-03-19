@@ -324,7 +324,7 @@ class PDQueue(PDQueueBase):
         _cleanup_files("tmp_")
         _cleanup_files("suc_")
 
-    def get_status(
+    def get_stats(
             self,
             detailed_snapshot=False
             ):
