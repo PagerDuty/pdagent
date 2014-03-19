@@ -639,7 +639,7 @@ class PDQueueTest(unittest.TestCase):
                     },
                 "throttled_service_keys_count": 1
                 },
-            "aggregated": {
+            "aggregate": {
                 "successful_events_count": 20,
                 "failed_events_count": 2,
                 "started_on": "some_utc_time"

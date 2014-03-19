@@ -355,7 +355,7 @@ class PDQueue(PDQueueBase):
                 },
                 "throttled_service_keys_count": 1
             },
-            "aggregated": {
+            "aggregate": {
                 "successful_events_count": 20,
                 "failed_events_count": 2,
                 "started_on": "2014-03-18T20:49:02Z"
@@ -397,7 +397,7 @@ class PDQueue(PDQueueBase):
 
         # historical counter data for completed events (success, failure)
         if self.counter_info and self.counter_info._data:
-            stats["aggregated"] = self.counter_info._data
+            stats["aggregate"] = self.counter_info._data
 
         return stats
 
