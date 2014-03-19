@@ -43,9 +43,12 @@ test_utf8_trigger() {
   # clear outqueue
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 0 || sudo rm -r $OUTQUEUE_DIR/*
 
-  /bin/bash -c "$BIN_PD_SEND --no-agent-context -k DUMMY_SERVICE_KEY -t acknowledge -i server.fire -d $'\xC3\xA9'"
+  /bin/bash -c "$BIN_PD_SEND -k DUMMY_SERVICE_KEY -t acknowledge -i server.fire -d $'\xC3\xA9'"
 
   test $(ls $OUTQUEUE_DIR | wc -l) -eq 1
+
+  sed -i -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g' $OUTQUEUE_DIR/pdq_*.txt
+  sed -i -r 's/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g' $OUTQUEUE_DIR/pdq_*.txt
 
   diff -q $OUTQUEUE_DIR/pdq_*.txt $(dirname $0)/test_30_encoding.pdq1.txt
 

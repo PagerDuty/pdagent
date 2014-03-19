@@ -31,7 +31,7 @@
 #
 
 def build_queue_arg_parser(description):
-    from pdagent.thirdparty.argparse import ArgumentParser, SUPPRESS
+    from pdagent.thirdparty.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
     parser.add_argument("-k", "--service-key", dest="service_key", required=True,
             help="Service API Key")
@@ -45,11 +45,6 @@ def build_queue_arg_parser(description):
     parser.add_argument("-f", "--field", action="append", dest="fields",
             help="Add given KEY=VALUE pair to the event details"
             )
-    # Undocumented options:
-    parser.add_argument(
-        "--no-agent-context", action="store_false", dest="include_agent_context",
-        help=SUPPRESS,
-        )
     return parser
 
 def parse_fields(fields):
@@ -79,9 +74,7 @@ def main():
         agent_config.get_queue(),
         args.event_type, args.service_key, args.incident_key, args.description,
         details,
-        args.include_agent_context,
-        agent_config.get_agent_id_or_None(),
-        "pd-send",
+        agent_config.get_agent_id(), "pd-send",
         )
     print "Event processed. Incident Key:", incident_key
 
