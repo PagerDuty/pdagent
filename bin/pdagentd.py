@@ -250,11 +250,18 @@ def run():
 
         # Get some basic system stats to post back in phone-home
         main_logger.debug('Collecting basic system stats')
+
+        # Pull uname-type system information
+        (sysname, node_name, release, version, machine, processor) = platform.uname()
         system_stats = {
             'platform_name': sys.platform,
+            'platform_release': release,
+            'platform_version': version,
+            'platform_machine': machine,
             'python_version': platform.python_version(),
             'host_name': socket.getfqdn()  # to show in stats-based alerts.
             }
+
         if sys.platform == 'linux2':
             system_stats['platform_version'] = platform.dist()
         main_logger.info('System: ' + str(system_stats))
