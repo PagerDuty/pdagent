@@ -151,9 +151,7 @@ class PDQueue(PDQueueBase):
         self.event_size_max_bytes = event_size_max_bytes
         self.backoff_info = \
             _BackoffInfo(backoff_db, backoff_intervals, time_calc)
-        self.backoff_info.load(self.time.time())
         self.counter_info = _CounterInfo(counter_db, time_calc)
-        self.counter_info.load()
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -442,6 +440,7 @@ class _BackoffInfo(object):
         self._previous_attempts = {}
         self._current_attempts = {}
         self._current_retry_at = {}
+        self.load(time_calc.time())
 
     # returns true if `current-attempts`, or `previous-attempts + 1`,
     # results in a threshold breach.
@@ -523,6 +522,13 @@ class _CounterInfo(object):
         self._db = counter_db
         self._data = {}
         self._time = time_calc
+        # Load data and try to persist it. If we can't persist, we'll want to
+        # reset the data because we don't know for how long we haven't been able
+        # to persist. Instead of updating the currently-loaded old counters,
+        # potentially resulting in incorrect values, we'll just consider the
+        # persisted data invalid.
+        self.load()
+        self.store(reset_data_if_failed=True)
 
     # increments success count by 1.
     def increment_success(self):
@@ -541,24 +547,27 @@ class _CounterInfo(object):
         try:
             self._data = self._db.get()
         except:
-            logger.warning(
-                "Unable to load counter history, resetting",
-                exc_info=True
-                )
+            logger.error("Unable to load counter history", exc_info=True)
         if not self._data:
             # only reset if loading for the first time fails or returns no data.
             # If, instead, we failed loading when we already have valid `_data`
             # in this instance, we'll reuse the `_data`.
-            self._data = {
-                "started_on": utcnow_isoformat(self._time)
-                }
+            self._reset_data()
 
     # persists current counter history.
-    def store(self):
+    def store(self, reset_data_if_failed=False):
         try:
             self._db.set(self._data)
         except:
-            logger.warning("Unable to save counter history", exc_info=True)
+            logger.error("Unable to save counter history", exc_info=True)
+            if reset_data_if_failed:
+                logger.warning("Resetting counter history")
+                self._reset_data()
+
+    def _reset_data(self):
+        self._data = {
+            "started_on": utcnow_isoformat(self._time)
+            }
 
 
 class SnapshotStats(object):

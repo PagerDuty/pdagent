@@ -725,23 +725,24 @@ class PDQueueTest(unittest.TestCase):
     def _assertCounterData(self, q, data):
         counter_db = q.counter_info._db
         counter_data = counter_db.get()
-        expected = None
+
+        try:
+            counter_db.cached_started_on
+        except AttributeError:
+            # "started_on" must be generated if not present already.
+            self.assertNotEquals(counter_data["started_on"], None)
+            counter_db.cached_started_on = counter_data["started_on"]
+        # "started_on" must not change once generated.
+        expected = {
+            "started_on": counter_db.cached_started_on
+            }
 
         if data:
             success, failure = data
-            expected = dict()
             if success != 0:
                 expected["successful_events_count"] = success
             if failure != 0:
                 expected["failed_events_count"] = failure
-            try:
-                counter_db.cached_valid_since
-            except AttributeError:
-                # "started_on" must be generated if not present already.
-                self.assertNotEquals(counter_data["started_on"], None)
-                counter_db.cached_started_on = counter_data["started_on"]
-            # "started_on" must not change once generated.
-            expected["started_on"] = counter_db.cached_started_on
 
         self.assertEqual(counter_data, expected)
 
