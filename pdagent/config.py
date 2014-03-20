@@ -92,10 +92,8 @@ class AgentConfig:
         from pdagent.pdqueue import PDQueue
         from pdagent.jsonstore import JsonStore
         backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
-        backoff_intervals = [
-            int(s.strip()) for s in
-            self.main_config["backoff_intervals"].split(",")
-            ]
+        backoff_interval = self.main_config["backoff_interval_secs"]
+        max_error_backoffs = self.main_config["maximum_error_backoff_count"]
         counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         return PDQueue(
             lock_class=FileLock,
@@ -103,7 +101,8 @@ class AgentConfig:
             time_calc=time,
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_intervals=backoff_intervals,
+            backoff_interval=backoff_interval,
+            max_error_backoffs=max_error_backoffs,
             counter_db=counter_db
             )
 
@@ -178,10 +177,12 @@ def load_agent_config():
 
     # parse integer values.
     for key in [
-            "send_interval_secs",
+            "backoff_interval_secs",
             "cleanup_interval_secs",
             "cleanup_threshold_secs",
             "event_size_max_bytes",
+            "maximum_error_backoff_count",
+            "send_interval_secs",
             ]:
         try:
             cfg[key] = int(cfg[key])
