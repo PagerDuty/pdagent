@@ -195,12 +195,10 @@ class PDQueue(PDQueueBase):
             if not len(file_names):
                 return
 
-            # reload back-off info, in case there are external changes to it.
             now = self.time.time()
-            self.backoff_info.load(now)
-            self.counter_info.load()
             err_svc_keys = set()
 
+            self.backoff_info.update()
             for fname in file_names:
                 if should_stop_func():
                     break
@@ -437,10 +435,24 @@ class _BackoffInfo(object):
         self._backoff_intervals = backoff_intervals
         self._max_backoff_attempts = len(backoff_intervals)
         self._time = time_calc
+        try:
+            data = self._db.get()
+        except:
+            logger.warning(
+                "Unable to load service-key back-off history",
+                exc_info=True
+                )
+            data = None
+        if not data:
+            # no db yet, or errors during db read.
+            data = {
+                'attempts': {},
+                'next_retries': {}
+                }
         self._previous_attempts = {}
-        self._current_attempts = {}
-        self._current_retry_at = {}
-        self.load(time_calc.time())
+        self._current_attempts = data['attempts']
+        self._current_retry_at = data['next_retries']
+        self.update()
 
     # returns true if `current-attempts`, or `previous-attempts + 1`,
     # results in a threshold breach.
@@ -468,36 +480,23 @@ class _BackoffInfo(object):
         self._current_attempts[svc_key] = cur_attempt
         self._current_retry_at[svc_key] = int(self._time.time()) + backoff
 
-    # loads data; copies over data that is still valid at time_now to current.
-    def load(self, time_now):
-        try:
-            previous = self._db.get()
-        except:
-            logger.warning(
-                "Unable to load service-key back-off history",
-                exc_info=True
-                )
-            previous = None
-        if not previous:
-            # no db yet, or errors during db read
-            previous = {
-                'attempts': {},
-                'next_retries': {}
-                }
+    # only retains data that is still valid at current time.
+    def update(self):
+        time_now = self._time.time()
+        new_attempts = {}
+        new_retry_at = {}
 
-        self._current_attempts = {}
-        self._current_retry_at = {}
+        # copy over all still-unexpired current back-offs to new data.
+        for (svc_key, retry_at) in self._current_retry_at.iteritems():
+            if retry_at > time_now:
+                new_attempts[svc_key] = self._current_attempts.get(svc_key)
+                new_retry_at[svc_key] = retry_at
 
         # we'll still hold on to previous attempts data so we can use it to
         # compute new current data if required later.
-        self._previous_attempts = previous['attempts']
-
-        # copy over all still-unexpired previous back-offs to current data.
-        for (svc_key, retry_at) in previous['next_retries'].iteritems():
-            if retry_at > time_now:
-                self._current_attempts[svc_key] = \
-                    self._previous_attempts.get(svc_key)
-                self._current_retry_at[svc_key] = retry_at
+        self._previous_attempts = self._current_attempts
+        self._current_attempts = new_attempts
+        self._current_retry_at = new_retry_at
 
     # persists current back-off info.
     def store(self):
@@ -522,13 +521,16 @@ class _CounterInfo(object):
         self._db = counter_db
         self._data = {}
         self._time = time_calc
-        # Load data and try to persist it. If we can't persist, we'll want to
-        # reset the data because we don't know for how long we haven't been able
-        # to persist. Instead of updating the currently-loaded old counters,
-        # potentially resulting in incorrect values, we'll just consider the
-        # persisted data invalid.
-        self.load()
-        # validate that counter values are indeed integers. If not, reset them.
+
+        # try to load data.
+        try:
+            self._data = self._db.get()
+        except:
+            logger.error("Unable to load counter history", exc_info=True)
+        if not self._data:
+            self._reset_data()
+
+        # validate that counter values are indeed integers. If not, reset data.
         for key in (k for k in self._data if k != "started_on"):
             if type(self._data[key]) is not int:
                 logger.error(
@@ -536,6 +538,12 @@ class _CounterInfo(object):
                     )
                 logger.warning("Resetting counter history")
                 self._reset_data()
+
+        # Try to persist loaded data. If we can't persist, we'll want to reset
+        # the data because we don't know for how long we haven't been able to
+        # persist. Instead of updating the currently-loaded old counters,
+        # potentially resulting in incorrect values, we'll just consider the
+        # persisted data invalid.
         self.store(reset_data_if_failed=True)
 
     # increments success count by 1.
@@ -549,18 +557,6 @@ class _CounterInfo(object):
     # increments count of given type by 1.
     def _increment(self, counter_type):
         self._data[counter_type] = self._data.get(counter_type, 0) + 1
-
-    # loads persisted counter history.
-    def load(self):
-        try:
-            self._data = self._db.get()
-        except:
-            logger.error("Unable to load counter history", exc_info=True)
-        if not self._data:
-            # only reset if loading for the first time fails or returns no data.
-            # If, instead, we failed loading when we already have valid `_data`
-            # in this instance, we'll reuse the `_data`.
-            self._reset_data()
 
     # persists current counter history.
     def store(self, reset_data_if_failed=False):
