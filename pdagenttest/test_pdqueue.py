@@ -56,7 +56,7 @@ class NoOpLock:
         pass
 
 
-class MockBackupDB:
+class MockDB:
 
     def __init__(self):
         self._data = None
@@ -78,6 +78,15 @@ class MockTime:
 
     def sleep(self, duration_sec):
         self._time_sec += duration_sec
+
+    def gmtime(self):
+        return "some_utc_time"
+
+    def strftime(self, fmt, t):
+        if fmt == "%Y-%m-%dT%H:%M:%SZ":
+            return t
+        else:
+            raise Exception("Expected format-string in ISO format, got " + fmt)
 
 
 class PDQueueTest(unittest.TestCase):
@@ -104,7 +113,8 @@ class PDQueueTest(unittest.TestCase):
             time_calc=mock_time,
             event_size_max_bytes=10,
             backoff_intervals=BACKOFF_INTERVALS,
-            backoff_db=MockBackupDB()
+            backoff_db=MockDB(),
+            counter_db=MockDB()
             )
         return eq, q
 
@@ -199,6 +209,7 @@ class PDQueueTest(unittest.TestCase):
 
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(len(q._queued_files("err_")), 1)
+        self._assertCounterData(q, (0, 1))
 
     def test_backoff_bad_event(self):
         # The item and all other items for same service key must get backed off
@@ -244,6 +255,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
         self._assertBackoffData(q, [("svckey1", 1, 0)])
+        self._assertCounterData(q, (1, 0))
 
         # retry immediately. later-retriable events must not be processed.
         events_processed = []
@@ -252,6 +264,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [e1_1, e1_2])
         self.assertEquals(len(q._queued_files("err_")), 0)
         self._assertBackoffData(q, [("svckey1", 1, 0)])
+        self._assertCounterData(q, (1, 0))
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
@@ -263,6 +276,7 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
             self._assertBackoffData(q, [("svckey1", i, i-1)])
+            self._assertCounterData(q, (1, 0))
 
         # retry now. there should be no more backoffs, bad event should be
         # kicked out, and next event should finally be processed.
@@ -277,11 +291,13 @@ class PDQueueTest(unittest.TestCase):
             [e1_1.replace("pdq_", "err_")]
             )
         self._assertBackoffData(q, None)
+        self._assertCounterData(q, (2, 1))
 
         # and now, the queue must be empty.
         self.assertRaises(
             EmptyQueueError, q.dequeue, lambda s, i: ConsumeEvent.CONSUMED
             )
+        self._assertCounterData(q, (2, 1))
 
     def test_backoff_not_consumed(self):
         # The item and all other items for same service key must get backed off
@@ -327,6 +343,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
         self._assertBackoffData(q, [("svckey1", 1, 0)])
+        self._assertCounterData(q, (1, 0))
 
         # retry immediately. later-retriable events must not be processed.
         events_processed = []
@@ -335,6 +352,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(q._queued_files(), [e1_1, e1_2])
         self.assertEquals(len(q._queued_files("err_")), 0)
         self._assertBackoffData(q, [("svckey1", 1, 0)])
+        self._assertCounterData(q, (1, 0))
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
@@ -346,6 +364,7 @@ class PDQueueTest(unittest.TestCase):
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
             self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
             self._assertBackoffData(q, [("svckey1", i, i-1)])
+            self._assertCounterData(q, (1, 0))
 
         # try a couple more times (we exceed max attempts going forward) --
         # bad event is still processed.
@@ -361,6 +380,7 @@ class PDQueueTest(unittest.TestCase):
                 q,
                 [("svckey1", max_total_attempts + i, -1)]
                 )
+            self._assertCounterData(q, (1, 0))
 
         # retry now (much after max_backoff_attempts), with no bad event.
         q.time.sleep(BACKOFF_INTERVALS[-1])
@@ -371,11 +391,13 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(len(q._queued_files("err_")), 0)   # no errors
         self._assertBackoffData(q, None)
+        self._assertCounterData(q, (3, 0))
 
         # and now, the queue must be empty.
         self.assertRaises(
             EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
             )
+        self._assertCounterData(q, (3, 0))
 
     def test_stop_processing(self):
         # No later event must be processed.
@@ -409,6 +431,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(events_processed, ["foo"])
         self.assertEquals(len(q._queued_files()), 3)  # 2 from bad svckey
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+        self._assertCounterData(q, (0, 0))
 
         # retry. all events must now be processed.
         count += 1
@@ -417,6 +440,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(events_processed, ["foo", "bar", "baz"])
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+        self._assertCounterData(q, (3, 0))
 
         # and now, the queue must be empty.
         self.assertRaises(
@@ -566,7 +590,10 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files()), 5)
         self.assertEquals(len(q._queued_files("err_")), 0)
 
-    def test_status(self):
+        # counters should not be touched.
+        self._assertCounterData(q, None)
+
+    def test_stats(self):
         eq, q = self.new_queue()
         events = ["e11", "e12", "e13", "e21", "e22", "e31", "e32", "e41", "e42"]
         fnames = []
@@ -574,6 +601,8 @@ class PDQueueTest(unittest.TestCase):
             # events are in the form e<svckey#><event#>
             k = e[1]
             fnames.append(eq.enqueue("svckey%s" % k, e))
+            eq.time.sleep(5)
+
         # 1 error for svckey1; 2 for svckey2
         for i in [0, 3, 4]:
             q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
@@ -582,60 +611,47 @@ class PDQueueTest(unittest.TestCase):
             q._unsafe_change_event_type(fnames[i], "pdq_", "suc_")
         # that leaves 1 pending for svckey1; 2 for svckey3
 
-        # also, let's throttle svckey2.
+        # also, let's throttle svckey2...
         q.backoff_info.increment("svckey2")
-
-        self.assertEqual(q.get_status("svckey1"), {
-            "service_keys": 1,
-            "events": {
-                "svckey1": {
-                    "pending": 1,
-                    "failed": 1,
-                    "succeeded": 1
-                    }
-                }
-            })
-
-        self.assertEqual(q.get_status("non_existent_key"), {
-            "service_keys": 0,
-            "events": {}
-            })
+        # ... and increment some counters.
+        for _ in range(20):
+            q.counter_info.increment_success()
+        for _ in range(2):
+            q.counter_info.increment_failure()
 
         expected_stats = {
-            "service_keys": 4,
-            "events": {
-                "svckey1": {
-                    "pending": 1, "succeeded": 1, "failed": 1
+            "snapshot": {
+                "pending_events": {
+                    "count": 3,
+                    "newest_age_secs": 15,
+                    "oldest_age_secs": 40,
+                    "service_keys_count": 2
                     },
-                "svckey2": {
-                    "pending": 0, "succeeded": 0, "failed": 2
+                "succeeded_events": {
+                    "count": 3,
+                    "newest_age_secs": 5,
+                    "oldest_age_secs": 35,
+                    "service_keys_count": 2
                     },
-                "svckey3": {
-                    "pending": 2, "succeeded": 0, "failed": 0
+                "failed_events": {
+                    "count": 3,
+                    "newest_age_secs": 25,
+                    "oldest_age_secs": 45,
+                    "service_keys_count": 2
                     },
-                "svckey4": {
-                    "pending": 0, "succeeded": 2, "failed": 0
-                    }
+                "throttled_service_keys_count": 1
+                },
+            "aggregate": {
+                "successful_events_count": 20,
+                "failed_events_count": 2,
+                "started_on": "some_utc_time"
                 }
             }
-        self.assertEqual(q.get_status(), expected_stats)
+        self.assertEqual(q.get_stats(detailed_snapshot=True), expected_stats)
 
-        expected_stats["service_keys_throttled"] = 1
-        self.assertEqual(q.get_status(throttle_info=True), expected_stats)
-
-        expected_aggr_stats = {
-            "service_keys": 4,
-            "events_pending": 3,
-            "events_succeeded": 3,
-            "events_failed": 3
-            }
-        self.assertEqual(q.get_status(aggregated=True), expected_aggr_stats)
-
-        expected_aggr_stats["service_keys_throttled"] = 1
-        self.assertEqual(
-            q.get_status(throttle_info=True, aggregated=True),
-            expected_aggr_stats
-            )
+        expected_stats["snapshot"].pop("succeeded_events")
+        expected_stats["snapshot"].pop("failed_events")
+        self.assertEqual(q.get_stats(), expected_stats)
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
@@ -685,6 +701,10 @@ class PDQueueTest(unittest.TestCase):
         actual_unremoved.extend(q._queued_files("suc"))
         self.assertEquals(expected_unremoved, actual_unremoved)
 
+        # counters should not be touched.
+        self._assertCounterData(q, None)
+
+
     def _assertBackoffData(self, q, data):
         backup_data = q.backoff_info._db.get()
         attempts = {}
@@ -700,6 +720,31 @@ class PDQueueTest(unittest.TestCase):
             "attempts": attempts,
             "next_retries": retries
             })
+
+
+    def _assertCounterData(self, q, data):
+        counter_db = q.counter_info._db
+        counter_data = counter_db.get()
+
+        try:
+            counter_db.cached_started_on
+        except AttributeError:
+            # "started_on" must be generated if not present already.
+            self.assertNotEquals(counter_data["started_on"], None)
+            counter_db.cached_started_on = counter_data["started_on"]
+        # "started_on" must not change once generated.
+        expected = {
+            "started_on": counter_db.cached_started_on
+            }
+
+        if data:
+            success, failure = data
+            if success != 0:
+                expected["successful_events_count"] = success
+            if failure != 0:
+                expected["failed_events_count"] = failure
+
+        self.assertEqual(counter_data, expected)
 
 
 
