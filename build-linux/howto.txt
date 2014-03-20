@@ -10,7 +10,7 @@ should happen automatically)
 Generate certs to sign the packages in development:
 
 ```
-cd /my/workspace/pdagent
+cd ~/w/pdagent
 mkdir build-linux/gnupg
 chmod 700 build-linux/gnupg
 gpg --homedir=build-linux/gnupg --gen-key # Use defaults & no passphrase
