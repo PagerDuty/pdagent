@@ -42,7 +42,7 @@ _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
 BACKOFF_INTERVAL = 5
-MAX_ERROR_BACKOFFS = 3
+ERROR_RETRY_LIMIT = 3
 
 
 class NoOpLock:
@@ -114,7 +114,7 @@ class PDQueueTest(unittest.TestCase):
             time_calc=mock_time,
             event_size_max_bytes=10,
             backoff_interval=BACKOFF_INTERVAL,
-            max_error_backoffs=MAX_ERROR_BACKOFFS,
+            retry_limit_for_possible_errors=ERROR_RETRY_LIMIT,
             backoff_db=MockDB(),
             counter_db=MockDB()
             )
@@ -228,7 +228,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = MAX_ERROR_BACKOFFS + 1
+        max_total_attempts = ERROR_RETRY_LIMIT + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)
@@ -316,7 +316,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = MAX_ERROR_BACKOFFS + 1
+        max_total_attempts = ERROR_RETRY_LIMIT + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)

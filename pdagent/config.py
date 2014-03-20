@@ -93,7 +93,7 @@ class AgentConfig:
         from pdagent.jsonstore import JsonStore
         backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
         backoff_interval = self.main_config["backoff_interval_secs"]
-        max_error_backoffs = self.main_config["maximum_error_backoff_count"]
+        retry_limit_for_possible_errors = self.main_config["retry_limit_for_possible_errors"]
         counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         return PDQueue(
             lock_class=FileLock,
@@ -102,7 +102,7 @@ class AgentConfig:
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
             backoff_interval=backoff_interval,
-            max_error_backoffs=max_error_backoffs,
+            retry_limit_for_possible_errors=retry_limit_for_possible_errors,
             counter_db=counter_db
             )
 
@@ -181,7 +181,7 @@ def load_agent_config():
             "cleanup_interval_secs",
             "cleanup_threshold_secs",
             "event_size_max_bytes",
-            "maximum_error_backoff_count",
+            "retry_limit_for_possible_errors",
             "send_interval_secs",
             ]:
         try:
