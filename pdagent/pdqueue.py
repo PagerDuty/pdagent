@@ -550,6 +550,7 @@ class _CounterInfo(object):
                     )
                 logger.warning("Resetting counter history")
                 self._reset_data()
+                break
 
         # Try to persist loaded data. If we can't persist, we'll want to reset
         # the data because we don't know for how long we haven't been able to
