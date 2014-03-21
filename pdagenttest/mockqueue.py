@@ -43,7 +43,7 @@ class MockQueue:
         self.consume_code = None
         self.cleaned_up = False
 
-    def get_status(self, detailed_snapshot=False):
+    def get_stats(self, detailed_snapshot=False):
         if detailed_snapshot == self.expected_detailed_snapshot:
             return self.status
         raise Exception(
