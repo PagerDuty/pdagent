@@ -26,12 +26,33 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+"""
+A directory based queue for PagerDuty events.
+
+Consists of two classes:
+- PDQEnqueuer which provides only enqueue functionality.
+- PDQueue which provides dequeue and queue management functionality.
+
+Notes:
+- Designed for multiple processes concurrently using the queue.
+- Each entry in the queue is written to a separate file in the
+    queue directory.
+- Files are named so that sorting by file name is queue order.
+- Concurrent enqueues use exclusive file create and retries to avoid
+    using the same file name.
+- Concurrent dequeues are serialized with an exclusive dequeue lock.
+- A dequeue will hold the exclusive lock until the consume callback
+    is done.
+- dequeue never block enqueue, and enqueue never blocks dequeue.
+"""
 
 
 import errno
-import os
 import logging
+import os
+
 from constants import ConsumeEvent
+from pdagentutil import ensure_readable_directory, ensure_writable_directory
 
 
 logger = logging.getLogger(__name__)
@@ -41,64 +62,31 @@ class EmptyQueueError(Exception):
     pass
 
 
-class PDQueue(object):
-    """
-    A directory based queue for PagerDuty events.
+class PDQueueBase(object):
 
-    Notes:
-    - Designed for multiple processes concurrently using the queue.
-    - Each entry in the queue is written to a separate file in the
-        queue directory.
-    - Files are named so that sorting by file name is queue order.
-    - Concurrent enqueues use exclusive file create & retries to avoid
-        using the same file name.
-    - Concurrent dequeues are serialized with an exclusive dequeue lock.
-    - A dequeue will hold the exclusive lock until the consume callback
-        is done.
-    - dequeue never block enqueue, and enqueue never blocks dequeue.
-    """
+    def __init__(self, queue_dir, lock_class, time_calc):
+        self.queue_dir = queue_dir
+        self.lock_class = lock_class
+        self.time = time_calc
+
+    def _abspath(self, fname):
+        return os.path.join(self.queue_dir, fname)
+
+
+class PDQEnqueuer(PDQueueBase):
 
     def __init__(
             self,
             queue_dir,
             lock_class,
             time_calc,
-            event_size_max_bytes,
-            backoff_intervals,
-            backoff_db,
             enqueue_file_mode
             ):
-        from pdagentutil import \
-            ensure_readable_directory, ensure_writable_directory
-
-        self.queue_dir = queue_dir
-
-        # FIXME: only need readable for dequeue & stats
-        #ensure_readable_directory(self.queue_dir)
-        ensure_writable_directory(self.queue_dir)
-
-        self.lock_class = lock_class
-        self._dequeue_lockfile = os.path.join(
-            self.queue_dir, "dequeue.lock"
-            )
-
-        self.event_size_max_bytes = event_size_max_bytes
-        self.time = time_calc
-        if backoff_db and backoff_intervals:
-            self.backoff_info = \
-                _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+        PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
         self.enqueue_file_mode = enqueue_file_mode
 
-    # Get the list of queued files from the queue directory in enqueue order
-    def _queued_files(self, file_prefix="pdq_"):
-        fnames = [
-            f for f in os.listdir(self.queue_dir) if f.startswith(file_prefix)
-            ]
-        fnames.sort()
-        return fnames
-
-    def _abspath(self, fname):
-        return os.path.join(self.queue_dir, fname)
+        # Enqueue needs only write access to the directory
+        ensure_writable_directory(self.queue_dir)
 
     def enqueue(self, service_key, s):
         # write to an exclusive temp file
@@ -136,6 +124,39 @@ class PDQueue(object):
                         )
             else:
                 return fname, fname_abs, fd
+
+
+class PDQueue(PDQueueBase):
+
+    def __init__(
+            self,
+            queue_dir,
+            lock_class,
+            time_calc,
+            event_size_max_bytes,
+            backoff_intervals,
+            backoff_db
+            ):
+        PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
+
+        ensure_readable_directory(self.queue_dir)
+        ensure_writable_directory(self.queue_dir)
+
+        self._dequeue_lockfile = os.path.join(
+            self.queue_dir, "dequeue.lock"
+            )
+
+        self.event_size_max_bytes = event_size_max_bytes
+        self.backoff_info = \
+            _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+
+    # Get the list of queued files from the queue directory in enqueue order
+    def _queued_files(self, file_prefix="pdq_"):
+        fnames = [
+            f for f in os.listdir(self.queue_dir) if f.startswith(file_prefix)
+            ]
+        fnames.sort()
+        return fnames
 
     def dequeue(self, consume_func, stop_check_func=lambda: False):
         # process only first event in queue.

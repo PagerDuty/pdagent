@@ -34,7 +34,7 @@ import time
 import unittest
 
 from pdagent.constants import ConsumeEvent
-from pdagent.pdqueue import PDQueue, EmptyQueueError
+from pdagent.pdqueue import PDQEnqueuer, PDQueue, EmptyQueueError
 
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -67,6 +67,7 @@ class MockBackupDB:
     def set(self, json_data):
         self._data = json_data
 
+
 class MockTime:
 
     def __init__(self, time_sec=time.time()):
@@ -90,23 +91,32 @@ class PDQueueTest(unittest.TestCase):
         os.makedirs(TEST_DB_DIR)
 
     def new_queue(self):
-        return PDQueue(
+        mock_time = MockTime()
+        eq = PDQEnqueuer(
             queue_dir=TEST_QUEUE_DIR,
             lock_class=NoOpLock,
-            time_calc=MockTime(),
+            time_calc=mock_time,
+            enqueue_file_mode=0644,
+            )
+        q = PDQueue(
+            queue_dir=TEST_QUEUE_DIR,
+            lock_class=NoOpLock,
+            time_calc=mock_time,
             event_size_max_bytes=10,
             backoff_intervals=BACKOFF_INTERVALS,
-            backoff_db=MockBackupDB())
+            backoff_db=MockBackupDB()
+            )
+        return eq, q
 
     def test__open_creat_excl_with_retry(self):
         from pdagent.pdqueue import _open_creat_excl
-        q = self.new_queue()
-        fname_abs = q._abspath("_open_creat_excl_with_retry.txt")
-        fd1 = _open_creat_excl(fname_abs)
+        eq, _ = self.new_queue()
+        fname_abs = eq._abspath("_open_creat_excl_with_retry.txt")
+        fd1 = _open_creat_excl(fname_abs, 0644)
         self.assertNotEquals(fd1, None)
         fd2 = None
         try:
-            fd2 = _open_creat_excl(fname_abs)
+            fd2 = _open_creat_excl(fname_abs, 0644)
             self.assertEquals(fd2, None)
         finally:
             os.close(fd1)
@@ -114,22 +124,22 @@ class PDQueueTest(unittest.TestCase):
                 os.close(fd2)
 
     def test_enqueue_and_dequeue(self):
-        q = self.new_queue()
+        eq, q = self.new_queue()
 
         self.assertEquals(q._queued_files(), [])
 
-        f_foo = q.enqueue("svckey1", "foo")
+        f_foo = eq.enqueue("svckey1", "foo")
         self.assertEquals(q._queued_files(), [f_foo])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
 
         q.time.sleep(0.05)
-        f_bar = q.enqueue("svckey2", "bar")  # different service key
+        f_bar = eq.enqueue("svckey2", "bar")  # different service key
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
 
         q.time.sleep(0.05)
-        f_baz = q.enqueue("svckey1", "baz")
+        f_baz = eq.enqueue("svckey1", "baz")
         self.assertEquals(q._queued_files(), [f_foo, f_bar, f_baz])
         self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
         self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
@@ -162,8 +172,8 @@ class PDQueueTest(unittest.TestCase):
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
         # further consumption, if consumption causes error.
-        q = self.new_queue()
-        f_foo = q.enqueue("svckey", "foo")
+        eq, q = self.new_queue()
+        f_foo = eq.enqueue("svckey", "foo")
 
         def erroneous_consume_foo(s, i):
             self.assertEquals("foo", s)
@@ -179,8 +189,8 @@ class PDQueueTest(unittest.TestCase):
     def test_huge_event_not_processed(self):
         # The item should get tagged as error, and not be available for
         # further consumption.
-        q = self.new_queue()
-        f = q.enqueue("svckey", "huuuuuuuuge")
+        eq, q = self.new_queue()
+        f = eq.enqueue("svckey", "huuuuuuuuge")
         self.assertEquals(q._queued_files(), [f])
 
         def unexpected_consume(s, i):
@@ -194,12 +204,12 @@ class PDQueueTest(unittest.TestCase):
         # The item and all other items for same service key must get backed off
         # until backoff limit is hit, then the offending item should get tagged
         # as error, and not be available for further consumption.
-        q = self.new_queue()
-        e1_1 = q.enqueue("svckey1", "foo")
+        eq, q = self.new_queue()
+        e1_1 = eq.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
-        e1_2 = q.enqueue("svckey1", "bar")
+        e1_2 = eq.enqueue("svckey1", "bar")
         q.time.sleep(0.05)
-        e2_1 = q.enqueue("svckey2", "baz")
+        e2_1 = eq.enqueue("svckey2", "baz")
 
         events_processed = []
         count = 0
@@ -277,12 +287,12 @@ class PDQueueTest(unittest.TestCase):
         # The item and all other items for same service key must get backed off
         # until backoff limit is hit, then continue getting backed off until the
         # erroneous event is consumed.
-        q = self.new_queue()
-        e1_1 = q.enqueue("svckey1", "foo")
+        eq, q = self.new_queue()
+        e1_1 = eq.enqueue("svckey1", "foo")
         q.time.sleep(0.05)
-        e1_2 = q.enqueue("svckey1", "bar")
+        e1_2 = eq.enqueue("svckey1", "bar")
         q.time.sleep(0.05)
-        e2_1 = q.enqueue("svckey2", "baz")
+        e2_1 = eq.enqueue("svckey2", "baz")
 
         events_processed = []
         count = 0
@@ -369,12 +379,12 @@ class PDQueueTest(unittest.TestCase):
 
     def test_stop_processing(self):
         # No later event must be processed.
-        q = self.new_queue()
-        f_foo = q.enqueue("svckey1", "foo")
+        eq, q = self.new_queue()
+        f_foo = eq.enqueue("svckey1", "foo")
         q.time.sleep(1)
-        q.enqueue("svckey1", "bar")
+        eq.enqueue("svckey1", "bar")
         q.time.sleep(1)
-        q.enqueue("svckey2", "baz")
+        eq.enqueue("svckey2", "baz")
 
         events_processed = []
         count = 0
@@ -415,8 +425,8 @@ class PDQueueTest(unittest.TestCase):
 
     def test_enqueue_never_blocks(self):
         # test that a read lock during dequeue does not block an enqueue
-        q = self.new_queue()
-        f_foo = q.enqueue("svckey", "foo")
+        eq, q = self.new_queue()
+        f_foo = eq.enqueue("svckey", "foo")
 
         trace = []
 
@@ -449,7 +459,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(trace, ["Li", "La", "C1"])
         self.assertEquals(q._queued_files(), [f_foo])
 
-        f_bar = q.enqueue("svckey", "bar")
+        f_bar = eq.enqueue("svckey", "bar")
 
         self.assertEquals(trace, ["Li", "La", "C1"])
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
@@ -462,9 +472,9 @@ class PDQueueTest(unittest.TestCase):
     def test_parallel_dequeue(self):
         # test that a dequeue blocks another dequeue using locking
 
-        q1 = self.new_queue()
-        q2 = self.new_queue()
-        q1.enqueue("svckey", "foo")
+        eq1, q1 = self.new_queue()
+        _, q2 = self.new_queue()
+        eq1.enqueue("svckey", "foo")
 
         dequeue_lockfile = q1._dequeue_lockfile
         trace = []
@@ -526,13 +536,13 @@ class PDQueueTest(unittest.TestCase):
              ])
 
     def test_resurrect(self):
-        q = self.new_queue()
+        eq, q = self.new_queue()
         fnames = []
-        fnames.append(q.enqueue("svckey1", "foo"))
-        fnames.append(q.enqueue("svckey1", "bar"))
-        fnames.append(q.enqueue("svckey2", "baz"))
-        fnames.append(q.enqueue("svckey2", "boo"))
-        fnames.append(q.enqueue("svckey3", "bam"))
+        fnames.append(eq.enqueue("svckey1", "foo"))
+        fnames.append(eq.enqueue("svckey1", "bar"))
+        fnames.append(eq.enqueue("svckey2", "baz"))
+        fnames.append(eq.enqueue("svckey2", "boo"))
+        fnames.append(eq.enqueue("svckey3", "bam"))
         for i in [0, 2, 4]:
             q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
 
@@ -557,13 +567,13 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(len(q._queued_files("err_")), 0)
 
     def test_status(self):
-        q = self.new_queue()
+        eq, q = self.new_queue()
         events = ["e11", "e12", "e13", "e21", "e22", "e31", "e32", "e41", "e42"]
         fnames = []
         for e in events:
             # events are in the form e<svckey#><event#>
             k = e[1]
-            fnames.append(q.enqueue("svckey%s" % k, e))
+            fnames.append(eq.enqueue("svckey%s" % k, e))
         # 1 error for svckey1; 2 for svckey2
         for i in [0, 3, 4]:
             q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
@@ -629,7 +639,7 @@ class PDQueueTest(unittest.TestCase):
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.
-        q = self.new_queue()
+        eq, q = self.new_queue()
 
         def enqueue_before(sec, prefix="pdq"):
             enqueue_time_ms = (int(time.time()) - sec) * 1000
