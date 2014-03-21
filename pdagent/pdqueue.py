@@ -65,14 +65,16 @@ class PDQueue(object):
             time_calc,
             event_size_max_bytes,
             backoff_intervals,
-            backoff_db
+            backoff_db,
+            enqueue_file_mode
             ):
         from pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
 
         self.queue_dir = queue_dir
 
-        ensure_readable_directory(self.queue_dir)
+        # FIXME: only need readable for dequeue & stats
+        #ensure_readable_directory(self.queue_dir)
         ensure_writable_directory(self.queue_dir)
 
         self.lock_class = lock_class
@@ -85,6 +87,7 @@ class PDQueue(object):
         if backoff_db and backoff_intervals:
             self.backoff_info = \
                 _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+        self.enqueue_file_mode = enqueue_file_mode
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -123,7 +126,7 @@ class PDQueue(object):
         while True:
             fname = fname_fmt % (t_millisecs + n)
             fname_abs = self._abspath(fname)
-            fd = _open_creat_excl(fname_abs)
+            fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
             if fd is None:
                 n += 1
                 if n >= 100:
@@ -363,9 +366,9 @@ class PDQueue(object):
         os.rename(old_abs, new_abs)
 
 
-def _open_creat_excl(fname_abs):
+def _open_creat_excl(fname_abs, mode):
     try:
-        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     except OSError, e:
         if e.errno == errno.EEXIST:
             return None
