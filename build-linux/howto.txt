@@ -7,7 +7,7 @@ should happen automatically)
 
 ## One-time setup:
 
-Generate certs to sign the packages in development:
+Generate keys to sign the packages in development:
 
 ```
 cd ~/w/pdagent
