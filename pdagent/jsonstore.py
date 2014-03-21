@@ -28,6 +28,7 @@
 #
 
 
+import errno
 import json
 import os
 
@@ -56,8 +57,13 @@ class JsonStore(object):
         try:
             fp = open(self._path, "r")
             return json.load(fp)
-        except (IOError, ValueError):
-            # file could not be opened, or had bad json in it.
+        except IOError as e:
+            # alright if no such file exists, not fine if any other error.
+            if e.errno != errno.ENOENT:
+                raise
+            return None
+        except ValueError:
+            # file had bad json in it.
             return None
         finally:
             if fp:

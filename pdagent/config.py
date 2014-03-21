@@ -96,13 +96,15 @@ class AgentConfig:
             int(s.strip()) for s in
             self.main_config["backoff_intervals"].split(",")
             ]
+        counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         return PDQueue(
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
             event_size_max_bytes=self.main_config["event_size_max_bytes"],
             backoff_db=backoff_db,
-            backoff_intervals=backoff_intervals
+            backoff_intervals=backoff_intervals,
+            counter_db=counter_db
             )
 
 

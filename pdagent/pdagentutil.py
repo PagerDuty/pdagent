@@ -61,9 +61,10 @@ def ensure_writable_directory(d):
             )
 
 
-def utcnow_isoformat():
-    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
+def utcnow_isoformat(time_calc=None):
+    if not time_calc:
+        time_calc = time
+    return time_calc.strftime("%Y-%m-%dT%H:%M:%SZ", time_calc.gmtime())
 
 def queue_event(
         enqueuer,
@@ -90,8 +91,8 @@ def resurrect_events(queue, service_key):
     queue.resurrect(service_key)
 
 
-def get_status(queue, service_key):
-    return queue.get_status(service_key)
+def get_stats(queue, service_key):
+    return queue.get_stats(service_key)
 
 
 def _build_event_json_str(
