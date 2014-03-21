@@ -14,7 +14,6 @@ cd ~/w/pdagent
 mkdir build-linux/gnupg
 chmod 700 build-linux/gnupg
 gpg --homedir=build-linux/gnupg --gen-key # Use defaults & no passphrase
-gpg --homedir=build-linux/gnupg --export --armor >build-linux/gnupg/build-GPG-KEY
 ```
 
 ## Ubuntu
