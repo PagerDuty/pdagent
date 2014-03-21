@@ -135,7 +135,8 @@ class PDQueue(PDQueueBase):
             lock_class,
             time_calc,
             event_size_max_bytes,
-            backoff_intervals,
+            backoff_interval,
+            retry_limit_for_possible_errors,
             backoff_db,
             counter_db
             ):
@@ -149,8 +150,12 @@ class PDQueue(PDQueueBase):
             )
 
         self.event_size_max_bytes = event_size_max_bytes
-        self.backoff_info = \
-            _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+        self.backoff_info = _BackoffInfo(
+            backoff_db,
+            backoff_interval,
+            retry_limit_for_possible_errors,
+            time_calc
+            )
         self.counter_info = _CounterInfo(counter_db, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
@@ -430,10 +435,16 @@ class _BackoffInfo(object):
     service keys in queue.
     """
 
-    def __init__(self, backoff_db, backoff_intervals, time_calc):
+    def __init__(
+            self,
+            backoff_db,
+            backoff_interval,
+            retry_limit_for_possible_errors,
+            time_calc
+            ):
         self._db = backoff_db
-        self._backoff_intervals = backoff_intervals
-        self._max_backoff_attempts = len(backoff_intervals)
+        self._backoff_interval = backoff_interval
+        self._retry_limit_for_possible_errors = retry_limit_for_possible_errors
         self._time = time_calc
         try:
             data = self._db.get()
@@ -455,30 +466,31 @@ class _BackoffInfo(object):
         self.update()
 
     # returns true if `current-attempts`, or `previous-attempts + 1`,
-    # results in a threshold breach.
+    # results in a threshold breach of retry-limit.
     def is_threshold_breached(self, svc_key):
         cur_attempt = self._current_attempts.get(
             svc_key,
             self._previous_attempts.get(svc_key, 0) + 1)
-        return cur_attempt > self._max_backoff_attempts
+        return cur_attempt > self._retry_limit_for_possible_errors
 
     # returns the current retry-at time for svc_key, or 0 if not available.
     def get_current_retry_at(self, svc_key):
         return self._current_retry_at.get(svc_key, 0)
 
     # updates current attempt and retry data based on previous data.
+    # Note that this doesn't check for threshold breach because the threshold is
+    # not required for all situations (e.g. back off due to throttling.)
     def increment(self, svc_key):
-        cur_attempt = self._previous_attempts.get(svc_key, 0) + 1
-        # if backoff-seconds have been exhausted, reuse the last one.
-        backoff_index = min(cur_attempt, self._max_backoff_attempts) - 1
-        backoff = self._backoff_intervals[backoff_index]
         logger.info(
             "Retrying events in service key %s after %d sec" %
-            (svc_key, backoff)
+            (svc_key, self._backoff_interval)
             )
 
-        self._current_attempts[svc_key] = cur_attempt
-        self._current_retry_at[svc_key] = int(self._time.time()) + backoff
+        self._current_attempts[svc_key] = \
+            self._previous_attempts.get(svc_key, 0) + 1
+        self._current_retry_at[svc_key] = int(
+            self._time.time() + self._backoff_interval
+            )
 
     # only retains data that is still valid at current time.
     def update(self):

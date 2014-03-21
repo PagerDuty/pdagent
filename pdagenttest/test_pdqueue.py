@@ -41,7 +41,8 @@ _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
-BACKOFF_INTERVALS = [1, 2, 4]
+BACKOFF_INTERVAL = 5
+ERROR_RETRY_LIMIT = 3
 
 
 class NoOpLock:
@@ -112,7 +113,8 @@ class PDQueueTest(unittest.TestCase):
             lock_class=NoOpLock,
             time_calc=mock_time,
             event_size_max_bytes=10,
-            backoff_intervals=BACKOFF_INTERVALS,
+            backoff_interval=BACKOFF_INTERVAL,
+            retry_limit_for_possible_errors=ERROR_RETRY_LIMIT,
             backoff_db=MockDB(),
             counter_db=MockDB()
             )
@@ -226,7 +228,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = len(BACKOFF_INTERVALS) + 1
+        max_total_attempts = ERROR_RETRY_LIMIT + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)
@@ -268,7 +270,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
-            q.time.sleep(BACKOFF_INTERVALS[i-2])
+            q.time.sleep(BACKOFF_INTERVAL)
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -280,7 +282,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry now. there should be no more backoffs, bad event should be
         # kicked out, and next event should finally be processed.
-        q.time.sleep(BACKOFF_INTERVALS[-1])
+        q.time.sleep(BACKOFF_INTERVAL)
         count += 1
         events_processed = []
         q.flush(consume_with_backoff, lambda: False)
@@ -314,7 +316,7 @@ class PDQueueTest(unittest.TestCase):
         count = 0
         # total attempts including backoffs, after which corrective action
         # for bad event kicks in, i.e. kicks in for the max-th attempt.
-        max_total_attempts = len(BACKOFF_INTERVALS) + 1
+        max_total_attempts = ERROR_RETRY_LIMIT + 1
 
         def consume_with_backoff(s, i):
             events_processed.append(s)
@@ -356,7 +358,7 @@ class PDQueueTest(unittest.TestCase):
 
         # retry just shy of max allowed times.
         for i in range(2, max_total_attempts):
-            q.time.sleep(BACKOFF_INTERVALS[i-2])
+            q.time.sleep(BACKOFF_INTERVAL)
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -369,7 +371,7 @@ class PDQueueTest(unittest.TestCase):
         # try a couple more times (we exceed max attempts going forward) --
         # bad event is still processed.
         for i in [0, 1]:
-            q.time.sleep(BACKOFF_INTERVALS[-1])
+            q.time.sleep(BACKOFF_INTERVAL)
             count += 1
             events_processed = []
             q.flush(consume_with_backoff, lambda: False)
@@ -383,7 +385,7 @@ class PDQueueTest(unittest.TestCase):
             self._assertCounterData(q, (1, 0))
 
         # retry now (much after max_backoff_attempts), with no bad event.
-        q.time.sleep(BACKOFF_INTERVALS[-1])
+        q.time.sleep(BACKOFF_INTERVAL)
         count += 1
         events_processed = []
         q.flush(consume_with_backoff, lambda: False)
@@ -713,8 +715,7 @@ class PDQueueTest(unittest.TestCase):
         if data:
             for (svc_key, count, backoff_index) in data:
                 attempts[svc_key] = count
-                retries[svc_key] = int(
-                    q.time.time() + BACKOFF_INTERVALS[backoff_index])
+                retries[svc_key] = int(q.time.time() + BACKOFF_INTERVAL)
 
         self.assertEqual(backup_data, {
             "attempts": attempts,
