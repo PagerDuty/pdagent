@@ -52,7 +52,8 @@ import logging
 import os
 
 from constants import ConsumeEvent
-from pdagentutil import ensure_readable_directory, ensure_writable_directory
+from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
+    utcnow_isoformat
 
 
 logger = logging.getLogger(__name__)
@@ -134,8 +135,10 @@ class PDQueue(PDQueueBase):
             lock_class,
             time_calc,
             event_size_max_bytes,
-            backoff_intervals,
-            backoff_db
+            backoff_interval,
+            retry_limit_for_possible_errors,
+            backoff_db,
+            counter_db
             ):
         PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
 
@@ -147,8 +150,13 @@ class PDQueue(PDQueueBase):
             )
 
         self.event_size_max_bytes = event_size_max_bytes
-        self.backoff_info = \
-            _BackoffInfo(backoff_db, backoff_intervals, time_calc)
+        self.backoff_info = _BackoffInfo(
+            backoff_db,
+            backoff_interval,
+            retry_limit_for_possible_errors,
+            time_calc
+            )
+        self.counter_info = _CounterInfo(counter_db, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, file_prefix="pdq_"):
@@ -192,11 +200,10 @@ class PDQueue(PDQueueBase):
             if not len(file_names):
                 return
 
-            # reload back-off info, in case there are external changes to it.
             now = self.time.time()
-            self.backoff_info.load(now)
             err_svc_keys = set()
 
+            self.backoff_info.update()
             for fname in file_names:
                 if should_stop_func():
                     break
@@ -216,12 +223,12 @@ class PDQueue(PDQueueBase):
                         break
 
             self.backoff_info.store()
+            self.counter_info.store()
         finally:
             lock.release()
 
     # Returns true if processing can continue for service key, false if not.
     def _process_event(self, fname, consume_func, svc_key):
-
         fname_abs = self._abspath(fname)
         data = None
         if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
@@ -234,6 +241,7 @@ class PDQueue(PDQueueBase):
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self.counter_info.increment_failure()
             return True
 
         logger.info("Processing event " + fname)
@@ -244,12 +252,14 @@ class PDQueue(PDQueueBase):
             # was not specified, i.e. if event was enqueued in a non-standard
             # manner (e.g. not using the pd* scripts.)
             self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
+            self.counter_info.increment_success()
             return True
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
             self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self.counter_info.increment_failure()
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
             logger.info("Backing off service key " + svc_key)
@@ -263,6 +273,7 @@ class PDQueue(PDQueueBase):
                     svc_key
                     )
                 self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                self.counter_info.increment_failure()
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
                 # don't consider key as erroneous.
@@ -314,67 +325,82 @@ class PDQueue(PDQueueBase):
         _cleanup_files("tmp_")
         _cleanup_files("suc_")
 
-    def get_status(
+    def get_stats(
             self,
-            service_key=None,
-            aggregated=False,
-            throttle_info=False
+            detailed_snapshot=False
             ):
-        empty_event_stats = {
-            "pending": 0,
-            "succeeded": 0,
-            "failed": 0
-            }
-        if aggregated:
-            event_stats = empty_event_stats
-        else:
-            # stats per service-key
-            event_stats = {}
-        svc_keys = set()
+        """
+        Returns status of events. Status consists of snapshot stats (based on
+        current queue state), and historical stats (based on persisted state.)
 
-        def add_stat(queue_file_prefix, stat_type):
+        Sample data returned:
+        {
+            "snapshot": {
+                "pending_events": {
+                    "count": 3,
+                    "newest_age_secs": 15,
+                    "oldest_age_secs": 40,
+                    "service_keys_count": 2
+                },
+                "succeeded_events": {
+                    "count": 3,
+                    "newest_age_secs": 5,
+                    "oldest_age_secs": 35,
+                    "service_keys_count": 2
+                },
+                "failed_events": {
+                    "count": 3,
+                    "newest_age_secs": 25,
+                    "oldest_age_secs": 45,
+                    "service_keys_count": 2
+                },
+                "throttled_service_keys_count": 1
+            },
+            "aggregate": {
+                "successful_events_count": 20,
+                "failed_events_count": 2,
+                "started_on": "2014-03-18T20:49:02Z"
+            }
+        }
+        """
+        now = self.time.time()
+
+        snapshot_stats = dict()
+
+        def add_stat(queue_file_prefix, stat_name):
+            if stat_name not in snapshot_stats:
+                snapshot_stats[stat_name] = SnapshotStats(now)
             for fname in self._queued_files(queue_file_prefix):
-                _, _, svc_key = _get_event_metadata(fname)
-                if not service_key or (svc_key == service_key):
-                    svc_keys.add(svc_key)
-                    if aggregated:
-                        stats = event_stats
-                    else:
-                        if not event_stats.get(svc_key):
-                            event_stats[svc_key] = dict(empty_event_stats)
-                        stats = event_stats[svc_key]
-                    stats[stat_type] += 1
-        add_stat("pdq_", "pending")
-        add_stat("suc_", "succeeded")
-        add_stat("err_", "failed")
+                snapshot_stats[stat_name].add_event(_get_event_metadata(fname))
 
-        status = {
-            "service_keys": len(svc_keys),
-            }
-        if aggregated:
-            status.update({
-                "events_pending": event_stats["pending"],
-                "events_succeeded": event_stats["succeeded"],
-                "events_failed": event_stats["failed"]
-                })
-        else:
-            status["events"] = event_stats
+        add_stat("pdq_", "pending_events")
+        if detailed_snapshot:
+            add_stat("suc_", "succeeded_events")
+            add_stat("err_", "failed_events")
+
+        for stat_name in snapshot_stats:
+            snapshot_stats[stat_name] = snapshot_stats[stat_name].to_dict()
 
         # if throttle info is required, compute from pre-loaded info.
         # (we don't want to reload info if queue processing is underway.)
-        if throttle_info and \
-                self.backoff_info and \
-                self.backoff_info._current_retry_at:
+        if self.backoff_info._current_retry_at:
             throttled_keys = set()
             now = int(self.time.time())
             for key, retry_at in \
                     self.backoff_info._current_retry_at.iteritems():
-                if (not service_key or (key == service_key)) and \
-                        retry_at > now:
+                if retry_at > now:
                     throttled_keys.add(key)
-            status["service_keys_throttled"] = len(throttled_keys)
+            snapshot_stats["throttled_service_keys_count"] = len(throttled_keys)
 
-        return status
+        stats = {
+            "snapshot": snapshot_stats
+            }
+
+        # historical counter data for completed events (success, failure)
+        if self.counter_info._data:
+            stats["aggregate"] = self.counter_info._data
+
+        return stats
 
     # This function can move error files back into regular files, so ensure that
     # you have considered any concurrency-related consequences to other queue
@@ -409,71 +435,80 @@ class _BackoffInfo(object):
     service keys in queue.
     """
 
-    def __init__(self, backoff_db, backoff_intervals, time_calc):
+    def __init__(
+            self,
+            backoff_db,
+            backoff_interval,
+            retry_limit_for_possible_errors,
+            time_calc
+            ):
         self._db = backoff_db
-        self._backoff_intervals = backoff_intervals
-        self._max_backoff_attempts = len(backoff_intervals)
+        self._backoff_interval = backoff_interval
+        self._retry_limit_for_possible_errors = retry_limit_for_possible_errors
         self._time = time_calc
+        try:
+            data = self._db.get()
+        except:
+            logger.warning(
+                "Unable to load service-key back-off history",
+                exc_info=True
+                )
+            data = None
+        if not data:
+            # no db yet, or errors during db read.
+            data = {
+                'attempts': {},
+                'next_retries': {}
+                }
         self._previous_attempts = {}
-        self._current_attempts = {}
-        self._current_retry_at = {}
+        self._current_attempts = data['attempts']
+        self._current_retry_at = data['next_retries']
+        self.update()
 
     # returns true if `current-attempts`, or `previous-attempts + 1`,
-    # results in a threshold breach.
+    # results in a threshold breach of retry-limit.
     def is_threshold_breached(self, svc_key):
         cur_attempt = self._current_attempts.get(
             svc_key,
             self._previous_attempts.get(svc_key, 0) + 1)
-        return cur_attempt > self._max_backoff_attempts
+        return cur_attempt > self._retry_limit_for_possible_errors
 
     # returns the current retry-at time for svc_key, or 0 if not available.
     def get_current_retry_at(self, svc_key):
         return self._current_retry_at.get(svc_key, 0)
 
     # updates current attempt and retry data based on previous data.
+    # Note that this doesn't check for threshold breach because the threshold is
+    # not required for all situations (e.g. back off due to throttling.)
     def increment(self, svc_key):
-        cur_attempt = self._previous_attempts.get(svc_key, 0) + 1
-        # if backoff-seconds have been exhausted, reuse the last one.
-        backoff_index = min(cur_attempt, self._max_backoff_attempts) - 1
-        backoff = self._backoff_intervals[backoff_index]
         logger.info(
             "Retrying events in service key %s after %d sec" %
-            (svc_key, backoff)
+            (svc_key, self._backoff_interval)
             )
 
-        self._current_attempts[svc_key] = cur_attempt
-        self._current_retry_at[svc_key] = int(self._time.time()) + backoff
+        self._current_attempts[svc_key] = \
+            self._previous_attempts.get(svc_key, 0) + 1
+        self._current_retry_at[svc_key] = int(
+            self._time.time() + self._backoff_interval
+            )
 
-    # loads data; copies over data that is still valid at time_now to current.
-    def load(self, time_now):
-        try:
-            previous = self._db.get()
-        except:
-            logger.warning(
-                "Unable to load service-key back-off history",
-                exc_info=True
-                )
-            previous = None
-        if not previous:
-            # no db yet, or errors during db read
-            previous = {
-                'attempts': {},
-                'next_retries': {}
-                }
+    # only retains data that is still valid at current time.
+    def update(self):
+        time_now = self._time.time()
+        new_attempts = {}
+        new_retry_at = {}
 
-        self._current_attempts = {}
-        self._current_retry_at = {}
+        # copy over all still-unexpired current back-offs to new data.
+        for (svc_key, retry_at) in self._current_retry_at.iteritems():
+            if retry_at > time_now:
+                new_attempts[svc_key] = self._current_attempts.get(svc_key)
+                new_retry_at[svc_key] = retry_at
 
         # we'll still hold on to previous attempts data so we can use it to
         # compute new current data if required later.
-        self._previous_attempts = previous['attempts']
-
-        # copy over all still-unexpired previous back-offs to current data.
-        for (svc_key, retry_at) in previous['next_retries'].iteritems():
-            if retry_at > time_now:
-                self._current_attempts[svc_key] = \
-                    self._previous_attempts.get(svc_key)
-                self._current_retry_at[svc_key] = retry_at
+        self._previous_attempts = self._current_attempts
+        self._current_attempts = new_attempts
+        self._current_retry_at = new_retry_at
 
     # persists current back-off info.
     def store(self):
@@ -486,3 +521,109 @@ class _BackoffInfo(object):
             logger.warning(
                 "Unable to save service-key back-off history",
                 exc_info=True)
+
+
+
+class _CounterInfo(object):
+    """
+    Loads, accesses, modifies and saves counters for processed events.
+    """
+
+    def __init__(self, counter_db, time_calc):
+        self._db = counter_db
+        self._data = {}
+        self._time = time_calc
+
+        # try to load data.
+        try:
+            self._data = self._db.get()
+        except:
+            logger.error("Unable to load counter history", exc_info=True)
+        if not self._data:
+            self._reset_data()
+
+        # validate that counter values are indeed integers. If not, reset data.
+        for key in (k for k in self._data if k != "started_on"):
+            if type(self._data[key]) is not int:
+                logger.error(
+                    "Invalid counter value %s=%s" % (key, self._data[key])
+                    )
+                logger.warning("Resetting counter history")
+                self._reset_data()
+                break
+
+        # Try to persist loaded data. If we can't persist, we'll want to reset
+        # the data because we don't know for how long we haven't been able to
+        # persist. Instead of updating the currently-loaded old counters,
+        # potentially resulting in incorrect values, we'll just consider the
+        # persisted data invalid.
+        self.store(reset_data_if_failed=True)
+
+    # increments success count by 1.
+    def increment_success(self):
+        self._increment("successful_events_count")
+
+    # increments failure count by 1.
+    def increment_failure(self):
+        self._increment("failed_events_count")
+
+    # increments count of given type by 1.
+    def _increment(self, counter_type):
+        self._data[counter_type] = self._data.get(counter_type, 0) + 1
+
+    # persists current counter history.
+    def store(self, reset_data_if_failed=False):
+        try:
+            self._db.set(self._data)
+        except:
+            logger.error("Unable to save counter history", exc_info=True)
+            if reset_data_if_failed:
+                logger.warning("Resetting counter history")
+                self._reset_data()
+
+    def _reset_data(self):
+        self._data = {
+            "started_on": utcnow_isoformat(self._time)
+            }
+
+
+class SnapshotStats(object):
+    """
+    Stats based on snapshot of queue.
+    """
+    def __init__(self, time_now):
+        self.count = 0
+        self.oldest_enqueue_time = None
+        self.newest_enqueue_time = None
+        self.service_keys = set()
+        self._time_now = time_now
+
+    def add_event(self, event_metadata):
+        _, enqueue_time, svc_key = event_metadata
+
+        self.count += 1
+        if (not self.oldest_enqueue_time) or \
+                enqueue_time < self.oldest_enqueue_time:
+            self.oldest_enqueue_time = enqueue_time
+        if (not self.newest_enqueue_time) or \
+                enqueue_time > self.newest_enqueue_time:
+            self.newest_enqueue_time = enqueue_time
+
+        self.service_keys.add(svc_key)
+
+    def to_dict(self):
+        if self.count:
+            return {
+                "count": self.count,
+                "oldest_age_secs": int(
+                    self._time_now - self.oldest_enqueue_time / 1000
+                    ),
+                "newest_age_secs": int(
+                    self._time_now - self.newest_enqueue_time / 1000
+                    ),
+                "service_keys_count": len(self.service_keys)
+                }
+        else:
+            return {
+                "count": self.count
+                }

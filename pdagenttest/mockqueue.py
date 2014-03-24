@@ -33,31 +33,22 @@ class MockQueue:
             self,
             event=None,
             status=None,
-            aggregated=None,
-            throttle_info=None,
+            detailed_snapshot=None,
             cleanup_age_secs=None
             ):
         self.event = event
         self.status = status
-        self.expected_aggregated = aggregated
-        self.expected_throttle_info = throttle_info
+        self.expected_detailed_snapshot = detailed_snapshot
         self.expected_cleanup_age = cleanup_age_secs
         self.consume_code = None
         self.cleaned_up = False
 
-    def get_status(self, aggregated=False, throttle_info=False):
-        if aggregated == self.expected_aggregated and \
-                throttle_info == self.expected_throttle_info:
+    def get_stats(self, detailed_snapshot=False):
+        if detailed_snapshot == self.expected_detailed_snapshot:
             return self.status
         raise Exception(
-                (
-                    "Received aggregated=%s and throttle_info=%s; " +
-                    "expected aggregated=%s and throttle_info=%s"
-                ) %
-                (
-                    aggregated, throttle_info,
-                    self.expected_aggregated, self.expected_throttle_info
-                )
+            "Received detailed_snapshot=%s; expected detailed_snapshot=%s" %
+            (detailed_snapshot, self.expected_detailed_snapshot)
             )
 
     def flush(self, consume_func, stop_check_func):
