@@ -76,7 +76,7 @@ instructions in `build-linux/howto.txt`.
 
 2. Run the following commands:
 
-        scons -clean
+        scons --clean
         scons local-repo
 
     Note that this will spin up multiple virtual machines using Vagrant to run
