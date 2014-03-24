@@ -5,9 +5,11 @@ These instructions assume you're running this on a Mac with Vagrant installed,
 and that the project directory ends up mounted in the VM at `/vagrant`. (this
 should happen automatically)
 
-## One-time setup:
+## One-time setup of GPG keys:
 
-Generate keys to sign the packages in development:
+To build Linux packages, you will need GPG keys to sign the packages.
+
+For development, you can generate new keys as follows:
 
 ```
 cd ~/w/pdagent
@@ -15,6 +17,11 @@ mkdir build-linux/gnupg
 chmod 700 build-linux/gnupg
 gpg --homedir=build-linux/gnupg --gen-key # Use defaults & no passphrase
 ```
+
+For production builds, you should use a key with a passphrase and save that key
+in a secure location. Please adjust the `gpg-home` parameter in the following
+instructions accordingly.
+
 
 ## Ubuntu
 
