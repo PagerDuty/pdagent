@@ -8,17 +8,6 @@ Vagrant setup notes for OS X 10.8 (Mountain Lion).
 
 1. Install Vagrant.  See instructions at http://www.vagrantup.com/
 
-2. Install Vagrant plugins:
-
-        vagrant plugin install vagrant-omnibus
-
-        gem install berkshelf
-        vagrant plugin install vagrant-berkshelf
-
-3. Install chef cookbooks:
-
-        berks install
-
 
 ## Managing VMs
 
@@ -27,23 +16,23 @@ defined in the project's `Vagrantfile`.
 
 For example:
 
-    ~/w/agent$ vagrant status
-    Current machine states:
+```
+~/w/pdagent$ vagrant status
+Current machine states:
 
-    agent-centos58            running (virtualbox)
-    agent-centos64            not created (virtualbox)
-    agent-lucid32             not created (virtualbox)
-    agent-precise32           not created (virtualbox)
+agent-minimal-centos65    not created (virtualbox)
+agent-minimal-ubuntu1004  running (virtualbox)
+agent-minimal-ubuntu1204  running (virtualbox)
 
-    This environment represents multiple VMs. The VMs are all listed
-    above with their current state. For more information about a specific
-    VM, run `vagrant status NAME`.
-
+This environment represents multiple VMs. The VMs are all listed
+above with their current state. For more information about a specific
+VM, run `vagrant status NAME`.
+```
 
 You can bring up all VM at the same time by running `vagrant up` or bring up
 an individual VM by specifying it's name. For example:
 
-    ~/w/agent$ vagrant up agent-precise32
+    ~/w/pdagent$ vagrant up agent-minimal-ubuntu1004
 
 **Note**: the first time that you bring up a VM may require a large download of the
 "box" that the VM is based on.  The box downloads will be cached in the
@@ -57,8 +46,19 @@ You can manage the VMs using the Vagrant commands: `up`, `halt`, `reload`,
 
 You can ssh into a VM by using `vagrant ssh <machine-name>`. For example:
 
-    ~/w/agent$ vagrant ssh agent-precise32
+    ~/w/pdagent$ vagrant ssh agent-minimal-ubuntu1004
 
+
+## Deleting VMs
+
+You can delete Vagrant VMs by using the `vagrant destroy` command:
+
+```
+~/w/pdagent$ vagrant destroy
+Are you sure you want to destroy the 'agent-minimal-ubuntu1204' VM? [y/N] y
+[agent-minimal-ubuntu1204] Forcing shutdown of VM...
+[agent-minimal-ubuntu1204] Destroying VM and associated drives...
+```
 
 
 ## Vagrant cache
