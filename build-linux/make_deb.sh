@@ -81,7 +81,7 @@ EOF
 apt-ftparchive -c /tmp/apt-ftparchive.conf release deb >Release
 mv Release deb/
 [ ! -e deb/Release.gpg ] || rm deb/Release.gpg
-gpg --homedir $gpg_home --no-tty --lock-never \
+gpg --homedir $gpg_home --lock-never \
     --output deb/Release.gpg \
     --detach-sign --armor deb/Release
 

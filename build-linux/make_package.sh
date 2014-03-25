@@ -129,7 +129,7 @@ fpm -s dir \
     --url "http://www.pagerduty.com" \
     --license 'Open Source' \
     --vendor 'PagerDuty, Inc.' \
-    --maintainer 'PagerDuty Build System <http://support.pagerduty.com>' \
+    --maintainer 'Package Maintainer (PagerDuty, Inc.) <packages@pagerduty.com>' \
     $_FPM_DEPENDS \
     $_SIGN_OPTS \
     --${pkg_type}-user root \
