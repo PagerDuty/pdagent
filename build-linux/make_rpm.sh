@@ -45,9 +45,8 @@ rpm_install_root=$install_root/rpm
 [ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
 # install required packages.
-installed=$(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
-    grep -vc 'not installed')
-[ $installed -eq 4 ] || {
+[ $(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
+    grep -vc 'not installed') -eq 4 ] || {
     echo "Installing required packages. This may take a few minutes..."
     sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
     echo "Done installing."
