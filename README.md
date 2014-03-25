@@ -76,8 +76,10 @@ instructions in `build-linux/howto.txt`.
 
 2. Run the following commands:
 
-        scons --clean
-        scons local-repo
+```
+scons --clean
+scons local-repo gpg-home=build-linux/gnupg
+```
 
     Note that this will spin up multiple virtual machines using Vagrant to run
     tests and perform builds on.
