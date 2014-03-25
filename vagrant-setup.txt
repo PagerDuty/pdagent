@@ -30,7 +30,7 @@ VM, run `vagrant status NAME`.
 ```
 
 You can bring up all VM at the same time by running `vagrant up` or bring up
-an individual VM by specifying it's name. For example:
+an individual VM by specifying its name. For example:
 
     ~/w/pdagent$ vagrant up agent-minimal-ubuntu1004
 
