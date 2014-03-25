@@ -27,7 +27,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-AGENT_VERSION=0.6
 AGENT_USER=pdagent
 BIN_PD_SEND=pd-send
 CONFIG_FILE=/etc/pdagent.conf
