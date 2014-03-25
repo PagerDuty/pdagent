@@ -120,6 +120,12 @@ cd target
 _DESC="The PagerDuty Agent package
 The PagerDuty Agent is a helper program that you install on your
 monitoring system to integrate your monitoring tools with PagerDuty."
+if [ "$pkg_type" = "deb" ]; then
+    _PKG_MAINTAINER="Package Maintainer"
+else
+    _PKG_MAINTAINER="RPM Package Maintainer"
+fi
+_PKG_MAINTAINER="$_PKG_MAINTAINER (PagerDuty, Inc.) <packages@pagerduty.com>"
 fpm -s dir \
     -t $pkg_type \
     --name "pdagent" \
@@ -129,7 +135,7 @@ fpm -s dir \
     --url "http://www.pagerduty.com" \
     --license 'Open Source' \
     --vendor 'PagerDuty, Inc.' \
-    --maintainer 'Package Maintainer (PagerDuty, Inc.) <packages@pagerduty.com>' \
+    --maintainer "$_PKG_MAINTAINER" \
     $_FPM_DEPENDS \
     $_SIGN_OPTS \
     --${pkg_type}-user root \
