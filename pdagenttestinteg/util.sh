@@ -58,7 +58,7 @@ start_agent() {
   if [ -z "$(agent_pid)" ]; then
     sudo service $AGENT_SVC_NAME start
   else
-    return 1
+    return 0
   fi
 }
 
@@ -67,7 +67,7 @@ stop_agent() {
   if [ -n "$(agent_pid)" ]; then
     sudo service $AGENT_SVC_NAME stop
   else
-    return 1
+    return 0
   fi
 }
 
@@ -76,6 +76,6 @@ restart_agent() {
   if [ -n "$(agent_pid)" ]; then
     sudo service $AGENT_SVC_NAME restart
   else
-    return 1
+    start_agent
   fi
 }
