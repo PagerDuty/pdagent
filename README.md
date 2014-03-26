@@ -76,17 +76,25 @@ instructions in `build-linux/howto.txt`.
 
 2. Run the following commands:
 
-```
-scons --clean
-scons local-repo gpg-home=build-linux/gnupg
-```
+        scons --clean
+        scons local-repo gpg-home=build-linux/gnupg
 
     Note that this will spin up multiple virtual machines using Vagrant to run
     tests and perform builds on.
 
-3. Run integration tests on the packages with the command:
+3. Run integration tests on the packages as follows:
+
+    (i) Edit the file `pdagenttestinteg/util.sh` and change the line
+    `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key suitable for testing.
+
+    (ii) Run the command:
 
         scons test-integration
+
+    This will run the integration tests on the various VMs using the packages
+    built in the previous step. Note that the tests will trigger and resolve
+    some incidents when they run.
+
 
 If you want to build packages by hand, follow the instructions in
 `build-linux/howto.txt`.
