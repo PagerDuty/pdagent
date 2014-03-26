@@ -15,12 +15,17 @@ For development, you can generate new keys as follows:
 cd ~/w/pdagent
 mkdir build-linux/gnupg
 chmod 700 build-linux/gnupg
-gpg --homedir=build-linux/gnupg --gen-key # Use defaults & no passphrase
+gpg --homedir=build-linux/gnupg --gen-key
 ```
 
+For key generation use the suggested defaults and *no passphrase*. (when
+asked to enter a passphrase, just press *Enter*)
+
 For production builds, you should use a key with a passphrase and save that key
-in a secure location. Please adjust the `gpg-home` parameter in the following
-instructions accordingly.
+in a secure location.
+
+If you use a different `gpg-home`, please adjust the `gpg-home` parameter in
+the following instructions accordingly.
 
 
 ## Ubuntu
