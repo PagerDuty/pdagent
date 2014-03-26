@@ -53,6 +53,7 @@ rpm_install_root=$install_root/rpm
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
     echo "Installing fpm gem..."
+    sudo yum install -y -q gcc gcc-c++ kernel-devel
     sudo gem install -q fpm
     echo "Done installing."
 }
