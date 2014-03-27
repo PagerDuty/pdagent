@@ -359,14 +359,13 @@ build               Runs unit tests on virtual machines, creates local
                     machines.
                     This is the default command if none is specified.
 --clean|-c          Removes generated artifacts.
+destroy-virt        Destroy the given virtual machine (provided using the `virt`
+                    option), or all 'minimal' virtual machines (ones with names
+                    containing 'minimal' in them.)
 publish             Uploads local repository contents for agent into
                     remote repository.
-                    You will need to pass a repo-root argument for this,
-                    which is the location of remote repository. Location
-                    types supported, and corresponding syntax:
-                    S3: s3://<bucket>/<path>  [requires `s3cmd`.]
-                    Also, the required arguments for 'local-repo' need to
-                    be passed in.
+                    Also, the required arguments for 'local-repo' and
+                    'sync-from-remote-repo' need to be passed in.
 local-repo          Creates installable local repository for supported OS
                     distributions.
                     You will need to pass a gpg-home argument for this,
@@ -374,6 +373,21 @@ local-repo          Creates installable local repository for supported OS
                     Agent packages with. You could run this command to
                     generate required content:
                     gpg --homedir=/desired/path --gen-key
+start-virt          Start the given virtual machine (provided using the `virt`
+                    option), or all 'minimal' virtual machines (ones with names
+                    containing 'minimal' in them.)
+sync-from-remote-repo  Downloads already-published package hierarchy from the
+                    given remote repository. Required if the repository is to be
+                    updated with new / modified package.
+                    You will need to pass a repo-root argument for this,
+                    which is the location of remote repository. Location
+                    types supported, and corresponding syntax:
+                    S3: s3://<bucket>/<path>  [requires `s3cmd`.]
+sync-to-remote-repo    Uploads already-published packages from the given
+                    remote repository. Required if the repository is to be
+                    updated with new / modified package.
+                    You will need to pass a repo-root argument for this. Refer
+                    'sync-from-remote-repo'.
 test                Runs unit tests on specific virtual machines, bringing
                     the virtual machine up if required.
                     By default, runs on all virtual machines. Specific
