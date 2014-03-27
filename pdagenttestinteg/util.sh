@@ -73,9 +73,5 @@ stop_agent() {
 
 # restart agent if running.
 restart_agent() {
-  if [ -n "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME restart
-  else
-    start_agent
-  fi
+  sudo service $AGENT_SVC_NAME restart
 }
