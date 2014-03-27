@@ -68,11 +68,11 @@ To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
 
 ### Building Packages
 
-To perform a full automated clean build of the Agent, perform the following
-steps:
+For development builds, you can perform a full automated clean build of the
+Agent with the following steps:
 
-1. Configure signing certificates by following the _One-time Setup_
-instructions in `build-linux/howto.txt`.
+1. Configure signing keys by following the _One-time Setup_ instructions in
+`build-linux/howto.txt`.
 
 2. Run the following commands:
 
@@ -101,3 +101,43 @@ If you want to build packages by hand, follow the instructions in
 
 Similarly, you can check the SCons targets using `scons -h` for instructions on
 performing specific builds tasks and on specific VMs.
+
+### Release Packages
+
+To build & upload packages for release, perform the following steps:
+
+1. Bring up clean VMs. (`vagrant destroy` followed by `vagrant up`)
+
+2. Copy the release GPG signing keys so that it is accessible in the VMs. You
+can either copy/link them under the `pdagent` project directory so that the VMs
+can access them via `/vagrant/...` or you can copy them into the VMs.
+
+3. Sync the current contents of the packages repo down from S3:
+
+        scons sync-from-remote-repo repo-root=s3://bucketname/pdagent
+
+4. Build the packages:
+
+        vagrant ssh agent-minimal-ubuntu1204
+
+        sh /vagrant/build-linux/make_deb.sh /path/to/prod/gpg/home /vagrant/target
+        logout
+
+    Enter the GPG key passphrase when prompted.
+
+    Repeat for *rpm*:
+
+        vagrant ssh agent-minimal-centos65
+
+        sh /vagrant/build-linux/make_rpm.sh /path/to/prod/gpg/home /vagrant/target
+        logout
+
+5. Verify that the new packages are on the host machine in the `target`
+directory.
+
+6. Run the integration tests as shown earlier. (edit the service key in
+`util.sh` and run `scons test-integration`)
+
+7. Sync the packages repo back up to S3:
+
+        scons sync-to-remote-repo repo-root=s3://bucketname/pdagent
