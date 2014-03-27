@@ -136,7 +136,7 @@ def load_agent_config():
         dev_proj_dir = None
     dev_layout = bool(dev_proj_dir)
 
-    conf_file, default_dirs = getconfdirs(main_dir, dev_proj_dir)
+    conf_file, default_dirs = getconfdirs(dev_proj_dir)
 
     if not os.access(conf_file, os.R_OK):
         raise SystemExit(

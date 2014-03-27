@@ -18,6 +18,8 @@ the source code and customize it for your needs.
 
 See the file `pydev-setup.txt` for PyDev setup instructions.
 
+See the file `idea-setup.txt` for IntelliJ IDEA setup instructions.
+
 See the file `scons-setup.txt` for configuring SCons and running build commands.
 
 See the file `vagrant-setup.txt` for configuring Vagrant and running test VMs.
