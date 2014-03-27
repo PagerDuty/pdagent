@@ -104,6 +104,16 @@ performing specific builds tasks and on specific VMs.
 
 ### Release Packages
 
+The build supports uploading to and downloading from your remote repository.
+Remote location types supported are:
+
+* S3: You will need to:
+    1. Install **s3cmd** from http://s3tools.org/download.
+    2. Configure it by running `s3cmd --configure`.
+    3. In your scons commands, use `s3://<your_bucket_name>` or
+       `s3://<your_bucket_name>/<path>` (depending on how you host your
+        repository) as your repository root.
+
 To build & upload packages for release, perform the following steps:
 
 1. Bring up clean VMs. (`vagrant destroy` followed by `vagrant up`)
