@@ -99,8 +99,6 @@ agent_id_file = agent_config.get_agent_id_file()
 
 pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
-pd_queue = agent_config.get_queue()
-
 
 # Check directories
 def _ensure_writable_directories(make_missing_dir, *directories):
@@ -139,6 +137,9 @@ def _check_dirs():
             )
 
 _check_dirs()
+
+# In development, allow _check_dirs() to create directories
+pd_queue = agent_config.get_queue()
 
 
 # Import agent modules
