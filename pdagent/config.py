@@ -99,7 +99,7 @@ class AgentConfig:
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
-            event_size_max_bytes=self.main_config["event_size_max_bytes"],
+            event_size_max_bytes=4 * 1024 * 1024,  # 4MB limit.
             backoff_db=backoff_db,
             backoff_interval=backoff_interval,
             retry_limit_for_possible_errors=retry_limit_for_possible_errors,
@@ -109,15 +109,6 @@ class AgentConfig:
 
 _valid_log_levels = \
     ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
-
-
-_CONFIG_DEFAULTS = {
-    "log_level": "INFO",
-    "send_interval_secs": 10,
-    "cleanup_interval_secs": 60 * 60 * 3,  # 3 hours
-    "cleanup_threshold_secs": 60 * 60 * 24 * 7,  # 1 week
-    "event_size_max_bytes": 4 * 1024 * 1024,  # 4MB
-    }
 
 
 _agent_config = None
@@ -145,7 +136,7 @@ def load_agent_config():
             )
 
     # Main config defaults
-    cfg = dict(_CONFIG_DEFAULTS)
+    cfg = dict()
 
     # Load config file
     try:
@@ -180,7 +171,6 @@ def load_agent_config():
             "backoff_interval_secs",
             "cleanup_interval_secs",
             "cleanup_threshold_secs",
-            "event_size_max_bytes",
             "retry_limit_for_possible_errors",
             "send_interval_secs",
             ]:
