@@ -33,11 +33,6 @@ import os
 import sys
 
 
-_PRODUCTION_MAIN_DIRS = [
-    "/usr/bin", "/usr/share/pdagent/bin",  # Linux
-    ]
-
-
 def _linux_production_dirs():
     d = {
         "pidfile_dir": "/var/run/pdagent",
@@ -57,20 +52,8 @@ def _dev_project_dirs(dev_proj_dir):
     return os.path.join(dev_proj_dir, "conf"), d
 
 
-def getconfdirs(main_dir, dev_proj_dir):
+def getconfdirs(dev_proj_dir):
     if dev_proj_dir is None:
-        # Production layout
-        # Check that the python main program is really in production layout.
-        # Production testing is done using `import pdagent` and this can give
-        # us a false positive due to mix & match or user PYTHONPATH hacking.
-        if not main_dir in _PRODUCTION_MAIN_DIRS:
-            raise SystemExit(
-                (
-                "Program in unexpected directory: %s\n" +
-                "(another agent may be installed and/or in the python path)"
-                )
-                % main_dir
-                )
         conf_dir, default_dirs = _linux_production_dirs()
     else:
         # Development layout
