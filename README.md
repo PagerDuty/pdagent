@@ -104,43 +104,55 @@ performing specific builds tasks and on specific VMs.
 
 ### Release Packages
 
-The build supports uploading to and downloading from your remote repository.
-Remote location types supported are:
+The steps here and the project scons targets are written assuming that S3 is
+used to host the package repository. If you use other methods, please modify
+the relevant steps.
 
-* S3: You will need to:
-    1. Install **s3cmd** from http://s3tools.org/download.
-    2. Configure it by running `s3cmd --configure`.
-    3. In your scons commands, use `s3://<your_bucket_name>` or
-       `s3://<your_bucket_name>/<path>` (depending on how you host your
-        repository) as your repository root.
 
-To build & upload packages for release, perform the following steps:
+#### S3 Setup:
 
-1. Bring up clean VMs. (`vagrant destroy` followed by `vagrant up`)
+1. Install **s3cmd** from http://s3tools.org/download.
 
-2. Copy the release GPG signing keys so that it is accessible in the VMs. You
-can either copy/link them under the `pdagent` project directory so that the VMs
-can access them via `/vagrant/...` or you can copy them into the VMs.
+2. Configure it by running `s3cmd --configure`.
 
-3. Sync the current contents of the packages repo down from S3:
+3. In the S3 related build commands below, remember to replace $S3_BUCKET with
+`s3://<your_bucket_name>` or `s3://<your_bucket_name>/<path>` depending on how
+you host your repository.
 
-        scons sync-from-remote-repo repo-root=s3://bucketname/pdagent
+
+#### Release build, test & upload:
+
+1. Copy the release GPG signing key to the `pdagent` project directory so that
+the VMs can access it. (via `/vagrant/...`)
+
+2. Sync the current contents of the packages repo down from S3:
+
+        scons sync-from-remote-repo repo-root=$S3_BUCKET
+
+3. Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
+destroy-virt` so that the build will use clean VMs.
 
 4. Build the packages:
+
+    (a) Ubuntu:
 
         vagrant ssh agent-minimal-ubuntu1204
 
         sh /vagrant/build-linux/make_deb.sh /path/to/prod/gpg/home /vagrant/target
-        logout
+
+    Note that the path `/path/to/prod/gpg/home` must be the path in the VM,
+    e.g. `/vagrant/my-release-gpg-home`.
 
     Enter the GPG key passphrase when prompted.
 
-    Repeat for *rpm*:
+    (b) CentOS:
 
         vagrant ssh agent-minimal-centos65
 
         sh /vagrant/build-linux/make_rpm.sh /path/to/prod/gpg/home /vagrant/target
-        logout
+
+    Enter the GPG key passphrase when prompted.
+
 
 5. Verify that the new packages are on the host machine in the `target`
 directory.
@@ -150,4 +162,4 @@ directory.
 
 7. Sync the packages repo back up to S3:
 
-        scons sync-to-remote-repo repo-root=s3://bucketname/pdagent
+        scons sync-to-remote-repo repo-root=$S3_BUCKET
