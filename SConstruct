@@ -354,61 +354,76 @@ env = Environment()
 env.Help("""
 Usage: scons [command [command...]]
 where supported commands are:
-build               Runs unit tests on virtual machines, creates local
-                    repos and then runs integration tests on virtual
-                    machines.
-                    This is the default command if none is specified.
---clean|-c          Removes generated artifacts.
-publish             Uploads local repository contents for agent into
-                    remote repository.
-                    You will need to pass a repo-root argument for this,
-                    which is the location of remote repository. Location
-                    types supported, and corresponding syntax:
-                    S3: s3://<bucket>/<path>  [requires `s3cmd`.]
-                    Also, the required arguments for 'local-repo' need to
-                    be passed in.
-local-repo          Creates installable local repository for supported OS
-                    distributions.
-                    You will need to pass a gpg-home argument for this,
-                    where gpg-home contains the key rings to sign the
-                    Agent packages with. You could run this command to
-                    generate required content:
-                    gpg --homedir=/desired/path --gen-key
-test                Runs unit tests on specific virtual machines, bringing
-                    the virtual machine up if required.
-                    By default, runs on all virtual machines. Specific
-                    virtual machines can be provided using the `virt` option,
-                    multiple times if required.
-                    By default, runs all tests in `pdagenttest` recursively.
-                    (Test files should be named in the format `test_*.py`.)
-                    Specific unit tests can be run by providing them as
-                    arguments to the `test` option, multiple times if
-                    required. Both test files and test directories are
-                    supported.
-                    e.g.
-                    scons test test=pdagenttest/test_foo.py \\
-                               virt=agent-minimal-centos
-test-integration    Runs integration tests on specific virtual machines,
-                    bringing the virtual machine up if required.
-                    By default, runs on all virtual machines. Specific
-                    virtual machines can be provided using the `virt` option,
-                    multiple times if required.
-                    By default, runs all tests in `pdagenttestinteg`
-                    recursively. (Test files should be named in the format
-                    `test_*.sh`.) Specific tests can be run by providing them
-                    as arguments to the `test` option, multiple times if
-                    required. Both test files and test directories are
-                    supported.
-                    e.g.
-                    scons test-integration test=pdagenttestinteg/test_foo.sh \\
-                                           virt=agent-minimal-centos
-                    If you want your tests to install a previous version
-                    of the agent, upgrade it to this version, and then run
-                    integration tests on the upgraded version, provide the
-                    upgrade-from option. (e.g. upgrade-from=1.0)
-test-local          Runs unit tests on the local machine.
-                    Please see 'test' command for more details about using the
-                    `test` option to run specific unit tests.
+build                   Runs unit tests on virtual machines, creates local
+                        repos and then runs integration tests on virtual
+                        machines.
+                        This is the default command if none is specified.
+--clean|-c              Removes generated artifacts.
+destroy-virt            Destroy the given virtual machine (provided using the
+                        `virt` option), or all 'minimal' virtual machines (ones
+                        with names containing 'minimal' in them.)
+publish                 Uploads local repository contents for agent into
+                        remote repository.
+                        Also, the required arguments for 'local-repo' and
+                        'sync-from-remote-repo' need to be passed in.
+local-repo              Creates installable local repository for supported OS
+                        distributions.
+                        You will need to pass a gpg-home argument for this,
+                        where gpg-home contains the key rings to sign the
+                        Agent packages with. You could run this command to
+                        generate required content:
+                        gpg --homedir=/desired/path --gen-key
+start-virt              Start the given virtual machine (provided using the
+                        `virt` option), or all 'minimal' virtual machines (ones
+                        with names containing 'minimal' in them.)
+sync-from-remote-repo   Downloads already-published package hierarchy from the
+                        given remote repository. Required if the repository is
+                        to be updated with new / modified package.
+                        You will need to pass a repo-root argument for this,
+                        which is the location of remote repository. Location
+                        types supported, and corresponding syntax:
+                        S3: s3://<bucket>[/<path>]  <--requires `s3cmd`.
+sync-to-remote-repo     Uploads already-published packages from the given
+                        remote repository. Required if the repository is to be
+                        updated with new / modified package.
+                        You will need to pass a repo-root argument for this.
+                        Refer 'sync-from-remote-repo'.
+test                    Runs unit tests on specific virtual machines, bringing
+                        the virtual machine up if required.
+                        By default, runs on all virtual machines. Specific
+                        virtual machines can be provided using the `virt`
+                        option, multiple times if required.
+                        By default, runs all tests in `pdagenttest` recursively.
+                        (Test files should be named in the format `test_*.py`.)
+                        Specific unit tests can be run by providing them as
+                        arguments to the `test` option, multiple times if
+                        required. Both test files and test directories are
+                        supported.
+                        e.g.
+                        scons test test=pdagenttest/test_foo.py \\
+                                   virt=agent-minimal-centos
+test-integration        Runs integration tests on specific virtual machines,
+                        bringing the virtual machine up if required.
+                        By default, runs on all virtual machines. Specific
+                        virtual machines can be provided using the `virt`
+                        option, multiple times if required.
+                        By default, runs all tests in `pdagenttestinteg`
+                        recursively. (Test files should be named in the format
+                        `test_*.sh`.) Specific tests can be run by providing
+                        them as arguments to the `test` option, multiple times
+                        if required. Both test files and test directories are
+                        supported.
+                        e.g.
+                        scons test-integration \\
+                            test=pdagenttestinteg/test_foo.sh \\
+                            virt=agent-minimal-centos
+                        If you want your tests to install a previous version
+                        of the agent, upgrade it to this version, and then run
+                        integration tests on the upgraded version, provide the
+                        upgrade-from option. (e.g. upgrade-from=1.0)
+test-local              Runs unit tests on the local machine.
+                        Please see 'test' command for more details about using
+                        `test` option to run specific unit tests.
 """)
 
 build_linux_dir = "build-linux"

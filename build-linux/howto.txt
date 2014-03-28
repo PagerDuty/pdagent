@@ -5,17 +5,28 @@ These instructions assume you're running this on a Mac with Vagrant installed,
 and that the project directory ends up mounted in the VM at `/vagrant`. (this
 should happen automatically)
 
-## One-time setup:
+## One-time setup of GPG keys:
 
-Generate certs to sign the packages in development:
+To build Linux packages, you will need GPG keys to sign the packages.
+
+For development, you can generate new keys as follows:
 
 ```
-cd /my/workspace/pdagent
+cd ~/w/pdagent
 mkdir build-linux/gnupg
 chmod 700 build-linux/gnupg
-gpg --homedir=build-linux/gnupg --gen-key # Use defaults & no passphrase
-gpg --homedir=build-linux/gnupg --export --armor >build-linux/gnupg/build-GPG-KEY
+gpg --homedir=build-linux/gnupg --gen-key
 ```
+
+For key generation use the suggested defaults and *no passphrase*. (when
+asked to enter a passphrase, just press *Enter*)
+
+For production builds, you should use a key with a passphrase and save that key
+in a secure location.
+
+If you use a different `gpg-home`, please adjust the `gpg-home` parameter in
+the following instructions accordingly.
+
 
 ## Ubuntu
 

@@ -56,7 +56,7 @@ def main():
     from pdagent.pdagentutil import queue_event
     from pdagent.config import load_agent_config
 
-    description = "Queue up a trigger, acknowledge or resolve event to PagerDuty."
+    description = "Queue up a trigger, acknowledge, or resolve event to PagerDuty."
     parser = build_queue_arg_parser(description)
     args = parser.parse_args()
     details = parse_fields(args.fields)
