@@ -81,7 +81,7 @@ test_wakeup() {
     | sudo tee $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | tail -n1) >/dev/null
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"
 
-  sleep $(($SEND_INTERVAL_SECS * 3 / 2))  # sleep-time + extra-time for processing.
+  sleep $(($SEND_INTERVAL_SECS * 2))  # sleep-time + extra-time for processing.
   # there must be one error file in outqueue; everything else must be cleared.
   test $(sudo find $OUTQUEUE_DIR -type f -name "???_*" | wc -l) -eq 6
   test $(sudo find $OUTQUEUE_DIR -type f -name "err_*" | wc -l) -eq 1
