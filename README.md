@@ -111,7 +111,13 @@ the relevant steps.
 
 #### S3 Setup:
 
-1. Install **s3cmd** from http://s3tools.org/download.
+1. Install **s3cmd** from http://s3tools.org/download. This should involve:
+
+        python setup.py install
+
+    or, for a custom location, something like:
+
+        python setup.py install --prefix=~/opt/
 
 2. Configure it by running `s3cmd --configure`.
 
@@ -122,7 +128,7 @@ you host your repository.
 
 #### Release build, test & upload:
 
-1. Copy the release GPG signing key to the `pdagent` project directory so that
+1. Copy the release GPG signing keys to the `pdagent` project directory so that
 the VMs can access it. (via `/vagrant/...`)
 
 2. Sync the current contents of the packages repo down from S3:
@@ -136,6 +142,7 @@ destroy-virt` so that the build will use clean VMs.
 
     (a) Ubuntu:
 
+        vagrant up agent-minimal-ubuntu1204
         vagrant ssh agent-minimal-ubuntu1204
 
         sh /vagrant/build-linux/make_deb.sh /path/to/prod/gpg/home /vagrant/target
@@ -147,9 +154,13 @@ destroy-virt` so that the build will use clean VMs.
 
     (b) CentOS:
 
+        vagrant up agent-minimal-centos65
         vagrant ssh agent-minimal-centos65
 
         sh /vagrant/build-linux/make_rpm.sh /path/to/prod/gpg/home /vagrant/target
+
+    Note that the path `/path/to/prod/gpg/home` must be the path in the VM,
+    e.g. `/vagrant/my-release-gpg-home`.
 
     Enter the GPG key passphrase when prompted.
 
@@ -157,9 +168,18 @@ destroy-virt` so that the build will use clean VMs.
 5. Verify that the new packages are on the host machine in the `target`
 directory.
 
-6. Run the integration tests as shown earlier. (edit the service key in
-`util.sh` and run `scons test-integration`)
 
-7. Sync the packages repo back up to S3:
+6. Prepare keys for integration testing:
+
+    ~/w/pdagent$ gpg --homedir=./gpg-general --export --armor > ./target/tmp/GPG-KEY-pagerduty
+
+    ~/w/pdagent$ gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
+
+
+7. Run the integration tests on clean VMs. (use `vagrant destroy`, edit the
+service key in `util.sh`, and run `scons test-integration`)
+
+
+8. Sync the packages repo back up to S3:
 
         scons sync-to-remote-repo repo-root=$S3_BUCKET

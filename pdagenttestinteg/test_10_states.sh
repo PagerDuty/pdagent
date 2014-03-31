@@ -42,7 +42,7 @@ pid2=$(agent_pid)
 test -n "$pid2"
 test "$pid2" != "$pid1"
 
-start_agent && {
+sudo service $AGENT_SVC_NAME start || {
     echo "expected start to return 0 even if agent is already running"
     exit 1
 }
