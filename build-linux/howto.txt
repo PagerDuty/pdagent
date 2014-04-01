@@ -40,7 +40,7 @@ Install & test the .deb:
 
     vagrant ssh agent-minimal-ubuntu1004 # or agent-minimal-ubuntu1204
 
-    sudo apt-key add /vagrant/build-linux/gnupg/build-GPG-KEY
+    sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
     sudo sh -c 'echo "deb file:///vagrant/target deb/" \
       >/etc/apt/sources.list.d/pdagent.list'
     sudo apt-get update
@@ -75,7 +75,7 @@ name=PDAgent
 baseurl=file:///vagrant/target/rpm
 enabled=1
 gpgcheck=1
-gpgkey=file:///vagrant/build-linux/gnupg/build-GPG-KEY
+gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
 EOF'
     sudo yum install pdagent
 
