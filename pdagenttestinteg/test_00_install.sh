@@ -58,7 +58,7 @@ name=PDAgent
 baseurl=file:///vagrant/target/rpm
 enabled=1
 gpgcheck=1
-gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
+gpgkey=file:///vagrant/target/tmp/GPG-KEY-RPM-pagerduty
 EOF'
 
     if [ -z "$UPGRADE_FROM_VERSION" ]; then
