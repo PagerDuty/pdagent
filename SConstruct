@@ -90,8 +90,12 @@ def create_repo(target, source, env):
     if not ret_code:
         # export public key into a temporary location to help installation.
         export_cmd = ["gpg", "--homedir", gpg_home, "--export", "--armor"]
+        public_key = subprocess.check_output(export_cmd)
         fd = open(os.path.join(tmp_dir, "GPG-KEY-pagerduty"), "w")
-        fd.writelines(subprocess.check_output(export_cmd))
+        fd.writelines(public_key)
+        fd.close()
+        fd = open(os.path.join(tmp_dir, "GPG-KEY-RPM-pagerduty"), "w")
+        fd.writelines(public_key)
         fd.close()
 
     return ret_code
