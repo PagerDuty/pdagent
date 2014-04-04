@@ -285,8 +285,8 @@ def run():
         # Sleep till it's time to exit
         if all_ok:
             try:
-                main_logger.debug(
-                    "Main thread sleeping till we need to stop!"
+                main_logger.info(
+                    "Main thread idling till we need to stop!"
                     )
                 while all_ok and not stop_signal:
                     time.sleep(1.0)
