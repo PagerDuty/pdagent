@@ -61,11 +61,11 @@ class SendEventTask(RepeatingTask):
 
     def tick(self):
         # flush the event queue.
-        logger.info("Flushing event queue")
+        logger.debug("Flushing event queue")
         try:
             self.pd_queue.flush(self.send_event, self.is_stop_invoked)
         except EmptyQueueError:
-            logger.info("Nothing to do - queue is empty!")
+            logger.debug("Nothing to do - queue is empty!")
         except IOError:
             logger.error("I/O error while flushing queue:", exc_info=True)
         except:
@@ -94,14 +94,15 @@ class SendEventTask(RepeatingTask):
             # the http error is structured similar to an http response.
             status_code = e.getcode()
             result_str = e.read()
-        except CertificateError:
+        except CertificateError as e:
             logger.error(
-                "Server certificate validation error while sending event:",
-                exc_info=True
+                "Certificate validation error while sending event: %s" % e
                 )
+            logger.debug("Traceback:", exc_info=True)
             return ConsumeEvent.STOP_ALL
-        except socket.timeout:
-            logger.error("Timeout while sending event:", exc_info=True)
+        except socket.timeout as e:
+            logger.error("Timeout while sending event: %s" % e)
+            logger.debug("Traceback:", exc_info=True)
             # This could be real issue with PD, or just some anomaly in
             # processing this service key or event. We'll retry this
             # service key a few more times, and then decide that this
@@ -109,14 +110,15 @@ class SendEventTask(RepeatingTask):
             return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
         except URLError as e:
             if isinstance(e.reason, socket.timeout):
-                logger.error("Timeout while sending event:", exc_info=True)
+                logger.error("Timeout while sending event: %s" % e)
+                logger.debug("Traceback:", exc_info=True)
                 # see above socket.timeout catch-block for details.
                 return ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY
             else:
                 logger.error(
-                    "Error establishing a connection for sending event:",
-                    exc_info=True
+                    "Error establishing connection for sending event: %s" % e
                     )
+                logger.debug("Traceback:", exc_info=True)
                 return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
         except:
             logger.error("Error while sending event:", exc_info=True)

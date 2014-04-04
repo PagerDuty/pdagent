@@ -66,7 +66,7 @@ class HeartbeatTask(RepeatingTask):
 
     def tick(self):
         try:
-            logger.info("Sending heartbeat")
+            logger.debug("Sending heartbeat")
             # max time is half an interval
             retry_time_limit = time.time() + (self.get_interval_secs() / 2)
             attempt_number = 0
@@ -88,11 +88,13 @@ class HeartbeatTask(RepeatingTask):
                             )
                     else:
                         raise
-                except (URLError, HTTPException):
+                except (URLError, HTTPException) as e:
                     # assumes 2.6 where socket.error is a sub-class of IOError
+                    # FIXME: not catching IOError so what does the above mean?
                     logger.error(
-                        "Error sending heartbeat (will retry):", exc_info=True
+                        "Error sending heartbeat (will retry): %s" % e
                         )
+                    logger.debug("Traceback:", exc_info=True)
                 # retry limit checks
                 if time.time() > retry_time_limit:
                     logger.info("Won't retry - time limit reached")
