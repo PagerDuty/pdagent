@@ -107,10 +107,6 @@ class AgentConfig:
             )
 
 
-_valid_log_levels = \
-    ['DEBUG', 'INFO', 'ERROR', 'WARN', 'WARNING', 'CRITICAL', 'FATAL']
-
-
 _agent_config = None
 
 
@@ -155,16 +151,6 @@ def load_agent_config():
             )
     for option in config.options("Main"):
         cfg[option] = config.get("Main", option)
-
-    # Convert log level
-    log_level = cfg["log_level"].upper()
-    if log_level in _valid_log_levels:
-        cfg["log_level"] = getattr(logging, log_level)
-    else:
-        raise SystemExit(
-            "Bad log_level in config file: %s\nAgent will now quit"
-            % conf_file
-            )
 
     # parse integer values.
     for key in [
