@@ -285,8 +285,8 @@ def run():
         # Sleep till it's time to exit
         if all_ok:
             try:
-                main_logger.debug(
-                    "Main thread sleeping till we need to stop!"
+                main_logger.info(
+                    "Main thread idling till we need to stop!"
                     )
                 while all_ok and not stop_signal:
                     time.sleep(1.0)
@@ -362,19 +362,41 @@ def get_or_make_agent_id():
 
 
 def init_logging(log_dir):
-    log_file = os.path.join(log_dir, 'pdagentd.log')
-    # 10MB files
-    handler = logging.handlers.RotatingFileHandler(
-        log_file, maxBytes=10485760, backupCount=5
-        )
+    # log format
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)-7s %(threadName)-20s %(name)-20s %(message)s"
         )
-    handler.setFormatter(formatter)
 
+    def make_rotating_handler(fname, maxBytes, backupCount, level):
+        f = os.path.join(log_dir, fname)
+        handler = logging.handlers.RotatingFileHandler(
+            f, maxBytes=maxBytes, backupCount=backupCount
+            )
+        handler.setFormatter(formatter)
+        handler.setLevel(level)
+        return handler
+
+    # info logging file
+    # retention goal here is 1k to 10K events
+    # tests showed about 500 bytes/event
+    # using 10Ke * 500B/e = 5MB
+    # other non-debug logging will take away from this but it should be
+    # minimal unless there are issues such as network errors, throttling etc
+    info_handler = make_rotating_handler(
+        'pdagentd.log', 1048576, 5, logging.INFO
+        )
+    # debug logging file
+    # retention goal here is 1 to 2 weeks
+    # tests which showed about 15M over ~8 days
+    # using 5MB *4 = 20 MB
+    debug_handler = make_rotating_handler(
+        'pdagentd-debug.log', 5242880, 4, logging.DEBUG
+        )
+    # put it all together
     root_logger = logging.getLogger()
-    root_logger.setLevel(main_config['log_level'])
-    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(info_handler)
+    root_logger.addHandler(debug_handler)
 
 
 # ---- Daemonize and run agent
