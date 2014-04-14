@@ -111,9 +111,9 @@ class PDQEnqueuer(PDQueueBase):
 
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
-        t_millisecs = int(self.time.time() * 1000)
+        t_microsecs = int(self.time.time() * 1e6)
         while True:
-            fname = fname_fmt % (t_millisecs + n)
+            fname = fname_fmt % (t_microsecs + n)
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
             if fd is None:
@@ -298,7 +298,7 @@ class PDQueue(PDQueueBase):
                 self._unsafe_change_event_type(errname, 'err_', 'pdq_')
 
     def cleanup(self, delete_before_sec):
-        delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
+        delete_before_time = int(self.time.time()) - delete_before_sec
 
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
@@ -424,9 +424,10 @@ def _open_creat_excl(fname_abs, mode):
 
 
 def _get_event_metadata(fname):
-    event_type, enqueue_time_str, service_key = \
+    event_type, enqueue_time_microsec_str, service_key = \
         fname.split('.')[0].split('_', 2)
-    return event_type, int(enqueue_time_str), service_key
+    enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
+    return event_type, enqueue_time, service_key
 
 
 class _BackoffInfo(object):
@@ -616,10 +617,10 @@ class SnapshotStats(object):
             return {
                 "count": self.count,
                 "oldest_age_secs": int(
-                    self._time_now - self.oldest_enqueue_time / 1000
+                    self._time_now - self.oldest_enqueue_time
                     ),
                 "newest_age_secs": int(
-                    self._time_now - self.newest_enqueue_time / 1000
+                    self._time_now - self.newest_enqueue_time
                     ),
                 "service_keys_count": len(self.service_keys)
                 }

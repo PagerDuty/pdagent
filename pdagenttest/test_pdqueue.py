@@ -660,7 +660,7 @@ class PDQueueTest(unittest.TestCase):
         eq, q = self.new_queue()
 
         def enqueue_before(sec, prefix="pdq"):
-            enqueue_time_ms = (int(time.time()) - sec) * 1000
+            enqueue_time_ms = (int(time.time()) - sec) * (1000 * 1000)
             fname = "%s_%d_%s.txt" % (
                 prefix,
                 enqueue_time_ms,
