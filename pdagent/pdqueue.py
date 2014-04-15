@@ -50,6 +50,7 @@ Notes:
 import errno
 import logging
 import os
+import uuid
 
 from constants import ConsumeEvent
 from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
@@ -90,14 +91,16 @@ class PDQEnqueuer(PDQueueBase):
         ensure_writable_directory(self.queue_dir)
 
     def enqueue(self, service_key, s):
+        # generate a random string to ensure we don't clash on file name!
+        random_str = uuid.uuid4().hex
         # write to an exclusive temp file
         _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
-            "tmp_%%d_%s.txt" % service_key
+            "tmp_%%d_%s_%s.txt" % (service_key, random_str)
             )
         os.write(tmp_fd, s)
         # get an exclusive queue entry file
         pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
-            "pdq_%%d_%s.txt" % service_key
+            "pdq_%%d_%s_%s.txt" % (service_key, random_str)
             )
         # since we're exclusive on both files, we can safely rename
         # the tmp file
