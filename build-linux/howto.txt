@@ -77,7 +77,7 @@ enabled=1
 gpgcheck=1
 gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
 EOF'
-    sudo yum install -q -y pdagent
+    sudo yum install -y pdagent
 
     sudo service pdagent status
     which pd-send
@@ -85,7 +85,7 @@ EOF'
 
 Uninstall & test cleanup:
 
-    sudo yum remove --yes pdagent
+    sudo yum remove -y pdagent
 
     # rerun the test commands to ensure files are gone
 
