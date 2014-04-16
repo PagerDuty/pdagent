@@ -77,7 +77,7 @@ enabled=1
 gpgcheck=1
 gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
 EOF'
-    sudo yum install pdagent
+    sudo yum install -q -y pdagent
 
     sudo service pdagent status
     which pd-send
