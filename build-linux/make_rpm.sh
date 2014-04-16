@@ -49,7 +49,8 @@ rpm_install_root=$install_root/rpm
         gcc gcc-c++ kernel-devel | \
         grep -vc 'not installed') -eq 7 ] || {
     echo "Installing required packages. This may take a few minutes..."
-    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
+    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo \
+        gcc gcc-c++ kernel-devel
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
