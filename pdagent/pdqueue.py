@@ -91,43 +91,26 @@ class PDQEnqueuer(PDQueueBase):
         ensure_writable_directory(self.queue_dir)
 
     def enqueue(self, service_key, s):
-        # generate a random string to ensure we don't clash on file name!
+        # generate a unique filename that is sorts by enqueue time
+        t_microsecs = int(self.time.time() * 1e6)
         random_str = uuid.uuid4().hex
-        # write to an exclusive temp file
-        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
-            "tmp_%%d_%s_%s.txt" % (service_key, random_str)
+        filename_middle = "%d_%s_%s" % (t_microsecs, service_key, random_str)
+        #filename_middle = "%d_%s" % (t_microsecs, service_key)
+        # calculate temp & final file names
+        tmp_fname = "tmp_%s.txt" % filename_middle
+        pdq_fname = "pdq_%s.txt" % filename_middle
+        tmp_fname_abs = self._abspath(tmp_fname)
+        pdq_fname_abs = self._abspath(pdq_fname)
+        # write to temp file
+        tmp_fd = os.open(
+            tmp_fname_abs, os.O_WRONLY | os.O_CREAT, self.enqueue_file_mode
             )
         os.write(tmp_fd, s)
-        # get an exclusive queue entry file
-        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
-            "pdq_%%d_%s_%s.txt" % (service_key, random_str)
-            )
-        # since we're exclusive on both files, we can safely rename
-        # the tmp file
-        os.fsync(tmp_fd)  # this seems to be the most we can do for durability
         os.close(tmp_fd)
-        # would love to fsync the rename but we're not writing a DB :)
+        # rename the complete tmp file to the enqueue name
         os.rename(tmp_fname_abs, pdq_fname_abs)
-        os.close(pdq_fd)
-
+        # return the enqueued file name
         return pdq_fname
-
-    def _open_creat_excl_with_retry(self, fname_fmt):
-        n = 0
-        t_microsecs = int(self.time.time() * 1e6)
-        while True:
-            fname = fname_fmt % (t_microsecs + n)
-            fname_abs = self._abspath(fname)
-            fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
-            if fd is None:
-                n += 1
-                if n >= 100:
-                    raise Exception(
-                        "Too many retries! (Last attempted name: %s)"
-                        % fname_abs
-                        )
-            else:
-                return fname, fname_abs, fd
 
 
 class PDQueue(PDQueueBase):
@@ -416,19 +399,9 @@ class PDQueue(PDQueueBase):
         os.rename(old_abs, new_abs)
 
 
-def _open_creat_excl(fname_abs, mode):
-    try:
-        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            return None
-        else:
-            raise
-
-
 def _get_event_metadata(fname):
-    event_type, enqueue_time_microsec_str, service_key = \
-        fname.split('.')[0].split('_', 2)
+    event_type, enqueue_time_microsec_str, service_key, random_str = \
+        fname.split('.')[0].split('_', 3)
     enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
     return event_type, enqueue_time, service_key
 
