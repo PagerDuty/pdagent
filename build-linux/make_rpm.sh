@@ -45,15 +45,15 @@ rpm_install_root=$install_root/rpm
 [ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
 # install required packages.
-[ $(sudo rpm -q rpm-build ruby-devel rubygems createrepo | \
-    grep -vc 'not installed') -eq 4 ] || {
+[ $(sudo rpm -q rpm-build ruby-devel rubygems createrepo \
+        gcc gcc-c++ kernel-devel | \
+        grep -vc 'not installed') -eq 7 ] || {
     echo "Installing required packages. This may take a few minutes..."
     sudo yum install -y -q rpm-build ruby-devel rubygems createrepo
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
     echo "Installing fpm gem..."
-    sudo yum install -y -q gcc gcc-c++ kernel-devel
     sudo gem install -q fpm
     echo "Done installing."
 }
