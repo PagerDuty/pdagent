@@ -95,7 +95,6 @@ class PDQEnqueuer(PDQueueBase):
         t_microsecs = int(self.time.time() * 1e6)
         random_str = uuid.uuid4().hex
         filename_middle = "%d_%s_%s" % (t_microsecs, service_key, random_str)
-        #filename_middle = "%d_%s" % (t_microsecs, service_key)
         # calculate temp & final file names
         tmp_fname = "tmp_%s.txt" % filename_middle
         pdq_fname = "pdq_%s.txt" % filename_middle
