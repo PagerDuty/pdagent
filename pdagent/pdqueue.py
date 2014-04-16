@@ -218,7 +218,7 @@ class PDQueue(PDQueueBase):
         fname_abs = self._abspath(fname)
         data = None
         if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
-            with open(self._abspath(fname_abs)) as f:
+            with open(fname_abs) as f:
                 data = f.read()
 
         # ensure that the event is not too large.
