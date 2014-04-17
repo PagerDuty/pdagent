@@ -48,7 +48,7 @@ PID_DIR=/var/run/pdagent
 PID_FILE=$PID_DIR/pdagentd.pid
 
 [ -x $EXEC ] || {
-  echo "Missing pdagent executable: $EXEC" >&2
+  echo "Missing pdagent executable: $EXEC." >&2
   # not an error since an uninstall without removing configuration files just
   # might result in init script being present but no executable available.
   exit 0
@@ -66,29 +66,29 @@ is_running() {
 setup() {
   [ -d $PID_DIR ] || {
     sudo mkdir $PID_DIR || {
-      echo "Error creating pid directory $PID_DIR" >&2
+      echo "Error creating pid directory $PID_DIR." >&2
       exit 2
     }
     sudo chown -R pdagent:pdagent $PID_DIR || {
-      echo "Error changing ownership of pid directory $PID_DIR" >&2
+      echo "Error changing ownership of pid directory $PID_DIR." >&2
       exit 2
     }
   }
 }
 
 start() {
-  echo "Starting pdagent..."
+  echo -n "Starting: pdagentd"
   setup
   is_running || {
     sudo -u pdagent $EXEC
     [ $? -eq 0 ] || return $?
   }
-  echo "Started."
+  echo "."
   return 0
 }
 
 stop() {
-  echo "Stopping pdagent..."
+  echo -n "Stopping: pdagentd"
   is_running && {
     sudo -u pdagent kill -TERM $(get_pid)
     [ $? -eq 0 ] || return $?
@@ -102,19 +102,19 @@ stop() {
       fi
     done
     is_running && {
-      echo "pdagent has still not stopped."
+      echo "... still not stopped."
       return 1
     }
   }
-  echo "Stopped."
+  echo "."
   return 0
 }
 
 status() {
   if is_running; then
-    echo "pdagent (pid $(get_pid)) is running."
+    echo "pdagentd (pid $(get_pid)) is running."
   else
-    echo "pdagent is not running."
+    echo "pdagentd is not running."
   fi
 }
 
