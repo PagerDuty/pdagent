@@ -49,7 +49,9 @@ PID_FILE=$PID_DIR/pdagentd.pid
 
 [ -x $EXEC ] || {
   echo "Missing pdagent executable: $EXEC" >&2
-  exit 1
+  # not an error since an uninstall without removing configuration files just
+  # might result in init script being present but no executable available.
+  exit 0
 }
 
 get_pid() {
