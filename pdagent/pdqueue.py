@@ -188,6 +188,10 @@ class PDQueue(PDQueueBase):
             consume_func,
             should_stop_func
             ):
+
+        if not self._queued_files():
+            raise EmptyQueueError
+
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
 
