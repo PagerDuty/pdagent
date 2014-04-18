@@ -120,21 +120,6 @@ class PDQueueTest(unittest.TestCase):
             )
         return eq, q
 
-    def test__open_creat_excl_with_retry(self):
-        from pdagent.pdqueue import _open_creat_excl
-        eq, _ = self.new_queue()
-        fname_abs = eq._abspath("_open_creat_excl_with_retry.txt")
-        fd1 = _open_creat_excl(fname_abs, 0644)
-        self.assertNotEquals(fd1, None)
-        fd2 = None
-        try:
-            fd2 = _open_creat_excl(fname_abs, 0644)
-            self.assertEquals(fd2, None)
-        finally:
-            os.close(fd1)
-            if fd2:
-                os.close(fd2)
-
     def test_enqueue_and_dequeue(self):
         eq, q = self.new_queue()
 
@@ -188,10 +173,11 @@ class PDQueueTest(unittest.TestCase):
             badf = q._abspath(n)
             open(badf, "w").close()
 
-        make_bad_entry("pdq_0_noextension")
+        make_bad_entry("pdq_0_extra_underscore_random.txt")
+        make_bad_entry("pdq_0_no_extension")
         f_foo = eq.enqueue("svckey", "foo")
-        make_bad_entry("pdq_notenoughunderscores.txt")
-        make_bad_entry("pdq_notint_servicekey.txt")
+        make_bad_entry("pdq_not_int_servicekey.txt")
+        make_bad_entry("pdq_notenough_underscores.txt")
 
         q.flush(
             lambda s, i: ConsumeEvent.CONSUMED,
@@ -202,15 +188,16 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(
             q._queued_files("suc_"),
             [
-                "suc_0_noextension",
+                "suc_0_extra_underscore_random.txt",
+                "suc_0_no_extension",
                 f_foo.replace("pdq_", "suc_"),
                 ]
             )
         self.assertEquals(
             q._queued_files("err_"),
             [
-                "err_notenoughunderscores.txt",
-                "err_notint_servicekey.txt",
+                "err_not_int_servicekey.txt",
+                "err_notenough_underscores.txt",
                 ]
             )
 
@@ -554,6 +541,7 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(trace, ["Li", "La", "C1"])
         self.assertEquals(q._queued_files(), [f_foo])
 
+        q.time.sleep(0.000001)  # because queue order random in same microsec
         f_bar = eq.enqueue("svckey", "bar")
 
         self.assertEquals(trace, ["Li", "La", "C1"])
@@ -729,11 +717,11 @@ class PDQueueTest(unittest.TestCase):
         eq, q = self.new_queue()
 
         def enqueue_before(sec, prefix="pdq"):
-            enqueue_time_ms = (int(time.time()) - sec) * 1000
-            fname = "%s_%d_%s.txt" % (
+            enqueue_time_us = (int(time.time()) - sec) * (1000 * 1000)
+            fname = "%s_%d_%s_RANDOM_STR.txt" % (
                 prefix,
-                enqueue_time_ms,
-                "svckey%d" % (enqueue_time_ms % 10)
+                enqueue_time_us,
+                "svckey%d" % (enqueue_time_us % 10)
                 )
             fpath = os.path.join(q.queue_dir, fname)
             os.close(os.open(fpath, os.O_CREAT))
