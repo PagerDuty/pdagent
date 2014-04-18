@@ -207,7 +207,11 @@ class PDQueue(PDQueueBase):
             for fname in file_names:
                 if should_stop_func():
                     break
-                _, _, svc_key = _get_event_metadata(fname)
+                try:
+                    _, _, svc_key = _get_event_metadata(fname)
+                except _BadFname:
+                    self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                    continue
                 if svc_key not in err_svc_keys and \
                         self.backoff_info.get_current_retry_at(svc_key) <= now:
                     # no back-off; nothing has gone wrong in this pass yet.
@@ -293,6 +297,7 @@ class PDQueue(PDQueueBase):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err_")
         for errname in errnames:
+            # XXX: not catching _BadFname at this time
             if not service_key or \
                     _get_event_metadata(errname)[2] == service_key:
                 self._unsafe_change_event_type(errname, 'err_', 'pdq_')
@@ -371,7 +376,12 @@ class PDQueue(PDQueueBase):
             if stat_name not in snapshot_stats:
                 snapshot_stats[stat_name] = SnapshotStats(now)
             for fname in self._queued_files(queue_file_prefix):
-                snapshot_stats[stat_name].add_event(_get_event_metadata(fname))
+                try:
+                    snapshot_stats[stat_name].add_event(
+                        _get_event_metadata(fname)
+                        )
+                except _BadFname:
+                    pass
 
         add_stat("pdq_", "pending_events")
         if detailed_snapshot:
@@ -423,10 +433,17 @@ def _open_creat_excl(fname_abs, mode):
             raise
 
 
+class _BadFname(Exception):
+    pass
+
+
 def _get_event_metadata(fname):
-    event_type, enqueue_time_str, service_key = \
-        fname.split('.')[0].split('_', 2)
-    return event_type, int(enqueue_time_str), service_key
+    try:
+        event_type, enqueue_time_str, service_key = \
+            fname.split('.')[0].split('_', 2)
+        return event_type, int(enqueue_time_str), service_key
+    except ValueError:
+        raise _BadFname
 
 
 class _BackoffInfo(object):
