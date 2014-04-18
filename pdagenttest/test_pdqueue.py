@@ -39,14 +39,6 @@ from pdagent.pdqueue import PDQEnqueuer, PDQueue, EmptyQueueError
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
-if _TEST_DIR.startswith("/vagrant/"):
-    print "************ WARNING!!!! ************"
-    print "test_pdqueue can't run queue tests on vagrant shared mount:", _TEST_DIR
-    _TEST_DIR = "/tmp/test_pdqueue_alternate"
-    print "Using alternate directory:", _TEST_DIR
-
-
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
 BACKOFF_INTERVAL = 5
