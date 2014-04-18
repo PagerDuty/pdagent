@@ -153,7 +153,6 @@ class PDQueueTest(unittest.TestCase):
 
         open(f1, "w").write("foo")
         self.assertEquals(open(f1).read(), "foo")
-        self.assertFalse(os.path.exists(f2))
 
         self.assertTrue(_link(f1, f2))
         self.assertEquals(open(f1).read(), "foo")
