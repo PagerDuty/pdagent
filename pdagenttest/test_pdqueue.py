@@ -95,7 +95,8 @@ class PDQueueTest(unittest.TestCase):
     def setUp(self):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
-        os.makedirs(TEST_QUEUE_DIR)
+        for t in ["pdq", "tmp", "suc", "err"]:
+            os.makedirs(os.path.join(TEST_QUEUE_DIR, t))
         if os.path.exists(TEST_DB_DIR):
             shutil.rmtree(TEST_DB_DIR)
         os.makedirs(TEST_DB_DIR)
@@ -127,20 +128,20 @@ class PDQueueTest(unittest.TestCase):
 
         f_foo = eq.enqueue("svckey1", "foo")
         self.assertEquals(q._queued_files(), [f_foo])
-        self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
+        self.assertEquals(open(q._abspath("pdq", f_foo)).read(), "foo")
 
         q.time.sleep(0.05)
         f_bar = eq.enqueue("svckey2", "bar")  # different service key
         self.assertEquals(q._queued_files(), [f_foo, f_bar])
-        self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
-        self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
+        self.assertEquals(open(q._abspath("pdq", f_foo)).read(), "foo")
+        self.assertEquals(open(q._abspath("pdq", f_bar)).read(), "bar")
 
         q.time.sleep(0.05)
         f_baz = eq.enqueue("svckey1", "baz")
         self.assertEquals(q._queued_files(), [f_foo, f_bar, f_baz])
-        self.assertEquals(open(q._abspath(f_foo)).read(), "foo")
-        self.assertEquals(open(q._abspath(f_bar)).read(), "bar")
-        self.assertEquals(open(q._abspath(f_baz)).read(), "baz")
+        self.assertEquals(open(q._abspath("pdq", f_foo)).read(), "foo")
+        self.assertEquals(open(q._abspath("pdq", f_bar)).read(), "bar")
+        self.assertEquals(open(q._abspath("pdq", f_baz)).read(), "baz")
 
         def verify_and_consume(event, event_id):
             def consume(s, i):
@@ -161,7 +162,7 @@ class PDQueueTest(unittest.TestCase):
         # verify that queued files are now success files.
         success_contents = []
         for f in q._queued_files("suc"):
-            fd = open(q._abspath(f))
+            fd = open(q._abspath("suc", f))
             success_contents.append(fd.read())
             fd.close()
         self.assertEquals(success_contents, ["foo", "bar", "baz"])
@@ -170,34 +171,34 @@ class PDQueueTest(unittest.TestCase):
         eq, q = self.new_queue()
 
         def make_bad_entry(n):
-            badf = q._abspath(n)
+            badf = q._abspath("pdq", n)
             open(badf, "w").close()
 
-        make_bad_entry("pdq_0_extra_underscore_random.txt")
-        make_bad_entry("pdq_0_no_extension")
+        make_bad_entry("0_extra_underscore_random.txt")
+        make_bad_entry("0_no_extension")
         f_foo = eq.enqueue("svckey", "foo")
-        make_bad_entry("pdq_not_int_servicekey.txt")
-        make_bad_entry("pdq_notenough_underscores.txt")
+        make_bad_entry("not_int_servicekey.txt")
+        make_bad_entry("notenough_underscores.txt")
 
         q.flush(
             lambda s, i: ConsumeEvent.CONSUMED,
             lambda: False
             )
 
-        self.assertEquals(len(q._queued_files("pdq_")), 0)
+        self.assertEquals(len(q._queued_files("pdq")), 0)
         self.assertEquals(
-            q._queued_files("suc_"),
+            q._queued_files("suc"),
             [
-                "suc_0_extra_underscore_random.txt",
-                "suc_0_no_extension",
-                f_foo.replace("pdq_", "suc_"),
+                "0_extra_underscore_random.txt",
+                "0_no_extension",
+                f_foo,
                 ]
             )
         self.assertEquals(
-            q._queued_files("err_"),
+            q._queued_files("err"),
             [
-                "err_not_int_servicekey.txt",
-                "err_notenough_underscores.txt",
+                "not_int_servicekey.txt",
+                "notenough_underscores.txt",
                 ]
             )
 
@@ -213,7 +214,7 @@ class PDQueueTest(unittest.TestCase):
             return ConsumeEvent.BAD_ENTRY
         q.dequeue(erroneous_consume_foo)
 
-        self.assertEquals(len(q._queued_files("err_")), 1)
+        self.assertEquals(len(q._queued_files("err")), 1)
         self.assertRaises(
             EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
             )
@@ -249,7 +250,7 @@ class PDQueueTest(unittest.TestCase):
 
         # If there is a pending item, dequeue should recheck the queue
         # after acquiring the lock.
-        f_foo_abs = q._abspath(f_foo)
+        f_foo_abs = q._abspath("pdq", f_foo)
         f_delete_me.append(f_foo_abs)
         self.assertRaises(EmptyQueueError, q.dequeue, None)
         self.assertEquals(trace, ["Li", "D", f_foo_abs, "La", "Lr"])
@@ -266,7 +267,7 @@ class PDQueueTest(unittest.TestCase):
         q.dequeue(unexpected_consume)  # consume function must not be called.
 
         self.assertEquals(len(q._queued_files()), 0)
-        self.assertEquals(len(q._queued_files("err_")), 1)
+        self.assertEquals(len(q._queued_files("err")), 1)
         self._assertCounterData(q, (0, 1))
 
     def test_backoff_bad_event(self):
@@ -311,7 +312,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
         self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
-        self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
+        self.assertEquals(len(q._queued_files("err")), 0)  # no error yet.
         self._assertBackoffData(q, [("svckey1", 1, 0)])
         self._assertCounterData(q, (1, 0))
 
@@ -320,7 +321,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(len(events_processed), 0)
         self.assertEquals(q._queued_files(), [e1_1, e1_2])
-        self.assertEquals(len(q._queued_files("err_")), 0)
+        self.assertEquals(len(q._queued_files("err")), 0)
         self._assertBackoffData(q, [("svckey1", 1, 0)])
         self._assertCounterData(q, (1, 0))
 
@@ -332,7 +333,7 @@ class PDQueueTest(unittest.TestCase):
             q.flush(consume_with_backoff, lambda: False)
             self.assertEquals(events_processed, ["foo"])  # bad event
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
-            self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
+            self.assertEquals(len(q._queued_files("err")), 0)  # no error yet
             self._assertBackoffData(q, [("svckey1", i, i-1)])
             self._assertCounterData(q, (1, 0))
 
@@ -345,8 +346,8 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(events_processed, ["foo", "bar"])  # bad + next events
         self.assertEquals(len(q._queued_files()), 0)
         self.assertEquals(
-            q._queued_files("err_"),
-            [e1_1.replace("pdq_", "err_")]
+            q._queued_files("err"),
+            [e1_1]
             )
         self._assertBackoffData(q, None)
         self._assertCounterData(q, (2, 1))
@@ -399,7 +400,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(events_processed, ["foo", "baz"])  # 1 bad, 1 good
         self.assertEquals(q._queued_files(), [e1_1, e1_2])  # 2 from bad svckey
-        self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet.
+        self.assertEquals(len(q._queued_files("err")), 0)  # no error yet.
         self._assertBackoffData(q, [("svckey1", 1, 0)])
         self._assertCounterData(q, (1, 0))
 
@@ -408,7 +409,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(len(events_processed), 0)
         self.assertEquals(q._queued_files(), [e1_1, e1_2])
-        self.assertEquals(len(q._queued_files("err_")), 0)
+        self.assertEquals(len(q._queued_files("err")), 0)
         self._assertBackoffData(q, [("svckey1", 1, 0)])
         self._assertCounterData(q, (1, 0))
 
@@ -420,7 +421,7 @@ class PDQueueTest(unittest.TestCase):
             q.flush(consume_with_backoff, lambda: False)
             self.assertEquals(events_processed, ["foo"])  # bad event
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
-            self.assertEquals(len(q._queued_files("err_")), 0)  # no error yet
+            self.assertEquals(len(q._queued_files("err")), 0)  # no error yet
             self._assertBackoffData(q, [("svckey1", i, i-1)])
             self._assertCounterData(q, (1, 0))
 
@@ -433,7 +434,7 @@ class PDQueueTest(unittest.TestCase):
             q.flush(consume_with_backoff, lambda: False)
             self.assertEquals(events_processed, ["foo"])  # bad event
             self.assertEquals(q._queued_files(), [e1_1, e1_2])  # bad svckey's
-            self.assertEquals(len(q._queued_files("err_")), 0)  # still no errors
+            self.assertEquals(len(q._queued_files("err")), 0)  # still no errors
             self._assertBackoffData(
                 q,
                 [("svckey1", max_total_attempts + i, -1)]
@@ -447,7 +448,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_backoff, lambda: False)
         self.assertEquals(events_processed, ["foo", "bar"])  # all good events
         self.assertEquals(len(q._queued_files()), 0)
-        self.assertEquals(len(q._queued_files("err_")), 0)   # no errors
+        self.assertEquals(len(q._queued_files("err")), 0)   # no errors
         self._assertBackoffData(q, None)
         self._assertCounterData(q, (3, 0))
 
@@ -488,7 +489,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_stopall, lambda: False)
         self.assertEquals(events_processed, ["foo"])
         self.assertEquals(len(q._queued_files()), 3)  # 2 from bad svckey
-        self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+        self.assertEquals(len(q._queued_files("err")), 0)  # no error events
         self._assertCounterData(q, (0, 0))
 
         # retry. all events must now be processed.
@@ -497,7 +498,7 @@ class PDQueueTest(unittest.TestCase):
         q.flush(consume_with_stopall, lambda: False)
         self.assertEquals(events_processed, ["foo", "bar", "baz"])
         self.assertEquals(len(q._queued_files()), 0)
-        self.assertEquals(len(q._queued_files("err_")), 0)  # no error events
+        self.assertEquals(len(q._queued_files("err")), 0)  # no error events
         self._assertCounterData(q, (3, 0))
 
         # and now, the queue must be empty.
@@ -627,14 +628,14 @@ class PDQueueTest(unittest.TestCase):
         fnames.append(eq.enqueue("svckey2", "boo"))
         fnames.append(eq.enqueue("svckey3", "bam"))
         for i in [0, 2, 4]:
-            q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
+            q._unsafe_change_event_type(fnames[i], "pdq", "err")
 
         self.assertEquals(len(q._queued_files()), 2)
-        self.assertEquals(len(q._queued_files("err_")), 3)
+        self.assertEquals(len(q._queued_files("err")), 3)
 
         q.resurrect("svckey1")
         self.assertEquals(len(q._queued_files()), 3)
-        errfiles = q._queued_files("err_")
+        errfiles = q._queued_files("err")
         self.assertEquals(len(errfiles), 2)
         for errname in errfiles:
             self.assertEquals(errname.find("svckey1"), -1)
@@ -647,7 +648,7 @@ class PDQueueTest(unittest.TestCase):
 
         q.resurrect()
         self.assertEquals(len(q._queued_files()), 5)
-        self.assertEquals(len(q._queued_files("err_")), 0)
+        self.assertEquals(len(q._queued_files("err")), 0)
 
         # counters should not be touched.
         self._assertCounterData(q, None)
@@ -664,10 +665,10 @@ class PDQueueTest(unittest.TestCase):
 
         # 1 error for svckey1; 2 for svckey2
         for i in [0, 3, 4]:
-            q._unsafe_change_event_type(fnames[i], "pdq_", "err_")
+            q._unsafe_change_event_type(fnames[i], "pdq", "err")
         # 1 success for svckey1; 2 for svckey4
         for i in [2, 7, 8]:
-            q._unsafe_change_event_type(fnames[i], "pdq_", "suc_")
+            q._unsafe_change_event_type(fnames[i], "pdq", "suc")
         # that leaves 1 pending for svckey1; 2 for svckey3
 
         # also, let's throttle svckey2...
@@ -718,12 +719,11 @@ class PDQueueTest(unittest.TestCase):
 
         def enqueue_before(sec, prefix="pdq"):
             enqueue_time_us = (int(time.time()) - sec) * (1000 * 1000)
-            fname = "%s_%d_%s_RANDOM_STR.txt" % (
-                prefix,
+            fname = "%d_%s_RANDOM_STR.txt" % (
                 enqueue_time_us,
                 "svckey%d" % (enqueue_time_us % 10)
                 )
-            fpath = os.path.join(q.queue_dir, fname)
+            fpath = os.path.join(q.queue_dir, prefix, fname)
             os.close(os.open(fpath, os.O_CREAT))
             return fname
 
@@ -749,8 +749,8 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(expected_unremoved, actual_unremoved)
 
         # create an invalid file too, just to complicate things.
-        invalid = "tmp_invalid.txt"
-        os.close(os.open(os.path.join(q.queue_dir, invalid), os.O_CREAT))
+        invalid = "invalid.txt"
+        os.close(os.open(os.path.join(q.queue_dir, "tmp", invalid), os.O_CREAT))
 
         q.cleanup(100)
         expected_unremoved = [q1, q2, invalid]
