@@ -145,8 +145,8 @@ class PDQueue(PDQueueBase):
         self.counter_info = _CounterInfo(counter_db, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
-    def _queued_files(self, file_prefix="pdq"):
-        fnames = os.listdir(os.path.join(self.queue_dir, file_prefix))
+    def _queued_files(self, ftype="pdq"):
+        fnames = os.listdir(os.path.join(self.queue_dir, ftype))
         fnames.sort()
         return fnames
 
