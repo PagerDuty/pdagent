@@ -91,7 +91,7 @@ class PDQEnqueuer(PDQueueBase):
         ensure_writable_directory(self.queue_dir)
 
     def enqueue(self, service_key, s):
-        # generate a unique filename that is sorted by enqueue time
+        # generate a unique filename that will string sort by enqueue time
         t_microsecs = int(self.time.time() * 1e6)
         random_str = uuid.uuid4().hex
         filename_middle = "%d_%s_%s" % (t_microsecs, service_key, random_str)
@@ -102,7 +102,9 @@ class PDQEnqueuer(PDQueueBase):
         pdq_fname_abs = self._abspath(pdq_fname)
         # write to temp file
         tmp_fd = os.open(
-            tmp_fname_abs, os.O_WRONLY | os.O_CREAT, self.enqueue_file_mode
+            tmp_fname_abs,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            self.enqueue_file_mode
             )
         os.write(tmp_fd, s)
         os.close(tmp_fd)

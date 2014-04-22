@@ -647,7 +647,7 @@ class PDQueueTest(unittest.TestCase):
 
         def enqueue_before(sec, prefix="pdq"):
             enqueue_time_us = (int(time.time()) - sec) * (1000 * 1000)
-            fname = "%s_%d_%s_RANDOMSTR.txt" % (
+            fname = "%s_%d_%s_RANDOM_STR.txt" % (
                 prefix,
                 enqueue_time_us,
                 "svckey%d" % (enqueue_time_us % 10)
