@@ -50,7 +50,6 @@ Notes:
 import errno
 import logging
 import os
-import uuid
 
 from constants import ConsumeEvent
 from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
@@ -92,23 +91,55 @@ class PDQEnqueuer(PDQueueBase):
         ensure_writable_directory(os.path.join(self.queue_dir, "pdq"))
 
     def enqueue(self, service_key, s):
-        # generate a unique filename that will string sort by enqueue time
-        t_microsecs = int(self.time.time() * 1e6)
-        random_str = uuid.uuid4().hex
-        fname = "%d_%s_%s.txt" % (t_microsecs, service_key, random_str)
-        # calculate temp & final file names
-        tmp_fname_abs = self._abspath("tmp", fname)
-        pdq_fname_abs = self._abspath("pdq", fname)
-        # write to temp file
-        tmp_fd = os.open(
-            tmp_fname_abs, os.O_WRONLY | os.O_CREAT, self.enqueue_file_mode
+        # write to an exclusive temp file
+        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
+            "tmp",
+            "%%d_%s.txt" % service_key
             )
         os.write(tmp_fd, s)
         os.close(tmp_fd)
-        # rename the complete tmp file to the enqueue name
-        os.rename(tmp_fname_abs, pdq_fname_abs)
-        # return the enqueued file name
-        return fname
+        # link to an exclusive queue entry file
+        pdq_fname, _ = self._link_with_retry(
+            "pdq",
+            "%%d_%s.txt" % service_key,
+            tmp_fname_abs
+            )
+        # unlink the temp file
+        os.unlink(tmp_fname_abs)
+        return pdq_fname
+
+    def _open_creat_excl_with_retry(self, ftype, fname_fmt):
+        n = 0
+        t_microsecs = int(self.time.time() * 1e6)
+        while True:
+            fname = fname_fmt % (t_microsecs + n)
+            fname_abs = self._abspath(ftype, fname)
+            fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
+            if fd is None:
+                n += 1
+                if n >= 100:
+                    raise Exception(
+                        "Too many retries! (Last attempted name: %s)"
+                        % fname_abs
+                        )
+            else:
+                return fname, fname_abs, fd
+
+    def _link_with_retry(self, ftype, fname_fmt, orig_abs):
+        n = 0
+        t_microsecs = int(self.time.time() * 1e6)
+        while True:
+            fname = fname_fmt % (t_microsecs + n)
+            fname_abs = self._abspath(ftype, fname)
+            if _link(orig_abs, fname_abs):
+                return fname, fname_abs
+            else:
+                n += 1
+                if n >= 100:
+                    raise Exception(
+                        "Too many retries! (Last attempted name: %s)"
+                        % fname_abs
+                        )
 
 
 class PDQueue(PDQueueBase):
@@ -198,6 +229,7 @@ class PDQueue(PDQueueBase):
                 try:
                     _, svc_key = _get_event_metadata(fname)
                 except _BadFname:
+                    logger.warn("Badly named event " + fname)
                     self._unsafe_change_event_type(fname, 'pdq', 'err')
                     continue
                 if svc_key not in err_svc_keys and \
@@ -285,10 +317,16 @@ class PDQueue(PDQueueBase):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err")
         for errname in errnames:
-            # XXX: not catching _BadFname at this time
-            if not service_key or \
-                    _get_event_metadata(errname)[1] == service_key:
-                self._unsafe_change_event_type(errname, 'err', 'pdq')
+            try:
+                # even if we don't need to filter by service keys
+                # always parse the event file to check for _BadFname
+                _, svc_key = _get_event_metadata(errname)
+                if not service_key or svc_key == service_key:
+                    self._unsafe_change_event_type(errname, 'err', 'pdq')
+            except _BadFname:
+                # Don't resurrect badly named file
+                # TODO: log about this if logging will be available
+                pass
 
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
@@ -410,14 +448,35 @@ class PDQueue(PDQueueBase):
         os.rename(old_abs, new_abs)
 
 
+def _open_creat_excl(fname_abs, mode):
+    try:
+        return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return None
+        else:
+            raise
+
+
+def _link(orig_abs, new_abs):
+    try:
+        os.link(orig_abs, new_abs)
+        return True
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return False
+        else:
+            raise
+
+
 class _BadFname(Exception):
     pass
 
 
 def _get_event_metadata(fname):
     try:
-        enqueue_time_microsec_str, service_key, random_str = \
-            fname.split('.')[0].split('_', 2)
+        enqueue_time_microsec_str, service_key = \
+            fname.split('.')[0].split('_', 1)
         enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
         return enqueue_time, service_key
     except ValueError:
