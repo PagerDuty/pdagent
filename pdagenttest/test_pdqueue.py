@@ -220,6 +220,39 @@ class PDQueueTest(unittest.TestCase):
             fd.close()
         self.assertEquals(success_contents, ["foo", "bar", "baz"])
 
+    def test_bad_fnames(self):
+        eq, q = self.new_queue()
+
+        def make_bad_entry(n):
+            badf = q._abspath(n)
+            open(badf, "w").close()
+
+        make_bad_entry("pdq_0_noextension")
+        f_foo = eq.enqueue("svckey", "foo")
+        make_bad_entry("pdq_notenoughunderscores.txt")
+        make_bad_entry("pdq_notint_servicekey.txt")
+
+        q.flush(
+            lambda s, i: ConsumeEvent.CONSUMED,
+            lambda: False
+            )
+
+        self.assertEquals(len(q._queued_files("pdq_")), 0)
+        self.assertEquals(
+            q._queued_files("suc_"),
+            [
+                f_foo.replace("pdq_", "suc_"),
+                ]
+            )
+        self.assertEquals(
+            q._queued_files("err_"),
+            [
+                "err_0_noextension",
+                "err_notenoughunderscores.txt",
+                "err_notint_servicekey.txt",
+                ]
+            )
+
     def test_consume_error(self):
         # The item should get tagged as error, and not be available for
         # further consumption, if consumption causes error.

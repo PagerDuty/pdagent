@@ -223,7 +223,12 @@ class PDQueue(PDQueueBase):
             for fname in file_names:
                 if should_stop_func():
                     break
-                _, _, svc_key = _get_event_metadata(fname)
+                try:
+                    _, _, svc_key = _get_event_metadata(fname)
+                except _BadFileNameError:
+                    logger.warn("Badly named event " + fname)
+                    self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                    continue
                 if svc_key not in err_svc_keys and \
                         self.backoff_info.get_current_retry_at(svc_key) <= now:
                     # no back-off; nothing has gone wrong in this pass yet.
@@ -309,9 +314,16 @@ class PDQueue(PDQueueBase):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err_")
         for errname in errnames:
-            if not service_key or \
-                    _get_event_metadata(errname)[2] == service_key:
-                self._unsafe_change_event_type(errname, 'err_', 'pdq_')
+            try:
+                # even if we don't need to filter by service keys
+                # always parse the event file to check for _BadFileNameError
+                _, _, svc_key = _get_event_metadata(errname)
+                if not service_key or svc_key == service_key:
+                    self._unsafe_change_event_type(errname, 'err_', 'pdq_')
+            except _BadFileNameError:
+                # Don't resurrect badly named file
+                # TODO: log about this if logging will be available
+                pass
 
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
@@ -321,8 +333,7 @@ class PDQueue(PDQueueBase):
             for fname in fnames:
                 try:
                     _, enqueue_time, _ = _get_event_metadata(fname)
-                except:
-                    # invalid file-name; we'll not include it in cleanup.
+                except _BadFileNameError:
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
                 else:
@@ -387,7 +398,12 @@ class PDQueue(PDQueueBase):
             if stat_name not in snapshot_stats:
                 snapshot_stats[stat_name] = SnapshotStats(now)
             for fname in self._queued_files(queue_file_prefix):
-                snapshot_stats[stat_name].add_event(_get_event_metadata(fname))
+                try:
+                    snapshot_stats[stat_name].add_event(
+                        _get_event_metadata(fname)
+                        )
+                except _BadFileNameError:
+                    pass
 
         add_stat("pdq_", "pending_events")
         if detailed_snapshot:
@@ -450,11 +466,21 @@ def _link(orig_abs, new_abs):
             raise
 
 
+class _BadFileNameError(Exception):
+    pass
+
+
 def _get_event_metadata(fname):
-    event_type, enqueue_time_microsec_str, service_key = \
-        fname.split('.')[0].split('_', 2)
-    enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
-    return event_type, enqueue_time, service_key
+    if not fname.endswith(".txt"):
+        raise _BadFileNameError
+    fname = fname[:-4]
+    try:
+        event_type, enqueue_time_microsec_str, service_key = \
+            fname.split('_', 2)
+        enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
+        return event_type, enqueue_time, service_key
+    except ValueError:
+        raise _BadFileNameError
 
 
 class _BackoffInfo(object):
