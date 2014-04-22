@@ -471,9 +471,12 @@ class _BadFileNameError(Exception):
 
 
 def _get_event_metadata(fname):
+    if not fname.endswith(".txt"):
+        raise _BadFileNameError
+    fname = fname[:-4]
     try:
         event_type, enqueue_time_microsec_str, service_key = \
-            fname.split('.')[0].split('_', 2)
+            fname.split('_', 2)
         enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
         return event_type, enqueue_time, service_key
     except ValueError:

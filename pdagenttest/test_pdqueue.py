@@ -241,13 +241,13 @@ class PDQueueTest(unittest.TestCase):
         self.assertEquals(
             q._queued_files("suc_"),
             [
-                "suc_0_noextension",
                 f_foo.replace("pdq_", "suc_"),
                 ]
             )
         self.assertEquals(
             q._queued_files("err_"),
             [
+                "err_0_noextension",
                 "err_notenoughunderscores.txt",
                 "err_notint_servicekey.txt",
                 ]
