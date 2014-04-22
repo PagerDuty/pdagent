@@ -237,6 +237,42 @@ class PDQueueTest(unittest.TestCase):
             EmptyQueueError, q.dequeue, lambda s: ConsumeEvent.CONSUMED
             )
 
+    def test_dequeue_no_lock_on_no_work(self):
+        eq, q = self.new_queue()
+
+        trace = []
+        f_delete_me = []
+
+        class FileDeletingLockClass:
+            def __init__(self, lockfile):
+                trace.append("Li")
+
+            def acquire(self):
+                if f_delete_me:
+                    f = f_delete_me.pop()
+                    trace.append("D")
+                    trace.append(f)
+                    os.remove(f)
+                trace.append("La")
+
+            def release(self):
+                trace.append("Lr")
+        q.lock_class = FileDeletingLockClass
+
+        # If there are no pending items, dequeue should return without
+        # acquiring the lock.
+        self.assertRaises(EmptyQueueError, q.dequeue, None)
+        self.assertEquals(trace, [])
+
+        f_foo = eq.enqueue("svckey", "foo")
+
+        # If there is a pending item, dequeue should recheck the queue
+        # after acquiring the lock.
+        f_foo_abs = q._abspath(f_foo)
+        f_delete_me.append(f_foo_abs)
+        self.assertRaises(EmptyQueueError, q.dequeue, None)
+        self.assertEquals(trace, ["Li", "D", f_foo_abs, "La", "Lr"])
+
     def test_huge_event_not_processed(self):
         # The item should get tagged as error, and not be available for
         # further consumption.
