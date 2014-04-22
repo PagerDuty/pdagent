@@ -39,6 +39,14 @@ from pdagent.pdqueue import PDQEnqueuer, PDQueue, EmptyQueueError
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+if _TEST_DIR.startswith("/vagrant/"):
+    print "************ WARNING!!!! ************"
+    print "test_pdqueue can't run queue tests on vagrant shared mount:", _TEST_DIR
+    _TEST_DIR = "/tmp/test_pdqueue_alternate"
+    print "Using alternate directory:", _TEST_DIR
+
+
 TEST_QUEUE_DIR = os.path.join(_TEST_DIR, "test_queue")
 TEST_DB_DIR = os.path.join(_TEST_DIR, "test_db")
 BACKOFF_INTERVAL = 5
@@ -120,10 +128,10 @@ class PDQueueTest(unittest.TestCase):
             )
         return eq, q
 
-    def test__open_creat_excl_with_retry(self):
+    def test__open_creat_excl(self):
         from pdagent.pdqueue import _open_creat_excl
         eq, _ = self.new_queue()
-        fname_abs = eq._abspath("_open_creat_excl_with_retry.txt")
+        fname_abs = eq._abspath("_open_creat_excl.txt")
         fd1 = _open_creat_excl(fname_abs, 0644)
         self.assertNotEquals(fd1, None)
         fd2 = None
@@ -134,6 +142,37 @@ class PDQueueTest(unittest.TestCase):
             os.close(fd1)
             if fd2:
                 os.close(fd2)
+
+    def test__link(self):
+        from pdagent.pdqueue import _link
+        eq, _ = self.new_queue()
+        f1 = eq._abspath("_link1.txt")
+        f2 = eq._abspath("_link2.txt")
+        self.assertFalse(os.path.exists(f1))
+        self.assertFalse(os.path.exists(f2))
+
+        open(f1, "w").write("foo")
+        self.assertEquals(open(f1).read(), "foo")
+
+        self.assertTrue(_link(f1, f2))
+        self.assertEquals(open(f1).read(), "foo")
+        self.assertEquals(open(f2).read(), "foo")
+
+        self.assertFalse(_link(f1, f2))
+
+        open(f1, "w").write("bar")
+        self.assertFalse(_link(f1, f2))
+        self.assertEquals(open(f1).read(), "bar")
+        self.assertEquals(open(f2).read(), "bar")
+
+        os.unlink(f1)
+        self.assertFalse(os.path.exists(f1))
+        self.assertEquals(open(f2).read(), "bar")
+
+        os.unlink(f2)
+        self.assertFalse(os.path.exists(f1))
+        self.assertFalse(os.path.exists(f2))
+
 
     def test_enqueue_and_dequeue(self):
         eq, q = self.new_queue()
@@ -660,11 +699,11 @@ class PDQueueTest(unittest.TestCase):
         eq, q = self.new_queue()
 
         def enqueue_before(sec, prefix="pdq"):
-            enqueue_time_ms = (int(time.time()) - sec) * 1000
+            enqueue_time_us = (int(time.time()) - sec) * (1000 * 1000)
             fname = "%s_%d_%s.txt" % (
                 prefix,
-                enqueue_time_ms,
-                "svckey%d" % (enqueue_time_ms % 10)
+                enqueue_time_us,
+                "svckey%d" % (enqueue_time_us % 10)
                 )
             fpath = os.path.join(q.queue_dir, fname)
             os.close(os.open(fpath, os.O_CREAT))
