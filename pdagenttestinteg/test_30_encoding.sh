@@ -48,14 +48,14 @@ test_utf8_trigger() {
 
   test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
 
-  sudo find $OUTQUEUE_DIR -type f -name "pdq_*" \
+  sudo find $OUTQUEUE_DIR/pdq -type f \
     | xargs sudo sed -i -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g'
-  sudo find $OUTQUEUE_DIR -type f -name "pdq_*" \
+  sudo find $OUTQUEUE_DIR/pdq -type f \
     | xargs sudo sed -i -r 's/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g'
 
   sudo diff \
     $(dirname $0)/test_30_encoding.pdq1.txt \
-    $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | tail -n1)
+    $(sudo find $OUTQUEUE_DIR/pdq -type f | tail -n1)
 
 }
 
