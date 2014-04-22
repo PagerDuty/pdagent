@@ -71,9 +71,6 @@ def queue_event(
         event_type, service_key, incident_key, description, details,
         agent_id, queued_by,
         ):
-    if not incident_key and event_type == "trigger":
-        import uuid
-        incident_key = "pdagent-%s" % str(uuid.uuid4())
     agent_context = {
         "agent_id": agent_id,
         "queued_by": queued_by,

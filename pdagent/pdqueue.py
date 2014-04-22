@@ -95,25 +95,21 @@ class PDQEnqueuer(PDQueueBase):
             "tmp_%%d_%s.txt" % service_key
             )
         os.write(tmp_fd, s)
-        # get an exclusive queue entry file
-        pdq_fname, pdq_fname_abs, pdq_fd = self._open_creat_excl_with_retry(
-            "pdq_%%d_%s.txt" % service_key
-            )
-        # since we're exclusive on both files, we can safely rename
-        # the tmp file
-        os.fsync(tmp_fd)  # this seems to be the most we can do for durability
         os.close(tmp_fd)
-        # would love to fsync the rename but we're not writing a DB :)
-        os.rename(tmp_fname_abs, pdq_fname_abs)
-        os.close(pdq_fd)
-
+        # link to an exclusive queue entry file
+        pdq_fname, _ = self._link_with_retry(
+            "pdq_%%d_%s.txt" % service_key,
+            tmp_fname_abs
+            )
+        # unlink the temp file
+        os.unlink(tmp_fname_abs)
         return pdq_fname
 
     def _open_creat_excl_with_retry(self, fname_fmt):
         n = 0
-        t_millisecs = int(self.time.time() * 1000)
+        t_microsecs = int(self.time.time() * 1e6)
         while True:
-            fname = fname_fmt % (t_millisecs + n)
+            fname = fname_fmt % (t_microsecs + n)
             fname_abs = self._abspath(fname)
             fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
             if fd is None:
@@ -125,6 +121,22 @@ class PDQEnqueuer(PDQueueBase):
                         )
             else:
                 return fname, fname_abs, fd
+
+    def _link_with_retry(self, fname_fmt, orig_abs):
+        n = 0
+        t_microsecs = int(self.time.time() * 1e6)
+        while True:
+            fname = fname_fmt % (t_microsecs + n)
+            fname_abs = self._abspath(fname)
+            if _link(orig_abs, fname_abs):
+                return fname, fname_abs
+            else:
+                n += 1
+                if n >= 100:
+                    raise Exception(
+                        "Too many retries! (Last attempted name: %s)"
+                        % fname_abs
+                        )
 
 
 class PDQueue(PDQueueBase):
@@ -188,6 +200,10 @@ class PDQueue(PDQueueBase):
             consume_func,
             should_stop_func
             ):
+
+        if not self._queued_files():
+            raise EmptyQueueError
+
         lock = self.lock_class(self._dequeue_lockfile)
         lock.acquire()
 
@@ -237,7 +253,7 @@ class PDQueue(PDQueueBase):
         fname_abs = self._abspath(fname)
         data = None
         if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
-            with open(self._abspath(fname_abs)) as f:
+            with open(fname_abs) as f:
                 data = f.read()
 
         # ensure that the event is not too large.
@@ -310,7 +326,7 @@ class PDQueue(PDQueueBase):
                 pass
 
     def cleanup(self, delete_before_sec):
-        delete_before_time = (int(self.time.time()) - delete_before_sec) * 1000
+        delete_before_time = int(self.time.time()) - delete_before_sec
 
         def _cleanup_files(fname_prefix):
             fnames = self._queued_files(fname_prefix)
@@ -440,15 +456,27 @@ def _open_creat_excl(fname_abs, mode):
             raise
 
 
+def _link(orig_abs, new_abs):
+    try:
+        os.link(orig_abs, new_abs)
+        return True
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            return False
+        else:
+            raise
+
+
 class _BadFname(Exception):
     pass
 
 
 def _get_event_metadata(fname):
     try:
-        event_type, enqueue_time_str, service_key = \
+        event_type, enqueue_time_microsec_str, service_key = \
             fname.split('.')[0].split('_', 2)
-        return event_type, int(enqueue_time_str), service_key
+        enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
+        return event_type, enqueue_time, service_key
     except ValueError:
         raise _BadFname
 
@@ -640,10 +668,10 @@ class SnapshotStats(object):
             return {
                 "count": self.count,
                 "oldest_age_secs": int(
-                    self._time_now - self.oldest_enqueue_time / 1000
+                    self._time_now - self.oldest_enqueue_time
                     ),
                 "newest_age_secs": int(
-                    self._time_now - self.newest_enqueue_time / 1000
+                    self._time_now - self.newest_enqueue_time
                     ),
                 "service_keys_count": len(self.service_keys)
                 }
