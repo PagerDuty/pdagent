@@ -60,13 +60,14 @@ test_startup() {
   $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i $i_key -f key=value -f foo=bar
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"
 
-  test $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | wc -l) -eq 3
+  test $(sudo find $OUTQUEUE_DIR/pdq -type f | wc -l) -eq 3
 
   start_agent
   test -n "$(agent_pid)"
-  sleep $(($SEND_INTERVAL_SECS / 2))  # enough time for agent to flush the queue.
-  test $(sudo find $OUTQUEUE_DIR -type f -name "???_*" | wc -l) -eq 3
-  test $(sudo find $OUTQUEUE_DIR -type f -name "suc_*" | wc -l) -eq 3
+  sleep $(($SEND_INTERVAL_SECS))  # enough time for agent to flush the queue.
+  sudo find $OUTQUEUE_DIR/pdq -type f
+  test $(sudo find $OUTQUEUE_DIR/pdq -type f | wc -l) -eq 0
+  test $(sudo find $OUTQUEUE_DIR/suc -type f | wc -l) -eq 3
 }
 
 # agent must flush out queue when it wakes up.
@@ -78,15 +79,14 @@ test_wakeup() {
   $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i $i_key -f baz=boo
   # corrupt the ack-event file.
   echo "bad json" \
-    | sudo tee $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | tail -n1) >/dev/null
+    | sudo tee $(sudo find $OUTQUEUE_DIR/pdq -type f | tail -n1) >/dev/null
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"
 
   sleep $(($SEND_INTERVAL_SECS * 3))  # sleep-time + extra-time for processing.
   # there must be one error file in outqueue; everything else must be cleared.
-  test $(sudo find $OUTQUEUE_DIR -type f -name "???_*" | wc -l) -eq 6
-  test $(sudo find $OUTQUEUE_DIR -type f -name "pdq_*" | wc -l) -eq 0
-  test $(sudo find $OUTQUEUE_DIR -type f -name "err_*" | wc -l) -eq 1
-  test $(sudo find $OUTQUEUE_DIR -type f -name "suc_*" | wc -l) -eq 5
+  test $(sudo find $OUTQUEUE_DIR/pdq -type f | wc -l) -eq 0
+  test $(sudo find $OUTQUEUE_DIR/err -type f | wc -l) -eq 1
+  test $(sudo find $OUTQUEUE_DIR/suc -type f | wc -l) -eq 5
 }
 
 test_startup
