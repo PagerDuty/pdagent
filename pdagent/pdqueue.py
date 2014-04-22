@@ -102,9 +102,7 @@ class PDQEnqueuer(PDQueueBase):
         pdq_fname_abs = self._abspath(pdq_fname)
         # write to temp file
         tmp_fd = os.open(
-            tmp_fname_abs,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-            self.enqueue_file_mode
+            tmp_fname_abs, os.O_WRONLY | os.O_CREAT, self.enqueue_file_mode
             )
         os.write(tmp_fd, s)
         os.close(tmp_fd)
