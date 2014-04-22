@@ -210,6 +210,7 @@ class PDQueue(PDQueueBase):
                 try:
                     _, _, svc_key = _get_event_metadata(fname)
                 except _BadFname:
+                    logger.warn("Badly named event " + fname)
                     self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                     continue
                 if svc_key not in err_svc_keys and \
