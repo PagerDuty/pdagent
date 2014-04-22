@@ -65,7 +65,6 @@ test_startup() {
   start_agent
   test -n "$(agent_pid)"
   sleep $(($SEND_INTERVAL_SECS))  # enough time for agent to flush the queue.
-  sudo find $OUTQUEUE_DIR/pdq -type f
   test $(sudo find $OUTQUEUE_DIR/pdq -type f | wc -l) -eq 0
   test $(sudo find $OUTQUEUE_DIR/suc -type f | wc -l) -eq 3
 }
