@@ -70,8 +70,8 @@ class PDQueueBase(object):
         self.lock_class = lock_class
         self.time = time_calc
 
-    def _abspath(self, fname):
-        return os.path.join(self.queue_dir, fname)
+    def _abspath(self, ftype, fname):
+        return os.path.join(self.queue_dir, ftype, fname)
 
 
 class PDQEnqueuer(PDQueueBase):
@@ -86,31 +86,34 @@ class PDQEnqueuer(PDQueueBase):
         PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
         self.enqueue_file_mode = enqueue_file_mode
 
-        # Enqueue needs only write access to the directory
-        ensure_writable_directory(self.queue_dir)
+        # Enqueue needs only write access to the 'tmp' and 'pdq' directories
+        ensure_writable_directory(os.path.join(self.queue_dir, "tmp"))
+        ensure_writable_directory(os.path.join(self.queue_dir, "pdq"))
 
     def enqueue(self, service_key, s):
         # write to an exclusive temp file
         _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
-            "tmp_%%d_%s.txt" % service_key
+            "tmp",
+            "%%d_%s.txt" % service_key
             )
         os.write(tmp_fd, s)
         os.close(tmp_fd)
         # link to an exclusive queue entry file
         pdq_fname, _ = self._link_with_retry(
-            "pdq_%%d_%s.txt" % service_key,
+            "pdq",
+            "%%d_%s.txt" % service_key,
             tmp_fname_abs
             )
         # unlink the temp file
         os.unlink(tmp_fname_abs)
         return pdq_fname
 
-    def _open_creat_excl_with_retry(self, fname_fmt):
+    def _open_creat_excl_with_retry(self, ftype, fname_fmt):
         n = 0
         t_microsecs = int(self.time.time() * 1e6)
         while True:
             fname = fname_fmt % (t_microsecs + n)
-            fname_abs = self._abspath(fname)
+            fname_abs = self._abspath(ftype, fname)
             fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
             if fd is None:
                 n += 1
@@ -122,12 +125,12 @@ class PDQEnqueuer(PDQueueBase):
             else:
                 return fname, fname_abs, fd
 
-    def _link_with_retry(self, fname_fmt, orig_abs):
+    def _link_with_retry(self, ftype, fname_fmt, orig_abs):
         n = 0
         t_microsecs = int(self.time.time() * 1e6)
         while True:
             fname = fname_fmt % (t_microsecs + n)
-            fname_abs = self._abspath(fname)
+            fname_abs = self._abspath(ftype, fname)
             if _link(orig_abs, fname_abs):
                 return fname, fname_abs
             else:
@@ -154,8 +157,10 @@ class PDQueue(PDQueueBase):
             ):
         PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
 
-        ensure_readable_directory(self.queue_dir)
-        ensure_writable_directory(self.queue_dir)
+        for ftype in ["pdq", "tmp", "suc", "err"]:
+            d = os.path.join(self.queue_dir, ftype)
+            ensure_readable_directory(d)
+            ensure_writable_directory(d)
 
         self._dequeue_lockfile = os.path.join(
             self.queue_dir, "dequeue.lock"
@@ -171,10 +176,8 @@ class PDQueue(PDQueueBase):
         self.counter_info = _CounterInfo(counter_db, time_calc)
 
     # Get the list of queued files from the queue directory in enqueue order
-    def _queued_files(self, file_prefix="pdq_"):
-        fnames = [
-            f for f in os.listdir(self.queue_dir) if f.startswith(file_prefix)
-            ]
+    def _queued_files(self, ftype="pdq"):
+        fnames = os.listdir(os.path.join(self.queue_dir, ftype))
         fnames.sort()
         return fnames
 
@@ -224,10 +227,10 @@ class PDQueue(PDQueueBase):
                 if should_stop_func():
                     break
                 try:
-                    _, _, svc_key = _get_event_metadata(fname)
+                    _, svc_key = _get_event_metadata(fname)
                 except _BadFileNameError:
                     logger.warn("Badly named event " + fname)
-                    self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                    self._unsafe_change_event_type(fname, 'pdq', 'err')
                     continue
                 if svc_key not in err_svc_keys and \
                         self.backoff_info.get_current_retry_at(svc_key) <= now:
@@ -250,7 +253,7 @@ class PDQueue(PDQueueBase):
 
     # Returns true if processing can continue for service key, false if not.
     def _process_event(self, fname, consume_func, svc_key):
-        fname_abs = self._abspath(fname)
+        fname_abs = self._abspath("pdq", fname)
         data = None
         if not os.path.getsize(fname_abs) > self.event_size_max_bytes:
             with open(fname_abs) as f:
@@ -261,7 +264,7 @@ class PDQueue(PDQueueBase):
             logger.info(
                 "Not processing event %s -- it exceeds max-allowed size" %
                 fname)
-            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self._unsafe_change_event_type(fname, 'pdq', 'err')
             self.counter_info.increment_failure()
             return True
 
@@ -272,14 +275,14 @@ class PDQueue(PDQueueBase):
             # a failure here means duplicate event sends if the incident key
             # was not specified, i.e. if event was enqueued in a non-standard
             # manner (e.g. not using the pd* scripts.)
-            self._unsafe_change_event_type(fname, 'pdq_', 'suc_')
+            self._unsafe_change_event_type(fname, 'pdq', 'suc')
             self.counter_info.increment_success()
             return True
         elif consume_code == ConsumeEvent.STOP_ALL:
             # stop processing any more events.
             raise StopIteration
         elif consume_code == ConsumeEvent.BAD_ENTRY:
-            self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+            self._unsafe_change_event_type(fname, 'pdq', 'err')
             self.counter_info.increment_failure()
             return True
         elif consume_code == ConsumeEvent.BACKOFF_SVCKEY_BAD_ENTRY:
@@ -293,7 +296,7 @@ class PDQueue(PDQueueBase):
                     ) %
                     svc_key
                     )
-                self._unsafe_change_event_type(fname, 'pdq_', 'err_')
+                self._unsafe_change_event_type(fname, 'pdq', 'err')
                 self.counter_info.increment_failure()
                 # now that we have handled the bad entry, we'll want to
                 # give the other events in this service key a chance, so
@@ -312,14 +315,14 @@ class PDQueue(PDQueueBase):
 
     def resurrect(self, service_key=None):
         # move dead events of given service key back to queue.
-        errnames = self._queued_files("err_")
+        errnames = self._queued_files("err")
         for errname in errnames:
             try:
                 # even if we don't need to filter by service keys
                 # always parse the event file to check for _BadFileNameError
-                _, _, svc_key = _get_event_metadata(errname)
+                _, svc_key = _get_event_metadata(errname)
                 if not service_key or svc_key == service_key:
-                    self._unsafe_change_event_type(errname, 'err_', 'pdq_')
+                    self._unsafe_change_event_type(errname, 'err', 'pdq')
             except _BadFileNameError:
                 # Don't resurrect badly named file
                 # TODO: log about this if logging will be available
@@ -328,11 +331,11 @@ class PDQueue(PDQueueBase):
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
 
-        def _cleanup_files(fname_prefix):
-            fnames = self._queued_files(fname_prefix)
+        def _cleanup_files(ftype):
+            fnames = self._queued_files(ftype)
             for fname in fnames:
                 try:
-                    _, enqueue_time, _ = _get_event_metadata(fname)
+                    enqueue_time, _ = _get_event_metadata(fname)
                 except _BadFileNameError:
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
@@ -340,17 +343,17 @@ class PDQueue(PDQueueBase):
                     if enqueue_time < delete_before_time:
                         try:
                             logger.info("Cleanup: removing file %s" % fname)
-                            os.remove(self._abspath(fname))
+                            os.remove(self._abspath(ftype, fname))
                         except IOError as e:
                             logger.warning(
-                                "Could not clean up file %s: %s" %
-                                (fname, str(e))
+                                "Could not clean up %s file %s: %s" %
+                                (ftype, fname, str(e))
                                 )
 
         # clean up bad / temp / success files created before delete-before-time.
-        _cleanup_files("err_")
-        _cleanup_files("tmp_")
-        _cleanup_files("suc_")
+        _cleanup_files("err")
+        _cleanup_files("tmp")
+        _cleanup_files("suc")
 
     def get_stats(
             self,
@@ -394,10 +397,10 @@ class PDQueue(PDQueueBase):
 
         snapshot_stats = dict()
 
-        def add_stat(queue_file_prefix, stat_name):
+        def add_stat(queue_file_type, stat_name):
             if stat_name not in snapshot_stats:
                 snapshot_stats[stat_name] = SnapshotStats(now)
-            for fname in self._queued_files(queue_file_prefix):
+            for fname in self._queued_files(queue_file_type):
                 try:
                     snapshot_stats[stat_name].add_event(
                         _get_event_metadata(fname)
@@ -405,10 +408,10 @@ class PDQueue(PDQueueBase):
                 except _BadFileNameError:
                     pass
 
-        add_stat("pdq_", "pending_events")
+        add_stat("pdq", "pending_events")
         if detailed_snapshot:
-            add_stat("suc_", "succeeded_events")
-            add_stat("err_", "failed_events")
+            add_stat("suc", "succeeded_events")
+            add_stat("err", "failed_events")
 
         for stat_name in snapshot_stats:
             snapshot_stats[stat_name] = snapshot_stats[stat_name].to_dict()
@@ -438,10 +441,9 @@ class PDQueue(PDQueueBase):
     # you have considered any concurrency-related consequences to other queue
     # operations before invoking this function.
     def _unsafe_change_event_type(self, event_name, frm, to):
-        new_event_name = event_name.replace(frm, to)
-        logger.info("Changing %s -> %s..." % (event_name, new_event_name))
-        old_abs = self._abspath(event_name)
-        new_abs = self._abspath(new_event_name)
+        logger.info("Changing %s type: %s -> %s..." % (event_name, frm, to))
+        old_abs = self._abspath(frm, event_name)
+        new_abs = self._abspath(to, event_name)
         os.rename(old_abs, new_abs)
 
 
@@ -475,10 +477,9 @@ def _get_event_metadata(fname):
         raise _BadFileNameError
     fname = fname[:-4]
     try:
-        event_type, enqueue_time_microsec_str, service_key = \
-            fname.split('_', 2)
+        enqueue_time_microsec_str, service_key = fname.split('_', 1)
         enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
-        return event_type, enqueue_time, service_key
+        return enqueue_time, service_key
     except ValueError:
         raise _BadFileNameError
 
@@ -653,7 +654,7 @@ class SnapshotStats(object):
         self._time_now = time_now
 
     def add_event(self, event_metadata):
-        _, enqueue_time, svc_key = event_metadata
+        enqueue_time, svc_key = event_metadata
 
         self.count += 1
         if (not self.oldest_enqueue_time) or \

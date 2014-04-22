@@ -71,7 +71,11 @@ cp ../bin/pdagentd.py data/usr/share/pdagent/bin
 echo = /var/...
 mkdir -p data/var/log/pdagent
 mkdir -p data/var/lib/pdagent/db
-mkdir -p data/var/lib/pdagent/outqueue
+mkdir -p \
+    data/var/lib/pdagent/outqueue/pdq \
+    data/var/lib/pdagent/outqueue/tmp \
+    data/var/lib/pdagent/outqueue/err \
+    data/var/lib/pdagent/outqueue/suc
 
 echo = /etc/...
 mkdir -p data/etc/

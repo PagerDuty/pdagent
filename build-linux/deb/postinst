@@ -36,12 +36,13 @@ if [ "$1" = "configure" ]; then
         /usr/sbin/adduser --system --shell /bin/false --no-create-home \
             --group pdagent
 
-    # Fix ownership of data and log dirs
-    # outqueue directory world permission is set to -wx to allow any user to
-    # write events but not list the directory so that service keys of other
-    # users cannot be seen
+    # Fix ownership of data and log dirs.
+    # outqueue/* world permission is set to 000 so that service keys of other
+    # users cannot be seen, but set to -wx for enqueue-related directories
+    # to allow any user to write events.
     chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
-    chmod 773 /var/lib/pdagent/outqueue
+    chmod 750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
+    chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
     # Compile module .py to .pyc
     if which update-python-modules >/dev/null 2>&1; then
