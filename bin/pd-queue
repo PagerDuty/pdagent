@@ -72,11 +72,11 @@ def _retry(agent_config, parser, args):
         parser.error(
             "Only one of specific service key or flag for all keys required")
     else:
-        resurrect_events(
-            agent_config.get_enqueuer(),
+        count = resurrect_events(
+            agent_config.get_queue(),
             args.service_key  # 'None' for all keys.
             )
-        print "Events set up for retry."
+        print "%d event(s) set up for retry." % count
 
 
 def _status(agent_config, _, args):

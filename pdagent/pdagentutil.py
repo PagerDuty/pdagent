@@ -85,7 +85,7 @@ def queue_event(
 
 
 def resurrect_events(queue, service_key):
-    queue.resurrect(service_key)
+    return queue.resurrect(service_key)
 
 
 def get_stats(queue, service_key):

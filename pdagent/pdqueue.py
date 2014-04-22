@@ -316,6 +316,7 @@ class PDQueue(PDQueueBase):
     def resurrect(self, service_key=None):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err")
+        count = 0
         for errname in errnames:
             try:
                 # even if we don't need to filter by service keys
@@ -323,10 +324,12 @@ class PDQueue(PDQueueBase):
                 _, svc_key = _get_event_metadata(errname)
                 if not service_key or svc_key == service_key:
                     self._unsafe_change_event_type(errname, 'err', 'pdq')
+                    count += 1
             except _BadFname:
                 # Don't resurrect badly named file
                 # TODO: log about this if logging will be available
                 pass
+        return count
 
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
