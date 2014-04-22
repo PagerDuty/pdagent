@@ -732,28 +732,27 @@ class PDQueueTest(unittest.TestCase):
         for _ in range(2):
             q.counter_info.increment_failure()
 
+        def stats_by_state(data):
+            stats = dict()
+            for d in data:
+                (stype, count, oldest_age, newest_age, svckey_count) = d
+                if count:
+                    stats[stype + "_events"] = {
+                        "count": count,
+                        "oldest_age_secs": oldest_age,
+                        "newest_age_secs": newest_age,
+                        "service_keys_count": svckey_count
+                        }
+            return stats
+
+        snapshot_stats = stats_by_state([
+            ("pending", 3, 40, 15, 2),
+            ("succeeded", 3, 35, 5, 2),
+            ("failed", 3, 45, 25, 2),
+            ])
+        snapshot_stats["throttled_service_keys_count"] = 1
         expected_stats = {
-            "snapshot": {
-                "pending_events": {
-                    "count": 3,
-                    "newest_age_secs": 15,
-                    "oldest_age_secs": 40,
-                    "service_keys_count": 2
-                    },
-                "succeeded_events": {
-                    "count": 3,
-                    "newest_age_secs": 5,
-                    "oldest_age_secs": 35,
-                    "service_keys_count": 2
-                    },
-                "failed_events": {
-                    "count": 3,
-                    "newest_age_secs": 25,
-                    "oldest_age_secs": 45,
-                    "service_keys_count": 2
-                    },
-                "throttled_service_keys_count": 1
-                },
+            "snapshot": snapshot_stats,
             "aggregate": {
                 "successful_events_count": 20,
                 "failed_events_count": 2,
@@ -762,9 +761,49 @@ class PDQueueTest(unittest.TestCase):
             }
         self.assertEqual(q.get_stats(detailed_snapshot=True), expected_stats)
 
-        expected_stats["snapshot"].pop("succeeded_events")
-        expected_stats["snapshot"].pop("failed_events")
+        snapshot_stats.pop("succeeded_events")
+        snapshot_stats.pop("failed_events")
         self.assertEqual(q.get_stats(), expected_stats)
+
+        # test per-service-key stats.
+        snapshot_stats.pop("pending_events")
+        snapshot_stats["svckey1"] = stats_by_state([
+            ("pending", 1, 40, 40, 1),
+            ("succeeded", 1, 35, 35, 1),
+            ("failed", 1, 45, 45, 1),
+            ])
+        snapshot_stats["svckey2"] = stats_by_state([
+            ("pending", 0, 0, 0, 0),
+            ("succeeded", 0, 0, 0, 0),
+            ("failed", 2, 30, 25, 1),
+            ])
+        snapshot_stats["svckey3"] = stats_by_state([
+            ("pending", 2, 20, 15, 1),
+            ("succeeded", 0, 0, 0, 0),
+            ("failed", 0, 0, 0, 0),
+            ])
+        snapshot_stats["svckey4"] = stats_by_state([
+            ("pending", 0, 0, 0, 0),
+            ("succeeded", 2, 10, 5, 1),
+            ("failed", 0, 0, 0, 0),
+            ])
+        self.assertEqual(
+            q.get_stats(detailed_snapshot=True, per_service_key_snapshot=True),
+            expected_stats
+            )
+
+        # test service-key stats for a given service key.
+        snapshot_stats.pop("svckey2")
+        snapshot_stats.pop("svckey3")
+        snapshot_stats.pop("svckey4")
+        self.assertEqual(
+            q.get_stats(
+                detailed_snapshot=True,
+                per_service_key_snapshot=True,
+                service_key="svckey1"
+                ),
+            expected_stats
+            )
 
     def test_cleanup(self):
         # simulate enqueues done a while ago.

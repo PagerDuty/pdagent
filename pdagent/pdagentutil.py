@@ -89,7 +89,11 @@ def resurrect_events(queue, service_key):
 
 
 def get_stats(queue, service_key):
-    return queue.get_stats(service_key)
+    return queue.get_stats(
+        detailed_snapshot=True,
+        per_service_key_snapshot=True,
+        service_key=service_key
+        )
 
 
 def _build_event_json_str(
