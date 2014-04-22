@@ -201,6 +201,7 @@ class PDQueue(PDQueueBase):
                 try:
                     _, _, svc_key = _get_event_metadata(fname)
                 except _BadFname:
+                    logger.warn("Badly named event " + fname)
                     self._unsafe_change_event_type(fname, 'pdq_', 'err_')
                     continue
                 if svc_key not in err_svc_keys and \
@@ -288,10 +289,16 @@ class PDQueue(PDQueueBase):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err_")
         for errname in errnames:
-            # XXX: not catching _BadFname at this time
-            if not service_key or \
-                    _get_event_metadata(errname)[2] == service_key:
-                self._unsafe_change_event_type(errname, 'err_', 'pdq_')
+            try:
+                # even if we don't need to filter by service keys
+                # always parse the event file to check for _BadFname
+                _, _, svc_key = _get_event_metadata(errname)
+                if not service_key or svc_key == service_key:
+                    self._unsafe_change_event_type(errname, 'err_', 'pdq_')
+            except _BadFname:
+                # Don't resurrect badly named file
+                # TODO: log about this if logging will be available
+                pass
 
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
