@@ -333,8 +333,7 @@ class PDQueue(PDQueueBase):
             for fname in fnames:
                 try:
                     _, enqueue_time, _ = _get_event_metadata(fname)
-                except:
-                    # invalid file-name; we'll not include it in cleanup.
+                except _BadFileNameError:
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
                 else:
