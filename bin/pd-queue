@@ -34,26 +34,30 @@ def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
     subparsers = parser.add_subparsers(title="sub-commands")
+    retry_parser_desc = "set up 'dead' PagerDuty events for retry."
+    status_parser_desc = "print out status of local event queue."
 
     retry_parser = subparsers.add_parser(
         "retry",
-        help="Set up 'dead' PagerDuty events for retry."
+        description=retry_parser_desc.capitalize(),  # printed as title
+        help=retry_parser_desc  # printed in 'options' part of main cmd
         )
     retry_parser.add_argument("-k", "--service-key", dest="service_key",
-        help="Retry events in given Service API Key"
+        help="retry events in given Service API Key (not to be used with -a)"
         )
     retry_parser.add_argument("-a", "--all-keys", action="store_true",
         dest="all_keys",
-        help="Retry events in all Service API Keys"
+        help="retry events in all Service API Keys (not to be used with -k)"
         )
     retry_parser.set_defaults(func=_retry)
 
     status_parser = subparsers.add_parser(
         "status",
-        help="Print out status of local event queue."
+        description=status_parser_desc.capitalize(),  # printed as title
+        help=status_parser_desc  # printed in 'options' part of main cmd
     )
     status_parser.add_argument("-k", "--service-key", dest="service_key",
-        help="Print status of events in given Service API Key"
+        help="print status of events in given Service API Key"
         )
     status_parser.set_defaults(func=_status)
 
