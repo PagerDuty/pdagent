@@ -735,13 +735,14 @@ class PDQueueTest(unittest.TestCase):
         def stats_by_state(data):
             stats = dict()
             for d in data:
-                (stype, count, oldest_age, newest_age, svckey_count) = d
+                (service_type, count, oldest_age, newest_age,
+                    service_key_count) = d
                 if count:
-                    stats[stype + "_events"] = {
+                    stats[service_type + "_events"] = {
                         "count": count,
                         "oldest_age_secs": oldest_age,
                         "newest_age_secs": newest_age,
-                        "service_keys_count": svckey_count
+                        "service_keys_count": service_key_count
                         }
             return stats
 
