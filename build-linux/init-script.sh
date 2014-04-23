@@ -77,7 +77,7 @@ setup() {
 }
 
 start() {
-  echo -n "Starting: pdagentd"
+  echo -n "Starting: pdagent"
   setup
   is_running || {
     sudo -u pdagent $EXEC
@@ -88,7 +88,7 @@ start() {
 }
 
 stop() {
-  echo -n "Stopping: pdagentd"
+  echo -n "Stopping: pdagent"
   is_running && {
     sudo -u pdagent kill -TERM $(get_pid)
     [ $? -eq 0 ] || return $?
@@ -112,9 +112,9 @@ stop() {
 
 status() {
   if is_running; then
-    echo "pdagentd (pid $(get_pid)) is running."
+    echo "pdagent (pid $(get_pid)) is running."
   else
-    echo "pdagentd is not running."
+    echo "pdagent is not running."
   fi
 }
 
