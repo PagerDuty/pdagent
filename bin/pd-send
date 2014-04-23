@@ -50,7 +50,7 @@ def build_queue_arg_parser(description):
             help="Add given KEY=VALUE pair to the event details"
             )
     parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
-            help="operate quietly"
+            help="Operate quietly (no output)"
             )
     return parser
 
