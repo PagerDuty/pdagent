@@ -47,5 +47,4 @@ ConsumeEvent = enum(
 EVENTS_API_BASE = \
     "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
-# TODO PD heartbeat end-point.
-HEARTBEAT_URI = "https://lego01.pd-internal.com:443/agent/2014-03-14/heartbeat"
+HEARTBEAT_URI = "https://api.pagerduty.com/agent/2014-03-14/heartbeat"
