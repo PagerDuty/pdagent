@@ -362,7 +362,7 @@ class PDQueue(PDQueueBase):
             self,
             detailed_snapshot=False,  # to return success/error status too
             per_service_key_snapshot=False,
-            service_key=None    # looked at only if per-service-key-snapshot
+            service_key=None    # looked at only if per_service_key_snapshot
             ):
         """
         Returns status of events. Status consists of snapshot stats (based on
