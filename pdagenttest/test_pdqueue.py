@@ -231,8 +231,8 @@ class PDQueueTest(unittest.TestCase):
         make_bad_entry("0_extra_underscore_random.txt")
         make_bad_entry("0_no_extension")
         f_foo = eq.enqueue("svckey", "foo")
-        make_bad_entry("not_int_servicekey.txt")
-        make_bad_entry("notenough_underscores.txt")
+        make_bad_entry("notinttime_servicekey.txt")
+        make_bad_entry("notenoughunderscores.txt")
 
         q.flush(
             lambda s, i: ConsumeEvent.CONSUMED,
@@ -244,15 +244,15 @@ class PDQueueTest(unittest.TestCase):
             q._queued_files("suc"),
             [
                 "0_extra_underscore_random.txt",
-                "0_no_extension",
                 f_foo,
                 ]
             )
         self.assertEquals(
             q._queued_files("err"),
             [
-                "not_int_servicekey.txt",
-                "notenough_underscores.txt",
+                "0_no_extension",
+                "notenoughunderscores.txt",
+                "notinttime_servicekey.txt",
                 ]
             )
 
