@@ -155,7 +155,7 @@ def destroy_virtual_boxes(target, source, env):
     virts = env.get("virts")
     force = env.get("force")
     if force:
-        force = force.lower() in ['true', 'yes', 'y', '1']
+        force = force[0].lower() in ['true', 'yes', 'y', '1']
     if not virts:
         virts = _get_minimal_virt_names()
     destroy_cmd = ["vagrant", "destroy"]
