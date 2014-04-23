@@ -228,7 +228,7 @@ class PDQueue(PDQueueBase):
                     break
                 try:
                     _, svc_key = _get_event_metadata(fname)
-                except _BadFname:
+                except _BadFileNameError:
                     logger.warn("Badly named event " + fname)
                     self._unsafe_change_event_type(fname, 'pdq', 'err')
                     continue
@@ -320,12 +320,12 @@ class PDQueue(PDQueueBase):
         for errname in errnames:
             try:
                 # even if we don't need to filter by service keys
-                # always parse the event file to check for _BadFname
+                # always parse the event file to check for _BadFileNameError
                 _, svc_key = _get_event_metadata(errname)
                 if not service_key or svc_key == service_key:
                     self._unsafe_change_event_type(errname, 'err', 'pdq')
                     count += 1
-            except _BadFname:
+            except _BadFileNameError:
                 # Don't resurrect badly named file
                 # TODO: log about this if logging will be available
                 pass
@@ -339,8 +339,7 @@ class PDQueue(PDQueueBase):
             for fname in fnames:
                 try:
                     enqueue_time, _ = _get_event_metadata(fname)
-                except:
-                    # invalid file-name; we'll not include it in cleanup.
+                except _BadFileNameError:
                     logger.info(
                         "Cleanup: ignoring invalid file name %s" % fname)
                 else:
@@ -410,7 +409,7 @@ class PDQueue(PDQueueBase):
             for fname in self._queued_files(queue_file_type):
                 try:
                     metadata = _get_event_metadata(fname)
-                except _BadFname:
+                except _BadFileNameError:
                     continue
                 if per_service_key_snapshot:
                     svc_key = metadata[1]
@@ -494,18 +493,20 @@ def _link(orig_abs, new_abs):
             raise
 
 
-class _BadFname(Exception):
+class _BadFileNameError(Exception):
     pass
 
 
 def _get_event_metadata(fname):
+    if not fname.endswith(".txt"):
+        raise _BadFileNameError
+    fname = fname[:-4]
     try:
-        enqueue_time_microsec_str, service_key = \
-            fname.split('.')[0].split('_', 1)
+        enqueue_time_microsec_str, service_key = fname.split('_', 1)
         enqueue_time = int(enqueue_time_microsec_str) / (1000 * 1000)
         return enqueue_time, service_key
     except ValueError:
-        raise _BadFname
+        raise _BadFileNameError
 
 
 class _BackoffInfo(object):
