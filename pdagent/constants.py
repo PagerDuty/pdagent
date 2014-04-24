@@ -32,7 +32,7 @@ from pdagent import enum
 
 
 # Agent version.
-AGENT_VERSION = "0.9"
+AGENT_VERSION = "1.0"
 
 # PDQueue event consumption function return codes.
 ConsumeEvent = enum(
@@ -47,5 +47,5 @@ ConsumeEvent = enum(
 EVENTS_API_BASE = \
     "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
-# TODO PD heartbeat end-point.
-HEARTBEAT_URI = "https://lego01.pd-internal.com:443/agent/2014-03-14/heartbeat"
+# PD heartbeat end-point.
+HEARTBEAT_URI = "https://api.pagerduty.com/agent/2014-03-14/heartbeat"
