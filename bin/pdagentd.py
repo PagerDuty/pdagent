@@ -101,7 +101,7 @@ pidfile = os.path.join(pidfile_dir, 'pdagentd.pid')
 
 
 # Check directories
-def _ensure_writable_directories(make_missing_dir, *directories):
+def _ensure_writable_directories(make_missing_dir, directories):
     problem_directories = []
     for directory in directories:
         if make_missing_dir and not os.path.exists(directory):
@@ -116,9 +116,13 @@ def _ensure_writable_directories(make_missing_dir, *directories):
 
 
 def _check_dirs():
+    from pdagent.pdqueue import QUEUE_SUBDIRS
+    dirs_to_check = [pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir]
+    for d in QUEUE_SUBDIRS:
+        dirs_to_check.append(os.path.join(outqueue_dir, d))
     problem_directories = _ensure_writable_directories(
         agent_config.is_dev_layout(),  # create directories in development
-        pidfile_dir, log_dir, data_dir, outqueue_dir, db_dir
+        dirs_to_check
         )
     if problem_directories:
         messages = [
