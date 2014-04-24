@@ -134,7 +134,7 @@ fpm -s dir \
     -t $pkg_type \
     --name "pdagent" \
     --description "$_DESC" \
-    --version "0.9" \
+    --version "1.0" \
     --architecture all \
     --url "http://www.pagerduty.com" \
     --license 'Open Source' \
