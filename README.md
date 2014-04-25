@@ -17,10 +17,12 @@ The Agent requires Python 2.6 or 2.7. The instructions here assume that you're
 on a Mac.
 
 
-## Running
+## Developing
 
-You can run the Agent directly in the source project. Start the Agent daemon as
-follows:
+### Running in Development
+
+You can run the Agent in development without any setup. Start the Agent daemon
+as follows:
 
     ~/w/pdagent/bin$ ./pdagentd.py
 
@@ -46,7 +48,7 @@ You can stop the daemon as follows:
     ~/w/pdagent/bin$ kill `cat ../tmp/pdagentd.pid`
 
 
-## Developing
+### IDE Setup
 
 For IDE setup instructions see `pydev-setup.txt` or `idea-setup.txt`. Apart
 from the usual benefits, the IDEs provide PEP-8 warnings which we care about.
