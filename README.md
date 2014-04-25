@@ -171,9 +171,9 @@ directory.
 
 6. Prepare keys for integration testing:
 
-    ~/w/pdagent$ gpg --homedir=./gpg-general --export --armor > ./target/tmp/GPG-KEY-pagerduty
-
-    ~/w/pdagent$ gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
+        ~/w/pdagent$ mkdir ./target/tmp
+        ~/w/pdagent$ gpg --homedir=./gpg-general --export --armor > ./target/tmp/GPG-KEY-pagerduty
+        ~/w/pdagent$ gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
 
 
 7. Run the integration tests on clean VMs. (use `vagrant destroy`, edit the
