@@ -13,26 +13,26 @@ The supported events are those listed in the PagerDuty Integration API:
 The PagerDuty Agent is completely open-source which means that you can download
 the source code and customize it for your needs.
 
-
-## Developing
-
 The Agent requires Python 2.6 or 2.7. The instructions here assume that you're
 on a Mac.
 
-You can start your development copy of the Agent daemon with the command:
 
-    bin/pdagentd.py
+## Developing
 
-In development the daemon automatically creates a `tmp` directory where it
-stores its various work files. The daemon's pid is stored in the file
-`tmp/pdagentd.pid`, so you can stop the daemon with the following command:
+### Running in Development
 
-    kill `cat tmp/pdagentd.pid`
+You can run the Agent in development without any setup. Start the Agent daemon
+as follows:
+
+    ~/w/pdagent/bin$ ./pdagentd.py
+
+When run in development the daemon automatically creates a `tmp` directory
+inside the project where it stores its various work files.
 
 Similarly, you can use the `pd-send` command immediately.
 
 ```
-~/w/pdagent$ bin/pd-send -h
+~/w/pdagent/bin$ ./pd-send -h
 usage: pd-send [-h] -k SERVICE_KEY -t {trigger,acknowledge,resolve}
                [-d DESCRIPTION] [-i INCIDENT_KEY] [-f FIELDS]
 
@@ -42,6 +42,13 @@ Queue up a trigger, acknowledge, or resolve event to PagerDuty.
 
 Make sure that you have run the daemon at least once so that the `tmp`
 directory exists.
+
+You can stop the daemon as follows:
+
+    ~/w/pdagent/bin$ kill `cat ../tmp/pdagentd.pid`
+
+
+### IDE Setup
 
 For IDE setup instructions see `pydev-setup.txt` or `idea-setup.txt`. Apart
 from the usual benefits, the IDEs provide PEP-8 warnings which we care about.
