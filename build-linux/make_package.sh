@@ -56,6 +56,13 @@ echo = BUILD TYPE: $pkg_type
 # ensure we're in the build directory
 cd $(dirname "$0")
 
+_VERSION=$(grep 'AGENT_VERSION\s*=\s*".*"' ../pdagent/constants.py \
+    | cut -d \" -f2)
+if [ -z "$_VERSION" ]; then
+    echo "Could not find AGENT_VERSION in source."
+    exit 1
+fi
+
 echo = cleaning build directories
 rm -fr data target
 mkdir data target
@@ -134,7 +141,7 @@ fpm -s dir \
     -t $pkg_type \
     --name "pdagent" \
     --description "$_DESC" \
-    --version "1.0" \
+    --version "$_VERSION" \
     --architecture all \
     --url "http://www.pagerduty.com" \
     --license 'Open Source' \
