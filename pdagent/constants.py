@@ -31,9 +31,6 @@
 from pdagent import enum
 
 
-# Agent version.
-AGENT_VERSION = "1.0"
-
 # PDQueue event consumption function return codes.
 ConsumeEvent = enum(
     'CONSUMED',

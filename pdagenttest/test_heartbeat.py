@@ -32,7 +32,7 @@ import json
 import unittest
 from urllib2 import URLError, HTTPError
 
-from pdagent.constants import AGENT_VERSION
+import pdagent
 from pdagent.heartbeat import HeartbeatTask
 from pdagent.thirdparty import httpswithverify
 from pdagenttest.mockqueue import MockQueue
@@ -71,7 +71,7 @@ class HeartbeatTest(unittest.TestCase):
         hb.tick()
         expected = {
             "agent_id": AGENT_ID,
-            "agent_version": AGENT_VERSION,
+            "agent_version": pdagent.__version__,
             "system_info": SYSTEM_INFO,
             "agent_stats": hb._pd_queue.status
             }
