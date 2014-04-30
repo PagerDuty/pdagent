@@ -56,10 +56,10 @@ echo = BUILD TYPE: $pkg_type
 # ensure we're in the build directory
 cd $(dirname "$0")
 
-_VERSION=$(grep 'AGENT_VERSION\s*=\s*".*"' ../pdagent/constants.py \
+_VERSION=$(grep '__version__\s*=\s*".*"' ../pdagent/__init__.py \
     | cut -d \" -f2)
 if [ -z "$_VERSION" ]; then
-    echo "Could not find AGENT_VERSION in source."
+    echo "Could not find Agent version in source."
     exit 1
 fi
 
