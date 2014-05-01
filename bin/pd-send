@@ -33,18 +33,31 @@
 def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
-    parser.add_argument("-k", "--service-key", dest="service_key", required=True,
-            help="Service API Key")
-    parser.add_argument("-t", "--event-type", dest="event_type", required=True,
-            choices=["trigger", "acknowledge", "resolve"],
-            help="Event type")
-    parser.add_argument("-d", "--description", dest="description",
-            help="Short description of the problem"),
-    parser.add_argument("-i", "--incident-key", dest="incident_key",
-            help="Incident Key"),
-    parser.add_argument("-f", "--field", action="append", dest="fields",
-            help="Add given KEY=VALUE pair to the event details"
-            )
+    parser.add_argument(
+        "-k", "--service-key", dest="service_key", required=True,
+        help="Service API Key"
+        )
+    parser.add_argument(
+        "-t", "--event-type", dest="event_type", required=True,
+        choices=["trigger", "acknowledge", "resolve"],
+        help="Event type"
+        )
+    parser.add_argument(
+        "-d", "--description", dest="description",
+        help="Short description of the problem"
+        )
+    parser.add_argument(
+        "-i", "--incident-key", dest="incident_key",
+        help="Incident Key"
+        )
+    parser.add_argument(
+        "-f", "--field", action="append", dest="fields",
+        help="Add given KEY=VALUE pair to the event details"
+        )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", dest="quiet",
+        help="Operate quietly (no output)"
+        )
     return parser
 
 def parse_fields(fields):
@@ -76,7 +89,8 @@ def main():
         details,
         agent_config.get_agent_id(), "pd-send",
         )
-    print "Event processed. Incident Key:", incident_key
+    if not args.quiet:
+        print "Event processed. Incident Key:", incident_key
 
 
 if __name__ == "__main__":
