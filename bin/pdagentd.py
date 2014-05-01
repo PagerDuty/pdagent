@@ -147,7 +147,7 @@ pd_queue = agent_config.get_queue()
 
 
 # Import agent modules
-from pdagent.constants import AGENT_VERSION
+import pdagent
 from pdagent.thirdparty.daemon import daemonize
 from pdagent.pdthread import RepeatingTaskThread
 from pdagent.heartbeat import HeartbeatTask
@@ -244,7 +244,7 @@ def run():
     all_ok = True
     try:
         main_logger.info('PID file: %s', pidfile)
-        main_logger.info('Agent version: %s', AGENT_VERSION)
+        main_logger.info('Agent version: %s', pdagent.__version__)
 
         # Load/create agent id
         agent_id = get_or_make_agent_id()
