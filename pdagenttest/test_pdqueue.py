@@ -35,6 +35,7 @@ import unittest
 
 from pdagent.constants import ConsumeEvent
 from pdagent.pdqueue import PDQEnqueuer, PDQueue, EmptyQueueError
+from pdagent import pdqueue
 
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -103,7 +104,7 @@ class PDQueueTest(unittest.TestCase):
     def setUp(self):
         if os.path.exists(TEST_QUEUE_DIR):
             shutil.rmtree(TEST_QUEUE_DIR)
-        for t in ["pdq", "tmp", "suc", "err"]:
+        for t in pdqueue.QUEUE_SUBDIRS:
             os.makedirs(os.path.join(TEST_QUEUE_DIR, t))
         if os.path.exists(TEST_DB_DIR):
             shutil.rmtree(TEST_DB_DIR)

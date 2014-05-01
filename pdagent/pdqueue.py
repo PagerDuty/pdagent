@@ -59,6 +59,9 @@ from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
 logger = logging.getLogger(__name__)
 
 
+QUEUE_SUBDIRS = ["pdq", "tmp", "suc", "err"]
+
+
 class EmptyQueueError(Exception):
     pass
 
@@ -157,7 +160,7 @@ class PDQueue(PDQueueBase):
             ):
         PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
 
-        for ftype in ["pdq", "tmp", "suc", "err"]:
+        for ftype in QUEUE_SUBDIRS:
             d = os.path.join(self.queue_dir, ftype)
             ensure_readable_directory(d)
             ensure_writable_directory(d)
