@@ -42,10 +42,12 @@ def build_queue_arg_parser(description):
         description=retry_parser_desc.capitalize(),  # printed as title
         help=retry_parser_desc  # printed in 'options' part of main cmd
         )
-    retry_parser.add_argument("-k", "--service-key", dest="service_key",
+    retry_parser.add_argument(
+        "-k", "--service-key", dest="service_key",
         help="retry events in given Service API Key (not to be used with -a)"
         )
-    retry_parser.add_argument("-a", "--all-keys", action="store_true",
+    retry_parser.add_argument(
+        "-a", "--all-keys", action="store_true",
         dest="all_keys",
         help="retry events in all Service API Keys (not to be used with -k)"
         )
@@ -56,7 +58,8 @@ def build_queue_arg_parser(description):
         description=status_parser_desc.capitalize(),  # printed as title
         help=status_parser_desc  # printed in 'options' part of main cmd
     )
-    status_parser.add_argument("-k", "--service-key", dest="service_key",
+    status_parser.add_argument(
+        "-k", "--service-key", dest="service_key",
         help="print status of events in given Service API Key"
         )
     status_parser.set_defaults(func=_status)
