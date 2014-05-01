@@ -93,6 +93,7 @@ def _status(agent_config, _, args):
     # key1                                        1         0         0
     # key2                                        1         0         1
 
+    from itertools import izip_longest
     from pdagent.pdagentutil import get_stats
 
     status = get_stats(
@@ -105,9 +106,16 @@ def _status(agent_config, _, args):
         print "Nothing to report."
     else:
         # left-aligned service key, right-aligned counts.
-        fmt = "%-35s%10s%10s%10s"
+        flags = ["-", "", "", ""]
+        widths = [35, 10, 10, 10]
+        types = ["s", "s", "s", "s"]
+        column_fmts = [
+            "%" + "".join(e)
+            for e in izip_longest(flags, map(str, widths), types)
+            ]
+        fmt = "".join(column_fmts)
         print fmt % ("Service Key", "Pending", "Success", "In Error")
-        print "=" * (35 + 10 + 10 + 10)  # as wide as status table.
+        print "=" * sum(widths)
         empty_dict = dict()
         for (svc_key, state) in sorted(snapshot.iteritems()):
             print fmt % (
