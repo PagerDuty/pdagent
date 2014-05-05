@@ -30,6 +30,42 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+def main():
+    from pdagent.config import load_agent_config
+
+    description = "Enqueue an event from Nagios to PagerDuty."
+    parser = build_queue_arg_parser(description)
+    args = parser.parse_args()
+    details = parse_fields(args.fields)
+
+    event_type = {
+        "PROBLEM": "trigger",
+        "ACKNOWLEDGEMENT": "acknowledge",
+        "RECOVERY": "resolve",
+        "NOP": "nop"
+    }[args.event_type]
+
+    from pdagent.pdagentutil import queue_event
+
+    event_description = "TODO: figure out event description"
+
+    if args.incident_key is None:
+        incident_key = calculated_incident_key(details)
+        if incident_key is None:
+            parser.error("TODO: figure out which fields are req'd for host/service incident keys" % args.event_type)
+    else:
+        incident_key = args.incident_key
+
+    agent_config = load_agent_config()
+
+    incident_key = queue_event(
+        agent_config.get_enqueuer(),
+        event_type, args.service_key, incident_key, event_description,
+        details,
+        agent_config.get_agent_id(), "pd-send",
+        )
+    print "Event processed. Incident Key:", incident_key
+
 def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
     parser = ArgumentParser(description=description)
@@ -73,42 +109,6 @@ def parse_fields(fields):
 
 def calculated_incident_key(details):
     return "TODO: figure out incident key"
-
-def main():
-    from pdagent.config import load_agent_config
-
-    description = "Enqueue an event from Nagios to PagerDuty."
-    parser = build_queue_arg_parser(description)
-    args = parser.parse_args()
-    details = parse_fields(args.fields)
-
-    event_type = {
-        "PROBLEM": "trigger",
-        "ACKNOWLEDGEMENT": "acknowledge",
-        "RECOVERY": "resolve",
-        "NOP": "nop"
-    }[args.event_type]
-
-    from pdagent.pdagentutil import queue_event
-
-    event_description = "TODO: figure out event description"
-
-    if args.incident_key is None:
-        incident_key = calculated_incident_key(details)
-        if incident_key is None:
-            parser.error("TODO: figure out which fields are req'd for host/service incident keys" % args.event_type)
-    else:
-        incident_key = args.incident_key
-
-    agent_config = load_agent_config()
-
-    incident_key = queue_event(
-        agent_config.get_enqueuer(),
-        event_type, args.service_key, incident_key, event_description,
-        details,
-        agent_config.get_agent_id(), "pd-send",
-        )
-    print "Event processed. Incident Key:", incident_key
 
 if __name__ == "__main__":
     try:
