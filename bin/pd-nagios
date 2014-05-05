@@ -50,9 +50,7 @@ def main():
     event_description = "TODO: figure out event description"
 
     if args.incident_key is None:
-        incident_key = calculated_incident_key(details)
-        if incident_key is None:
-            parser.error("TODO: figure out which fields are req'd for host/service incident keys" % args.event_type)
+        incident_key = calculated_incident_key(args, details)
     else:
         incident_key = args.incident_key
 
@@ -107,8 +105,18 @@ def parse_fields(fields):
         return {}
     return dict(f.split("=", 2) for f in fields)
 
-def calculated_incident_key(details):
-    return "TODO: figure out incident key"
+def calculated_incident_key(args, details):
+    notification_type = args.notification_type
+
+    if notification_type == "service":
+        return "event_source=service;host_name={0};service_desc={1}".format(
+            details["HOSTNAME"],
+            details["SERVICEDESC"]
+        )
+    elif notification_type == "host":
+        return "event_source=host;host_name={0}".format(details["HOSTNAME"])
+    else:
+        return None
 
 if __name__ == "__main__":
     try:
