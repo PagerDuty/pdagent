@@ -319,6 +319,7 @@ class PDQueue(PDQueueBase):
     def resurrect(self, service_key=None):
         # move dead events of given service key back to queue.
         errnames = self._queued_files("err")
+        count = 0
         for errname in errnames:
             try:
                 # even if we don't need to filter by service keys
@@ -326,10 +327,12 @@ class PDQueue(PDQueueBase):
                 _, svc_key = _get_event_metadata(errname)
                 if not service_key or svc_key == service_key:
                     self._unsafe_change_event_type(errname, 'err', 'pdq')
+                    count += 1
             except _BadFileNameError:
                 # Don't resurrect badly named file
                 # TODO: log about this if logging will be available
                 pass
+        return count
 
     def cleanup(self, delete_before_sec):
         delete_before_time = int(self.time.time()) - delete_before_sec
@@ -360,11 +363,16 @@ class PDQueue(PDQueueBase):
 
     def get_stats(
             self,
-            detailed_snapshot=False
+            detailed_snapshot=False,  # to return success/error status too
+            per_service_key_snapshot=False,
+            service_key=None    # looked at only if per_service_key_snapshot
             ):
         """
         Returns status of events. Status consists of snapshot stats (based on
         current queue state), and historical stats (based on persisted state.)
+        Some states might be missing if there are no events in those states,
+        e.g. if there are no erroneous events, there might be no "failed_events"
+        entry.
 
         Sample data returned:
         {
@@ -401,23 +409,40 @@ class PDQueue(PDQueueBase):
         snapshot_stats = dict()
 
         def add_stat(queue_file_type, stat_name):
-            if stat_name not in snapshot_stats:
-                snapshot_stats[stat_name] = SnapshotStats(now)
             for fname in self._queued_files(queue_file_type):
                 try:
-                    snapshot_stats[stat_name].add_event(
-                        _get_event_metadata(fname)
-                        )
+                    metadata = _get_event_metadata(fname)
                 except _BadFileNameError:
-                    pass
+                    continue
+                if per_service_key_snapshot:
+                    svc_key = metadata[1]
+                    if service_key and (svc_key != service_key):
+                        # stats required only for given service key.
+                        continue
+                    if not svc_key in snapshot_stats:
+                        # we encountered a new service key.
+                        snapshot_stats[svc_key] = dict()
+                    stats = snapshot_stats[svc_key]
+                else:
+                    stats = snapshot_stats
+                if stat_name not in stats:
+                    stats[stat_name] = SnapshotStats(now)
+                stats[stat_name].add_event(metadata)
 
         add_stat("pdq", "pending_events")
         if detailed_snapshot:
             add_stat("suc", "succeeded_events")
             add_stat("err", "failed_events")
 
-        for stat_name in snapshot_stats:
-            snapshot_stats[stat_name] = snapshot_stats[stat_name].to_dict()
+        if per_service_key_snapshot:
+            for svc_key in snapshot_stats:
+                svc_key_stats = snapshot_stats[svc_key]
+                for stat_name in svc_key_stats:
+                    svc_key_stats[stat_name] = \
+                        svc_key_stats[stat_name].to_dict()
+        else:
+            for stat_name in snapshot_stats:
+                snapshot_stats[stat_name] = snapshot_stats[stat_name].to_dict()
 
         # if throttle info is required, compute from pre-loaded info.
         # (we don't want to reload info if queue processing is underway.)

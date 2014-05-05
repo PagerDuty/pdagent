@@ -1,3 +1,7 @@
+
+> This is the source code and project. For the PagerDuty Agent Install Guide,
+> see http://www.pagerduty.com/docs/guides/agent-install-guide/
+
 # Introduction
 
 The PagerDuty Agent is a program that lets you easily integrate your monitoring

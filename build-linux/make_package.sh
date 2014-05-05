@@ -56,13 +56,20 @@ echo = BUILD TYPE: $pkg_type
 # ensure we're in the build directory
 cd $(dirname "$0")
 
+_VERSION=$(grep '__version__\s*=\s*".*"' ../pdagent/__init__.py \
+    | cut -d \" -f2)
+if [ -z "$_VERSION" ]; then
+    echo "Could not find Agent version in source."
+    exit 1
+fi
+
 echo = cleaning build directories
 rm -fr data target
 mkdir data target
 
 echo = /usr/bin/...
 mkdir -p data/usr/bin
-cp ../bin/pd-send data/usr/bin
+cp ../bin/pd-* data/usr/bin
 
 echo = /usr/share/pdagent/bin
 mkdir -p data/usr/share/pdagent/bin
@@ -134,7 +141,7 @@ fpm -s dir \
     -t $pkg_type \
     --name "pdagent" \
     --description "$_DESC" \
-    --version "1.0" \
+    --version "$_VERSION" \
     --architecture all \
     --url "http://www.pagerduty.com" \
     --license 'Open Source' \

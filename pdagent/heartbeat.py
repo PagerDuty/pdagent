@@ -33,7 +33,8 @@ import logging
 import time
 from urllib2 import Request, URLError, HTTPError
 
-from pdagent.constants import AGENT_VERSION, HEARTBEAT_URI
+import pdagent
+from pdagent.constants import HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
 from pdagent.thirdparty import httpswithverify
 from httplib import HTTPException
@@ -119,7 +120,7 @@ class HeartbeatTask(RepeatingTask):
     def _make_heartbeat_data(self):
         hb_data = {
             "agent_id": self._agent_id,
-            "agent_version": AGENT_VERSION,
+            "agent_version": pdagent.__version__,
             "agent_stats": self._pd_queue.get_stats()
             }
         if self._system_info:

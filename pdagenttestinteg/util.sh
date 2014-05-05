@@ -28,6 +28,7 @@
 #
 
 AGENT_USER=pdagent
+BIN_PD_QUEUE=pd-queue
 BIN_PD_SEND=pd-send
 CONFIG_FILE=/etc/pdagent.conf
 PID_FILE=/var/run/pdagent/pdagentd.pid
