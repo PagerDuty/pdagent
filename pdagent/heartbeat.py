@@ -87,8 +87,11 @@ class HeartbeatTask(RepeatingTask):
                         logger.error(
                             "HTTPError sending heartbeat (will retry): %s" % e
                             )
+                        e.close()
                     else:
-                        raise
+                        error = HTTPError(e.url, e.code, e.msg, e.hdrs, None)
+                        e.close()
+                        raise error
                 except (URLError, HTTPException) as e:
                     # assumes 2.6 where socket.error is a sub-class of IOError
                     # FIXME: not catching IOError so what does the above mean?
@@ -134,7 +137,9 @@ class HeartbeatTask(RepeatingTask):
         heartbeat_json_str = json.dumps(heartbeat_data)
         request.add_data(heartbeat_json_str)
         response = self._urllib2.urlopen(request)
-        return response.read()
+        response_str = response.read()
+        response.close()
+        return response_str
 
     def _process_response(self, response_str):
         try:

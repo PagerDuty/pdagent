@@ -90,10 +90,12 @@ class SendEventTask(RepeatingTask):
             response = self._urllib2.urlopen(request)
             status_code = response.getcode()
             result_str = response.read()
+            response.close()
         except HTTPError as e:
             # the http error is structured similar to an http response.
             status_code = e.getcode()
             result_str = e.read()
+            e.close()
         except CertificateError as e:
             logger.error(
                 "Certificate validation error while sending event: %s" % e
