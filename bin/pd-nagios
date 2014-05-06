@@ -49,6 +49,18 @@ def main():
 
     event_description = "TODO: figure out event description"
 
+    # ensure that required fields are provided for the notification_type
+    # these fields are displayed on Nagios services in PD as well as used
+    # for determining the incident key
+
+    if not required_fields(args.notification_type).issubset(details.keys()):
+        error_message = "Missing fields for type '{0}'.  {1} required".format(
+            args.notification_type,
+            ", ".join(required_fields(args.notification_type))
+            )
+        parser.error(error_message)
+
+    # allow the user to provide an incident key, or calculate one
     if args.incident_key is None:
         incident_key = calculated_incident_key(args, details)
     else:
@@ -99,6 +111,12 @@ def build_queue_arg_parser(description):
         help="Nagios notification type (host or service)",
         choices=["service", "host"])
     return parser
+
+def required_fields(notification_type):
+    return {
+        "host": set(["HOSTNAME","HOSTSTATE"]),
+        "service": set(["HOSTNAME", "SERVICEDESC","SERVICESTATE"])
+    }[notification_type]
 
 def parse_fields(fields):
     if fields is None:
