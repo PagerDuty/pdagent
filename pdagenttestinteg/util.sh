@@ -30,6 +30,7 @@
 AGENT_USER=pdagent
 BIN_PD_QUEUE=pd-queue
 BIN_PD_SEND=pd-send
+BIN_PD_NAGIOS=pd-nagios
 CONFIG_FILE=/etc/pdagent.conf
 PID_FILE=/var/run/pdagent/pdagentd.pid
 LOG_FILE=/var/log/pdagent/pdagentd.log
