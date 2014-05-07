@@ -51,7 +51,7 @@ class NagiosEvent:
             self._event_description(),
             self.__details,
             agent_config.get_agent_id(),
-            "pd-send"
+            "pd-nagios"
         )
 
     def _event_description(self):
