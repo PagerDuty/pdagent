@@ -30,51 +30,86 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-def main():
-    from pdagent.config import load_agent_config
+class NagiosEvent:
+    def __init__(self, service_key, event_type, notification_type, details, incident_key=None):
+        self.__service_key = service_key
+        self.__event_type = event_type
+        self.__notification_type = notification_type
+        self.__details = details
+        self.__incident_key = incident_key
 
+    def enqueue(self):
+        from pdagent.config import load_agent_config
+        from pdagent.pdagentutil import queue_event
+        agent_config = load_agent_config()
+        self._check_required_fields()
+        return queue_event(
+            agent_config.get_enqueuer(),
+            self._pagerduty_event_type(),
+            self.__service_key,
+            self._incident_key(),
+            self._event_description(),
+            self.__details,
+            agent_config.get_agent_id(),
+            "pd-send"
+        )
+
+    def _event_description(self):
+        return "TODO: figure out description"
+
+    def _incident_key(self):
+        if self.__incident_key is None:
+            if self.__notification_type == "service":
+                return "event_source=service;host_name={0};service_desc={1}".format(
+                    self.__details["HOSTNAME"],
+                    self.__details["SERVICEDESC"]
+                )
+            elif self.__notification_type == "host":
+                return "event_source=host;host_name={0}".format(self.__details["HOSTNAME"])
+            else:
+                raise ValueError("notification_type must be one of 'service' or 'host'")
+        else:
+            return self.__incident_key
+
+    def _check_required_fields(self):
+        if not self._required_fields().issubset(self.__details.keys()):
+            msg = "Missing fields for type '{0}'.  {1} required".format(
+                self.__notification_type,
+                ", ".join(self._required_fields()))
+            raise ValueError(msg)
+
+    def _required_fields(self):
+        return {
+            "host": set(["HOSTNAME","HOSTSTATE"]),
+            "service": set(["HOSTNAME", "SERVICEDESC","SERVICESTATE"])
+        }[self.__notification_type]
+
+    def _pagerduty_event_type(self):
+        return {
+            "PROBLEM": "trigger",
+            "ACKNOWLEDGEMENT": "acknowledge",
+            "RECOVERY": "resolve",
+            "NOP": "nop"
+        }[self.__event_type]
+
+def main():
     description = "Enqueue an event from Nagios to PagerDuty."
     parser = build_queue_arg_parser(description)
     args = parser.parse_args()
     details = parse_fields(args.fields)
 
-    event_type = {
-        "PROBLEM": "trigger",
-        "ACKNOWLEDGEMENT": "acknowledge",
-        "RECOVERY": "resolve",
-        "NOP": "nop"
-    }[args.event_type]
-
-    from pdagent.pdagentutil import queue_event
-
-    event_description = "TODO: figure out event description"
-
-    # ensure that required fields are provided for the notification_type
-    # these fields are displayed on Nagios services in PD as well as used
-    # for determining the incident key
-
-    if not required_fields(args.notification_type).issubset(details.keys()):
-        error_message = "Missing fields for type '{0}'.  {1} required".format(
-            args.notification_type,
-            ", ".join(required_fields(args.notification_type))
-            )
-        parser.error(error_message)
-
-    # allow the user to provide an incident key, or calculate one
-    if args.incident_key is None:
-        incident_key = calculated_incident_key(args, details)
-    else:
-        incident_key = args.incident_key
-
-    agent_config = load_agent_config()
-
-    incident_key = queue_event(
-        agent_config.get_enqueuer(),
-        event_type, args.service_key, incident_key, event_description,
+    event = NagiosEvent(
+        args.service_key,
+        args.event_type,
+        args.notification_type,
         details,
-        agent_config.get_agent_id(), "pd-send",
-        )
-    print "Event processed. Incident Key:", incident_key
+        args.incident_key)
+
+    try:
+        incident_key = event.enqueue()
+        print "Event processed. Incident Key:", incident_key
+    except ValueError as e:
+        parser.error(e.message)
 
 def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
@@ -112,29 +147,10 @@ def build_queue_arg_parser(description):
         choices=["service", "host"])
     return parser
 
-def required_fields(notification_type):
-    return {
-        "host": set(["HOSTNAME","HOSTSTATE"]),
-        "service": set(["HOSTNAME", "SERVICEDESC","SERVICESTATE"])
-    }[notification_type]
-
 def parse_fields(fields):
     if fields is None:
         return {}
     return dict(f.split("=", 2) for f in fields)
-
-def calculated_incident_key(args, details):
-    notification_type = args.notification_type
-
-    if notification_type == "service":
-        return "event_source=service;host_name={0};service_desc={1}".format(
-            details["HOSTNAME"],
-            details["SERVICEDESC"]
-        )
-    elif notification_type == "host":
-        return "event_source=host;host_name={0}".format(details["HOSTNAME"])
-    else:
-        return None
 
 if __name__ == "__main__":
     try:
