@@ -94,7 +94,7 @@ test_missing_fields() {
     -f SERVICESTATE=critical
   test $? -ne 0 || exit 1
 
-  # required fieldds for 'hosts' = HOSTNAME, HOSTSTATE
+  # required fields for 'hosts' = HOSTNAME, HOSTSTATE
 
   $BIN_PD_NAGIOS -k testkey -t PROBLEM -n host -f HOSTNAME=host.test.local
   test $? -ne 0 || exit 1
@@ -105,8 +105,30 @@ test_missing_fields() {
   set -e
 }
 
-# test_incident_key() {
-# }
+test_incident_key() {
+  # stop the agent, since we don't really want these things to send
+  test -z "$(agent_pid)" || stop_agent
+
+  # service-type
+  result=`$BIN_PD_NAGIOS -k $SVC_KEY -t PROBLEM -n service -f HOSTNAME=service.test.local \
+    -f SERVICEDESC="test service" -f SERVICESTATE=critical`
+  expected="event_source=service;host_name=service.test.local;service_desc=test service"
+  test `echo $result | grep -c "$expected"` -eq 1
+
+  # host-type
+  result=`$BIN_PD_NAGIOS -k $SVC_KEY -t PROBLEM -n host -f HOSTNAME=host.test.local \
+    -f HOSTSTATE=critical`
+  expected="event_source=host;host_name=host.test.local"
+  test `echo $result | grep -c "$expected"` -eq 1
+
+  # explicit incident key
+  result=`$BIN_PD_NAGIOS -k $SVC_KEY -t PROBLEM -n host -f HOSTNAME=host.test.local \
+    -f HOSTSTATE=critical -i 1123581321`
+  expected="1123581321"
+  test `echo $result | grep -c "$expected"` -eq 1
+
+  start_agent
+}
 
 # test_bad_notification_type() {
 # }
@@ -114,5 +136,6 @@ test_missing_fields() {
 # test_bad_event_type() {
 # }
 
+test_incident_key
 test_good_events
 test_missing_fields
