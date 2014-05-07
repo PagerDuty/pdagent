@@ -55,7 +55,17 @@ class NagiosEvent:
         )
 
     def _event_description(self):
-        return "TODO: figure out description"
+        if self.__notification_type == "service":
+            return "SERVICEDESC={0}; SERVICESTATE={1}; HOSTNAME={2}".format(
+                self.__details['SERVICEDESC'],
+                self.__details['SERVICESTATE'],
+                self.__details['HOSTNAME']
+                )
+        elif self.__notification_type == "host":
+            return "HOSTNAME={0}; HOSTSTATE={1}".format(
+                self.__details['HOSTNAME'],
+                self.__details['HOSTSTATE']
+                )
 
     def _incident_key(self):
         if self.__incident_key is None:
