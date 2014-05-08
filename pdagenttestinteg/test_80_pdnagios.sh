@@ -130,12 +130,24 @@ test_incident_key() {
   start_agent
 }
 
-# test_bad_notification_type() {
-# }
+test_bad_notification_type() {
+  set +e
+  $BIN_PD_NAGIOS -k testkey -t PROBLEM -n nonsense -f HOSTNAME=host.test.local \ 
+    -f HOSTSTATE=critical -f SERVICESTATE=critical -f SERVICEDESC=test
+  test $? -ne 0 || exit 1
+  set -e
+}
 
-# test_bad_event_type() {
-# }
+test_bad_event_type() {
+  set +e
+  $BIN_PD_NAGIOS -k $SVC_KEY -t nonsense -n host -f HOSTNAME=host.test.local \
+    -f HOSTSTATE=critical
+  test $? -ne 0 || exit 1
+  set -e
+}
 
+test_bad_event_type
+test_bad_notification_type
 test_incident_key
 test_good_events
 test_missing_fields
