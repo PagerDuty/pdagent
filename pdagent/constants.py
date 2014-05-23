@@ -40,6 +40,9 @@ ConsumeEvent = enum(
     'BACKOFF_SVCKEY_NOT_CONSUMED',
 )
 
+# PDEnqueue warnings.
+EnqueueWarnings = enum('UMASK_TOO_RESTRICTIVE')
+
 # PD event integration API.
 EVENTS_API_BASE = \
     "https://events.pagerduty.com/generic/2010-04-15/create_event.json"

@@ -80,8 +80,8 @@ def queue_event(
         event_type, service_key, incident_key, description, details,
         agent_context
         )
-    enqueuer.enqueue(service_key, event)
-    return incident_key
+    _, problems = enqueuer.enqueue(service_key, event)
+    return incident_key, problems
 
 
 def resurrect_events(queue, service_key):
