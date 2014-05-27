@@ -39,3 +39,6 @@ class MockResponse:
     def read(self):
         return self.data
 
+    def close(self):
+        pass
+
