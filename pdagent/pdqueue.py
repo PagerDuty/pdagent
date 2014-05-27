@@ -51,7 +51,7 @@ import errno
 import logging
 import os
 
-from constants import ConsumeEvent
+from constants import ConsumeEvent, EnqueueWarnings
 from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
     utcnow_isoformat
 
@@ -84,10 +84,12 @@ class PDQEnqueuer(PDQueueBase):
             queue_dir,
             lock_class,
             time_calc,
-            enqueue_file_mode
+            enqueue_file_mode,
+            default_umask
             ):
         PDQueueBase.__init__(self, queue_dir, lock_class, time_calc)
         self.enqueue_file_mode = enqueue_file_mode
+        self.default_umask = default_umask
 
         # Enqueue needs only write access to the 'tmp' and 'pdq' directories
         ensure_writable_directory(os.path.join(self.queue_dir, "tmp"))
@@ -95,7 +97,7 @@ class PDQEnqueuer(PDQueueBase):
 
     def enqueue(self, service_key, s):
         # write to an exclusive temp file
-        _, tmp_fname_abs, tmp_fd = self._open_creat_excl_with_retry(
+        _, tmp_fname_abs, tmp_fd, problems = self._open_creat_excl_with_retry(
             "tmp",
             "%%d_%s.txt" % service_key
             )
@@ -109,24 +111,34 @@ class PDQEnqueuer(PDQueueBase):
             )
         # unlink the temp file
         os.unlink(tmp_fname_abs)
-        return pdq_fname
+        return pdq_fname, problems
 
     def _open_creat_excl_with_retry(self, ftype, fname_fmt):
-        n = 0
-        t_microsecs = int(self.time.time() * 1e6)
-        while True:
-            fname = fname_fmt % (t_microsecs + n)
-            fname_abs = self._abspath(ftype, fname)
-            fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
-            if fd is None:
-                n += 1
-                if n >= 100:
-                    raise Exception(
-                        "Too many retries! (Last attempted name: %s)"
-                        % fname_abs
-                        )
-            else:
-                return fname, fname_abs, fd
+        problems = []
+        # we're changing the umask globally here, because this is not supposed
+        # to be multi-threaded, and will not cause problems elsewhere.
+        orig_umask = os.umask(self.default_umask)
+        if self.enqueue_file_mode & orig_umask > 0:
+            # current user's umask is very restrictive.
+            problems.append(EnqueueWarnings.UMASK_TOO_RESTRICTIVE)
+        try:
+            n = 0
+            t_microsecs = int(self.time.time() * 1e6)
+            while True:
+                fname = fname_fmt % (t_microsecs + n)
+                fname_abs = self._abspath(ftype, fname)
+                fd = _open_creat_excl(fname_abs, self.enqueue_file_mode)
+                if fd is None:
+                    n += 1
+                    if n >= 100:
+                        raise Exception(
+                            "Too many retries! (Last attempted name: %s)"
+                            % fname_abs
+                            )
+                else:
+                    return fname, fname_abs, fd, problems
+        finally:
+            os.umask(orig_umask)
 
     def _link_with_retry(self, ftype, fname_fmt, orig_abs):
         n = 0

@@ -68,6 +68,7 @@ def parse_fields(fields):
 def main():
     from pdagent.pdagentutil import queue_event
     from pdagent.config import load_agent_config
+    from pdagent.constants import EnqueueWarnings
 
     description = "Queue up a trigger, acknowledge, or resolve event to PagerDuty."
     parser = build_queue_arg_parser(description)
@@ -83,13 +84,24 @@ def main():
 
     agent_config = load_agent_config()
 
-    incident_key = queue_event(
-        agent_config.get_enqueuer(),
+    enqueuer = agent_config.get_enqueuer()
+    incident_key, problems = queue_event(
+        enqueuer,
         args.event_type, args.service_key, args.incident_key, args.description,
         details,
         agent_config.get_agent_id(), "pd-send",
         )
     if not args.quiet:
+        for problem in problems:
+            if problem == EnqueueWarnings.UMASK_TOO_RESTRICTIVE:
+                print(
+                    "WARNING: Current umask too restrictive. " +
+                    "Using default umask (%03o)." % enqueuer.default_umask
+                    )
+                print(
+                    "(For umask requirements, please refer: %s)" %
+                    "https://www.pagerduty.com/docs/guides/agent-install-guide/"
+                    )
         print "Event processed. Incident Key:", incident_key
 
 

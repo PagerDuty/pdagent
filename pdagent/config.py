@@ -40,6 +40,7 @@ from pdagent.thirdparty.filelock import FileLock
 
 
 _ENQUEUE_FILE_MODE = 0644  # rw-r--r--
+_ENQUEUE_DEFAULT_UMASK = 0022  # default umask for world-readability of files.
 
 
 class AgentConfig:
@@ -85,7 +86,8 @@ class AgentConfig:
             lock_class=FileLock,
             queue_dir=self.default_dirs["outqueue_dir"],
             time_calc=time,
-            enqueue_file_mode=_ENQUEUE_FILE_MODE
+            enqueue_file_mode=_ENQUEUE_FILE_MODE,
+            default_umask=_ENQUEUE_DEFAULT_UMASK
             )
 
     def get_queue(self):
@@ -93,7 +95,8 @@ class AgentConfig:
         from pdagent.jsonstore import JsonStore
         backoff_db = JsonStore("backoff", self.default_dirs["db_dir"])
         backoff_interval = self.main_config["backoff_interval_secs"]
-        retry_limit_for_possible_errors = self.main_config["retry_limit_for_possible_errors"]
+        retry_limit_for_possible_errors = \
+            self.main_config["retry_limit_for_possible_errors"]
         counter_db = JsonStore("aggregates", self.default_dirs["db_dir"])
         return PDQueue(
             lock_class=FileLock,
