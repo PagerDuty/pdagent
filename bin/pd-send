@@ -63,7 +63,7 @@ def build_queue_arg_parser(description):
 def parse_fields(fields):
     if fields is None:
         return {}
-    return dict(f.split("=", 2) for f in fields)
+    return dict(f.split("=", 1) for f in fields)
 
 def main():
     from pdagent.pdagentutil import queue_event
