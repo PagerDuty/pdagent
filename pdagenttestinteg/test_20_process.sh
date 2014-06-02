@@ -50,12 +50,18 @@ sudo sed -i "s#^\#send_interval_secs.*#send_interval_secs=$SEND_INTERVAL_SECS#" 
 
 # agent must flush out queue when it starts up.
 test_startup() {
-  i_key="test$$_1"
-  $BIN_PD_SEND -k $SVC_KEY -t trigger -i $i_key -d "Test incident 1"
+  i_key="test1"
+  $BIN_PD_SEND -k $SVC_KEY -t trigger -i $i_key -d "Test incident 1" -f key1=value1 -f key2=subkey=subvalue
 
   test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
-  QUEUED_FILE=$(sudo find $OUTQUEUE_DIR -type f )
-  test $(sudo stat -c %a $QUEUED_FILE) = "644"
+  queued_file=$(sudo find $OUTQUEUE_DIR -type f )
+  test $(sudo stat -c %a $queued_file) = "644"
+  tmp_file=/tmp/$(basename $queued_file)
+  sudo sed -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g ;
+    s/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g ;
+    s/"service_key":"'$SVC_KEY'"/"service_key":"SOME_SERVICE_KEY"/g' \
+    $queued_file >$tmp_file
+  sudo diff $(dirname $0)/test_20_process.pdq1.txt $tmp_file
 
   $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i $i_key -f key=value -f foo=bar
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"
