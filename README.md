@@ -191,6 +191,12 @@ directory.
 service key in `util.sh`, and run `scons test-integration`)
 
 
+
 8. Sync the packages repo back up to S3:
 
         scons sync-to-remote-repo repo-root=$S3_BUCKET
+
+
+9. Optionally, tag your release in git:
+
+        git tag v1.0
