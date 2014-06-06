@@ -199,4 +199,5 @@ service key in `util.sh`, and run `scons test-integration`)
 
 9. Optionally, tag your release in git:
 
-        git tag v1.0
+        git tag vX.Y
+        git push origin --tags
