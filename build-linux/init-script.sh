@@ -80,7 +80,7 @@ start() {
   echo -n "Starting: pdagent"
   setup
   is_running || {
-    su pdagent $EXEC
+    su -s /bin/bash -c "$EXEC" pdagent
     [ $? -eq 0 ] || return $?
   }
   echo "."
