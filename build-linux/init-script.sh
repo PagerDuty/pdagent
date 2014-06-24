@@ -65,11 +65,11 @@ is_running() {
 
 setup() {
   [ -d $PID_DIR ] || {
-    sudo mkdir $PID_DIR || {
+    mkdir $PID_DIR || {
       echo "Error creating pid directory $PID_DIR." >&2
       exit 2
     }
-    sudo chown -R pdagent:pdagent $PID_DIR || {
+    chown -R pdagent:pdagent $PID_DIR || {
       echo "Error changing ownership of pid directory $PID_DIR." >&2
       exit 2
     }
@@ -80,7 +80,7 @@ start() {
   echo -n "Starting: pdagent"
   setup
   is_running || {
-    sudo -u pdagent $EXEC
+    su pdagent $EXEC
     [ $? -eq 0 ] || return $?
   }
   echo "."
@@ -90,7 +90,7 @@ start() {
 stop() {
   echo -n "Stopping: pdagent"
   is_running && {
-    sudo -u pdagent kill -TERM $(get_pid)
+    kill -TERM $(get_pid)
     [ $? -eq 0 ] || return $?
     c=15  # wait up to 15sec for process to stop running.
     while [ $c -gt 0 ]; do
