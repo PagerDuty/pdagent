@@ -5,7 +5,7 @@ This project includes files that have a different license than the one below.
 See each individual file for the license for that file.
 
 Specifically, the folder `pdagent/thirdparty/` contains third-party code and
-the folder `pdagent/root_certs/` contains files derived from third-party code.
+the file `pdagent/root_certs/ca_certs.pem` is derived from third-party code.
 
 All files authored by PagerDuty, Inc. and any files in this project that do not
 mention a license are licensed under the terms below.
