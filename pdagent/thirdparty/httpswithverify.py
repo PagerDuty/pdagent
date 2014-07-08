@@ -1,7 +1,15 @@
 #
-# Verified HTTPS connection - based on Python's httplib & urllib2.
+# Verified HTTPS connection.
+#
+# Based on Python 2.7's httplib & urllib2.
 #
 # Source: http://www.python.org/
+#
+# Modifications by PagerDuty:
+#  - VerifyingHTTPSConnection wraps httplib.HTTPSConnection adding
+#       validation of server SSL cert using given CA certs.
+#  - VerifyingHTTPSHandler uses VerifyingHTTPSConnection
+#  - urlopen that uses VerifyingHTTPSHandler
 #
 # PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
 # --------------------------------------------
