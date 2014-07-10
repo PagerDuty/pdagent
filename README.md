@@ -139,15 +139,25 @@ you host your repository.
 
 #### Release build, test & upload:
 
-1. Copy the release GPG signing keys to the `pdagent` project directory so that
+Before you start: did you remember to commit the new Agent version?
+
+1. Ensure your `pdagent` checkout is clean. Either start with a fresh git clone
+or:
+    - Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
+destroy-virt`
+    - Use `git clean -dxf` to remove all ignored files
+    - Use `git reset`/`git checkout`/etc to ensure no local changes
+
+
+2. Copy the release GPG signing keys to the `pdagent` project directory so that
 the VMs can access it. (via `/vagrant/...`)
 
-2. Sync the current contents of the packages repo down from S3:
+3. Sync the current contents of the packages repo down from S3:
 
         scons sync-from-remote-repo repo-root=$S3_BUCKET
 
-3. Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
-destroy-virt` so that the build will use clean VMs.
+        cp -r target target-orig
+
 
 4. Build the packages:
 
@@ -178,6 +188,8 @@ destroy-virt` so that the build will use clean VMs.
 
 5. Verify that the new packages are on the host machine in the `target`
 directory.
+
+        diff -qr target-orig target
 
 
 6. Prepare keys for integration testing:
