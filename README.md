@@ -152,6 +152,11 @@ destroy-virt`
 2. Copy the release GPG signing keys to the `pdagent` project directory so that
 the VMs can access it. (via `/vagrant/...`)
 
+        cp -r /path/to/pd-release-keys/gpg-* .
+
+    This should copy two directories `gpg-general` and `gpg-rpm`
+
+
 3. Sync the current contents of the packages repo down from S3:
 
         scons sync-from-remote-repo repo-root=$S3_BUCKET
@@ -166,24 +171,21 @@ the VMs can access it. (via `/vagrant/...`)
         vagrant up agent-minimal-ubuntu1204
         vagrant ssh agent-minimal-ubuntu1204
 
-        sh /vagrant/build-linux/make_deb.sh /path/to/prod/gpg/home /vagrant/target
+        sh /vagrant/build-linux/make_deb.sh /vagrant/gpg-general /vagrant/target
 
-    Note that the path `/path/to/prod/gpg/home` must be the path in the VM,
-    e.g. `/vagrant/my-release-gpg-home`.
+    This relies on `/vagrant` in the VM being a mount of the pdagent project
+    directory.
 
-    Enter the GPG key passphrase when prompted.
+    Enter the GPG key passphrase when prompted. Exit from the VM when done.
 
     (b) CentOS:
 
         vagrant up agent-minimal-centos65
         vagrant ssh agent-minimal-centos65
 
-        sh /vagrant/build-linux/make_rpm.sh /path/to/prod/gpg/home /vagrant/target
+        sh /vagrant/build-linux/make_rpm.sh /vagrant/gpg-rpm /vagrant/target
 
-    Note that the path `/path/to/prod/gpg/home` must be the path in the VM,
-    e.g. `/vagrant/my-release-gpg-home`.
-
-    Enter the GPG key passphrase when prompted.
+    Enter the GPG key passphrase when prompted. Exit from the VM when done.
 
 
 5. Verify that the new packages are on the host machine in the `target`
@@ -194,9 +196,9 @@ directory.
 
 6. Prepare keys for integration testing:
 
-        ~/w/pdagent$ mkdir ./target/tmp
-        ~/w/pdagent$ gpg --homedir=./gpg-general --export --armor > ./target/tmp/GPG-KEY-pagerduty
-        ~/w/pdagent$ gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
+        mkdir ./target/tmp
+        gpg --homedir=./gpg-general --export --armor > ./target/tmp/GPG-KEY-pagerduty
+        gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
 
 
 7. Run the integration tests on clean VMs. (use `vagrant destroy`, edit the
