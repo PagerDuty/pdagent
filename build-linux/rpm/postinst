@@ -42,13 +42,17 @@ chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
 chmod 750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
 chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
-# Compile module .py to .pyc
-python -m compileall -q -f /usr/lib/python2.6/site-packages/pdagent/
-
-# Create a symlink for python 2.7 libs
-if [ -d /usr/lib/python2.7/site-packages ]; then
-    ln -s /usr/lib/python2.6/site-packages/pdagent /usr/lib/python2.7/site-packages/pdagent
+VERSION=`python -c "import platform; print platform.python_version()"`
+if [[ $VERSION == 2.7.* ]]; then
+	INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
+else
+	INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
 fi
+
+ln -s /usr/share/pdagent/lib/pdagent $INSTALL_PATH
+
+# Compile module .py to .pyc
+python -m compileall -q -f "$INSTALL_PATH/"
 
 # Register daemon
 chkconfig --add pdagent

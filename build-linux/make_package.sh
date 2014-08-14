@@ -94,7 +94,7 @@ chmod 755 data/etc/init.d/pdagent
 if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
 else
-    _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
+    _PY_SITE_PACKAGES=data/usr/share/pdagent/lib
 fi
 
 echo = python modules...
