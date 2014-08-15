@@ -94,7 +94,8 @@ chmod 755 data/etc/init.d/pdagent
 if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/share/pyshared
 else
-    _PY_SITE_PACKAGES=data/usr/share/pdagent/lib
+    _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
+    _PY27_SITE_PACKAGES=data/usr/lib/python2.7/site-packages
 fi
 
 echo = python modules...
@@ -113,6 +114,12 @@ if [ "$pkg_type" = "deb" ]; then
     echo >> $_PD_PUBLIC
     find $_PY_SITE_PACKAGES -type f -name "*.py" | cut -c 5- >> $_PD_PUBLIC
     find $_PY_SITE_PACKAGES -type f -name "ca_certs.pem" | cut -c 5- >> $_PD_PUBLIC
+fi
+
+# copy the libraries for python2.7 rpm users
+if [ "$pkg_type" = "rpm" ]; then
+    mkdir -p "$_PY27_SITE_PACKAGES"
+    cp -r $_PY_SITE_PACKAGES/* "$_PY27_SITE_PACKAGES"
 fi
 
 echo = FPM!

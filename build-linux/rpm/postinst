@@ -44,12 +44,10 @@ chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
 VERSION=`python -c "import platform; print platform.python_version()"`
 if [[ $VERSION == 2.7.* ]]; then
-	INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
+    INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
 else
-	INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
+    INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
 fi
-
-ln -s /usr/share/pdagent/lib/pdagent $INSTALL_PATH
 
 # Compile module .py to .pyc
 python -m compileall -q -f "$INSTALL_PATH/"
