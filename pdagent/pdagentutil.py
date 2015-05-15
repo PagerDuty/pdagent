@@ -68,7 +68,7 @@ def utcnow_isoformat(time_calc=None):
 
 def queue_event(
         enqueuer,
-        event_type, service_key, incident_key, description, details,
+        event_type, service_key, incident_key, description, client, client_url, details,
         agent_id, queued_by,
         ):
     agent_context = {
@@ -77,7 +77,7 @@ def queue_event(
         "queued_at": utcnow_isoformat()
         }
     event = _build_event_json_str(
-        event_type, service_key, incident_key, description, details,
+        event_type, service_key, incident_key, description, client, client_url, details,
         agent_context
         )
     _, problems = enqueuer.enqueue(service_key, event)
@@ -97,7 +97,7 @@ def get_stats(queue, service_key):
 
 
 def _build_event_json_str(
-    event_type, service_key, incident_key, description, details,
+    event_type, service_key, incident_key, description, client, client_url, details,
     agent_context=None
     ):
     d = {
@@ -109,6 +109,10 @@ def _build_event_json_str(
         d["incident_key"] = incident_key
     if description is not None:
         d["description"] = description
+    if client is not None:
+        d["client"] = client
+    if client_url is not None:
+        d["client_url"] = client_url
     if agent_context is not None:
         d["agent"] = agent_context
 
