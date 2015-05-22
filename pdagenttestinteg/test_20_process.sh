@@ -51,7 +51,7 @@ sudo sed -i "s#^\#send_interval_secs.*#send_interval_secs=$SEND_INTERVAL_SECS#" 
 # agent must flush out queue when it starts up.
 test_startup() {
   i_key="test1"
-  $BIN_PD_SEND -k $SVC_KEY -t trigger -i $i_key -d "Test incident 1" -f key1=value1 -f key2=subkey=subvalue
+  $BIN_PD_SEND -k $SVC_KEY -t trigger -i $i_key -d "Test incident 1" -f key1=value1 -f key2=subkey=subvalue -c "PagerDuty" -u "https://www.pagerduty.com"
 
   test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
   queued_file=$(sudo find $OUTQUEUE_DIR -type f )

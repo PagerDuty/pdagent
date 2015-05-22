@@ -54,6 +54,8 @@ SAMPLE_EVENT = json.dumps({
     "service_key": "foo",
     "incident_key": INCIDENT_KEY,
     "description": "test",
+    "client": "PagerDuty",
+    "client_url": "http://www.pagerduty.com",
     "details": {}
     })
 
