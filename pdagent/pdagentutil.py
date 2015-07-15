@@ -39,6 +39,47 @@ import sys
 import time
 
 
+class IntegrationParameterEncoder(json.JSONEncoder):
+
+    def default(self, o):
+        try:
+            return o.to_json()
+        except AttributeError:
+            return json.JSONEncoder.default(self, o)
+
+
+class Context(object):
+
+    def __init__(self, context_type):
+        self._context_type = context_type
+        self._context_dict = {}
+
+    def to_json(self):
+        o = self._context_dict.copy()
+        o["type"] = self._context_type
+        return o
+
+
+class LinkContext(Context):
+
+    def __init__(self, href, text=None):
+        Context.__init__(self, "link")
+        self._context_dict["href"] = href
+        if text:
+            self._context_dict["text"] = text
+
+
+class ImageContext(Context):
+
+    def __init__(self, src, href=None, alt=None):
+        Context.__init__(self, "image")
+        self._context_dict["src"] = src
+        if href:
+            self._context_dict["href"] = href
+        if alt:
+            self._context_dict["alt"] = alt
+
+
 def find_in_sys_path(file_path):
     for directory in sys.path:
         abs_path = os.path.join(directory, file_path)
@@ -66,10 +107,11 @@ def utcnow_isoformat(time_calc=None):
         time_calc = time
     return time_calc.strftime("%Y-%m-%dT%H:%M:%SZ", time_calc.gmtime())
 
+
 def queue_event(
         enqueuer,
         event_type, service_key, incident_key, description, client, client_url, details,
-        agent_id, queued_by,
+        contexts, agent_id, queued_by,
         ):
     agent_context = {
         "agent_id": agent_id,
@@ -78,7 +120,7 @@ def queue_event(
         }
     event = _build_event_json_str(
         event_type, service_key, incident_key, description, client, client_url, details,
-        agent_context
+        contexts, agent_context
         )
     _, problems = enqueuer.enqueue(service_key, event)
     return incident_key, problems
@@ -98,7 +140,7 @@ def get_stats(queue, service_key):
 
 def _build_event_json_str(
     event_type, service_key, incident_key, description, client, client_url, details,
-    agent_context=None
+    contexts, agent_context=None
     ):
     d = {
         "service_key": service_key,
@@ -113,11 +155,14 @@ def _build_event_json_str(
         d["client"] = client
     if client_url is not None:
         d["client_url"] = client_url
+    if contexts is not None:
+        d["contexts"] = contexts
     if agent_context is not None:
         d["agent"] = agent_context
 
     return json.dumps(
         d,
+        cls=IntegrationParameterEncoder,
         separators=(',', ':'),  # compact json str
         sort_keys=True
         )

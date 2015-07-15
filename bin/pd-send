@@ -63,6 +63,10 @@ def build_queue_arg_parser(description):
         help="Add given KEY=VALUE pair to the event details"
         )
     parser.add_argument(
+        "-x", "--context", action="append", dest="contexts",
+        help="Add given TYPE:KEY=VALUE[,KEY=VALUE...] to the event contexts"
+        )
+    parser.add_argument(
         "-q", "--quiet", action="store_true", dest="quiet",
         help="Operate quietly (no output)"
         )
@@ -73,6 +77,36 @@ def parse_fields(fields):
         return {}
     return dict(f.split("=", 1) for f in fields)
 
+def parse_contexts(context_strs):
+    from pdagent.pdagentutil import LinkContext, ImageContext
+
+    def params_from_str(params_str):
+         return dict([p.split("=", 1) for p in params_str.split(",")])
+
+    def build_link_context(params_str):
+         params = params_from_str(params_str)
+         return LinkContext(href=params["href"], text=params.get("text"))
+
+    def build_image_context(params_str):
+         params = params_from_str(params_str)
+         return ImageContext(
+            src=params["src"],
+            href=params.get("href"),
+            alt=params.get("alt")
+            )
+
+    def build_context(context_str):
+        context_builders = {
+            "link": build_link_context,
+            "image": build_image_context
+            }
+        context_type, params = context_str.split(":", 1)
+        return context_builders[context_type](params)
+
+    if context_strs is None:
+        return []
+    return [build_context(c) for c in context_strs]
+
 def main():
     from pdagent.pdagentutil import queue_event
     from pdagent.config import load_agent_config
@@ -82,6 +116,7 @@ def main():
     parser = build_queue_arg_parser(description)
     args = parser.parse_args()
     details = parse_fields(args.fields)
+    contexts = parse_contexts(args.contexts)
 
     if args.event_type == "trigger":
         if (not args.description) or (not args.description.strip()):
@@ -96,7 +131,7 @@ def main():
     incident_key, problems = queue_event(
         enqueuer,
         args.event_type, args.service_key, args.incident_key, args.description,
-        args.client, args.client_url, details,
+        args.client, args.client_url, details, contexts,
         agent_config.get_agent_id(), "pd-send",
         )
     if not args.quiet:
