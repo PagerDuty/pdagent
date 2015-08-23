@@ -56,6 +56,7 @@ SAMPLE_EVENT = json.dumps({
     "description": "test",
     "client": "PagerDuty",
     "client_url": "http://www.pagerduty.com",
+    "vendor": "acme",
     "details": {}
     })
 
