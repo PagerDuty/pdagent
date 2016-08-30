@@ -92,7 +92,7 @@ cp init-script.sh data/etc/init.d/pdagent
 chmod 755 data/etc/init.d/pdagent
 
 if [ "$pkg_type" = "deb" ]; then
-    _PY_SITE_PACKAGES=data/usr/share/pyshared
+    _PY_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
 else
     _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
     _PY27_SITE_PACKAGES=data/usr/lib/python2.7/site-packages
@@ -106,16 +106,6 @@ find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
     -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
 cd -
 
-if [ "$pkg_type" = "deb" ]; then
-    echo = deb python-support...
-    mkdir -p data/usr/share/python-support
-    _PD_PUBLIC=data/usr/share/python-support/python-pdagent.public
-    echo pyversions=2.6- > $_PD_PUBLIC
-    echo >> $_PD_PUBLIC
-    find $_PY_SITE_PACKAGES -type f -name "*.py" | cut -c 5- >> $_PD_PUBLIC
-    find $_PY_SITE_PACKAGES -type f -name "ca_certs.pem" | cut -c 5- >> $_PD_PUBLIC
-fi
-
 # copy the libraries for python2.7 rpm users
 if [ "$pkg_type" = "rpm" ]; then
     mkdir -p "$_PY27_SITE_PACKAGES"
@@ -124,9 +114,6 @@ fi
 
 echo = FPM!
 _FPM_DEPENDS="--depends sudo --depends python"
-if [ "$pkg_type" = "deb" ]; then
-    _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
-fi
 
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then

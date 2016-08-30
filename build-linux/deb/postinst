@@ -45,9 +45,7 @@ if [ "$1" = "configure" ]; then
     chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
     # Compile module .py to .pyc
-    if which update-python-modules >/dev/null 2>&1; then
-        update-python-modules python-pdagent.public
-    fi
+    pycompile -p pdagent
 
     # Register daemon
     update-rc.d -f pdagent defaults
