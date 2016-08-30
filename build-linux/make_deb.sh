@@ -44,10 +44,10 @@ install_root="$2"
 deb_install_root=$install_root/deb
 [ -d "$deb_install_root" ] || mkdir -p $deb_install_root
 
-[ $(sudo dpkg -l ruby-dev rubygems | grep -c '^i') -eq 2 ] || {
+[ $(sudo dpkg -l ruby-dev rubygems libffi-dev | grep -c '^i') -eq 3 ] || {
     echo "Installing required packages. This may take a few minutes..."
     sudo apt-get update -qq
-    sudo apt-get install -y -q ruby-dev rubygems
+    sudo apt-get install -y -q ruby-dev rubygems libffi-dev
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
