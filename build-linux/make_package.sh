@@ -83,16 +83,16 @@ mkdir -p \
     data/var/lib/pdagent/outqueue/tmp \
     data/var/lib/pdagent/outqueue/err \
     data/var/lib/pdagent/outqueue/suc
+mkdir -p data/var/lib/pdagent/scripts
+cp init-script.sh data/var/lib/pdagent/scripts/pdagent.init
+cp systemd-service.sh data/var/lib/pdagent/scripts/pdagent.service
 
 echo = /etc/...
 mkdir -p data/etc/
 cp ../conf/pdagent.conf data/etc/
-mkdir -p data/etc/init.d
-cp init-script.sh data/etc/init.d/pdagent
-chmod 755 data/etc/init.d/pdagent
 
 if [ "$pkg_type" = "deb" ]; then
-    _PY_SITE_PACKAGES=data/usr/share/pyshared
+    _PY_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
 else
     _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
     _PY27_SITE_PACKAGES=data/usr/lib/python2.7/site-packages
@@ -106,15 +106,6 @@ find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
     -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
 cd -
 
-if [ "$pkg_type" = "deb" ]; then
-    echo = deb python-support...
-    mkdir -p data/usr/share/python-support
-    _PD_PUBLIC=data/usr/share/python-support/python-pdagent.public
-    echo pyversions=2.6- > $_PD_PUBLIC
-    echo >> $_PD_PUBLIC
-    find $_PY_SITE_PACKAGES -type f -name "*.py" | cut -c 5- >> $_PD_PUBLIC
-    find $_PY_SITE_PACKAGES -type f -name "ca_certs.pem" | cut -c 5- >> $_PD_PUBLIC
-fi
 
 # copy the libraries for python2.7 rpm users
 if [ "$pkg_type" = "rpm" ]; then
@@ -124,9 +115,6 @@ fi
 
 echo = FPM!
 _FPM_DEPENDS="--depends sudo --depends python"
-if [ "$pkg_type" = "deb" ]; then
-    _FPM_DEPENDS="$_FPM_DEPENDS --depends python-support"
-fi
 
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then
@@ -144,7 +132,13 @@ else
     _PKG_MAINTAINER="RPM Package Maintainer"
 fi
 _PKG_MAINTAINER="$_PKG_MAINTAINER (PagerDuty, Inc.) <packages@pagerduty.com>"
-fpm -s dir \
+if [ "$pkg_type" = "rpm" ]; then
+    source /opt/rh/ruby193/enable
+    FPM=/opt/rh/ruby193/root/usr/local/share/gems/gems/fpm-1.6.3/bin/fpm
+else
+    FPM=fpm
+fi
+$FPM -s dir \
     -t $pkg_type \
     --name "pdagent" \
     --description "$_DESC" \

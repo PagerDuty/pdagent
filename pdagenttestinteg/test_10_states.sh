@@ -38,23 +38,27 @@ set -x
 pid1=$(agent_pid)  # may be empty if agent is not already running.
 
 restart_agent || start_agent
+
 pid2=$(agent_pid)
 test -n "$pid2"
 test "$pid2" != "$pid1"
 
-sudo service $AGENT_SVC_NAME start || {
+start_agent || {
     echo "expected start to return 0 even if agent is already running"
     exit 1
 }
+
 pid2b=$(agent_pid)
 test -n "$pid2b"
 test $pid2b -eq $pid2
 
 stop_agent
+
 pid3=$(agent_pid)
 test -z "$pid3"  # ensures empty pid.
 
 start_agent
+
 pid4=$(agent_pid)
 test -n "$pid4"
 test $pid4 -ne $pid2

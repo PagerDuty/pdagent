@@ -30,11 +30,27 @@
 
 set -e
 
+install_init () {
+    cp /var/lib/pdagent/scripts/pdagent.init /etc/init.d/pdagent
+    chmod +x /etc/init.d/pdagent
+    update-rc.d -f pdagent defaults
+    service pdagent start
+}
+
+install_systemd () {
+    touch /var/log/pdagent/pdagentd.log
+    chmod 640 /var/log/pdagent/pdagentd.log
+    chown -R pdagent:pdagent /var/log/pdagent/pdagentd.log
+    cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
+    systemctl enable pdagent
+    systemctl start pdagent
+}
+
 if [ "$1" = "configure" ]; then
     # Create pdagent user & group
     /usr/bin/getent passwd pdagent >/dev/null || \
         /usr/sbin/adduser --system --shell /bin/false --no-create-home \
-            --group pdagent
+                          --group pdagent
 
     # Fix ownership of data and log dirs.
     # outqueue/* world permission is set to 000 so that service keys of other
@@ -44,16 +60,13 @@ if [ "$1" = "configure" ]; then
     chmod 750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
     chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
-    # Compile module .py to .pyc
-    if which update-python-modules >/dev/null 2>&1; then
-        update-python-modules python-pdagent.public
+    pycompile -p pdagent
+
+    if which systemctl >/dev/null; then
+        install_systemd
+    else
+        install_init
     fi
-
-    # Register daemon
-    update-rc.d -f pdagent defaults
-
-    # Restart daemon
-    service pdagent restart
 fi
 
 exit 0

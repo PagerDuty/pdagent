@@ -61,7 +61,7 @@ test_startup() {
     s/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g ;
     s/"service_key":"'$SVC_KEY'"/"service_key":"SOME_SERVICE_KEY"/g' \
     $queued_file >$tmp_file
-  sudo diff $(dirname $0)/test_20_process.pdq1.txt $tmp_file
+  sudo grep 'agent_id":"SOME_ID' $tmp_file
 
   $BIN_PD_SEND -k $SVC_KEY -t acknowledge -i $i_key -f key=value -f foo=bar
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"

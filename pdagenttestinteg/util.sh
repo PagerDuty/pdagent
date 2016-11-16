@@ -51,28 +51,40 @@ os_type() {
 
 # return pid if agent is running, or empty string if not running.
 agent_pid() {
-  sudo service $AGENT_SVC_NAME status | egrep -o 'pid [0-9]+' | cut -d' ' -f2
+    ps aux | grep /usr/share/pdagent/bin/pdagentd.py | grep -v grep | awk '{print $2}'
 }
 
 # start agent if not running.
 start_agent() {
-  if [ -z "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME start
-  else
-    return 0
-  fi
+    if [ -z "$(agent_pid)" ]; then
+        if which systemctl >/dev/null; then
+            sudo systemctl start $AGENT_SVC_NAME
+        else
+            sudo service $AGENT_SVC_NAME start
+        fi
+    else
+        return 0
+    fi
 }
 
 # stop agent if running.
 stop_agent() {
-  if [ -n "$(agent_pid)" ]; then
-    sudo service $AGENT_SVC_NAME stop
-  else
-    return 0
-  fi
+    if [ -n "$(agent_pid)" ]; then
+            if which systemctl >/dev/null; then
+                sudo systemctl stop $AGENT_SVC_NAME
+            else
+                sudo service $AGENT_SVC_NAME stop
+            fi
+    else
+        return 0
+    fi
 }
 
 # restart agent if running.
 restart_agent() {
-  sudo service $AGENT_SVC_NAME restart
+    if which systemctl >/dev/null; then
+        sudo systemctl restart $AGENT_SVC_NAME
+    else
+        sudo service $AGENT_SVC_NAME restart
+    fi
 }

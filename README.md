@@ -1,4 +1,3 @@
-
 > This is the source code and project. For the PagerDuty Agent Install Guide,
 > see http://www.pagerduty.com/docs/guides/agent-install-guide/
 
@@ -112,6 +111,21 @@ If you want to build packages by hand, follow the instructions in
 
 Similarly, you can check the SCons targets using `scons -h` for instructions on
 performing specific builds tasks and on specific VMs.
+
+#### Some helpful scripts
+
+```
+scripts/rev_pkgs.sh
+```
+
+This will remove the installed pdagent packages from the vagrant build machines, `agent-minimal-centos65` and `agent-minimal-ubuntu1204`, and run `scons local-repo gpg-home=build-linux/gnupg` to install them again.  Run this anytime you revise a package artifact like `build-linux/deb/postinst`.
+
+```
+scripts/kill_pids.sh
+```
+
+This will kill stray pdagent processes and cleanup the pidfile on all vagrant machines.  Run this
+if your changes are causing integration tests to fail due to improper process managment via `service` or `systemctl`.
 
 ### Release Packages
 

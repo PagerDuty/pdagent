@@ -53,6 +53,8 @@ fi
 python -m compileall -q -f "$INSTALL_PATH/"
 
 # Register daemon
+cp /var/lib/pdagent/scripts/pdagent.init /etc/init.d/pdagent
+chmod +x /etc/init.d/pdagent
 chkconfig --add pdagent
 
 # Restart daemon

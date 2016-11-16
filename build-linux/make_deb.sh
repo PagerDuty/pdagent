@@ -44,10 +44,19 @@ install_root="$2"
 deb_install_root=$install_root/deb
 [ -d "$deb_install_root" ] || mkdir -p $deb_install_root
 
-[ $(sudo dpkg -l ruby-dev rubygems | grep -c '^i') -eq 2 ] || {
+[ $(sudo dpkg -l ruby1.9.1-dev | grep -c '^i') -eq 2 ] || {
     echo "Installing required packages. This may take a few minutes..."
     sudo apt-get update -qq
-    sudo apt-get install -y -q ruby-dev rubygems
+    sudo apt-get install -y -q ruby1.9.1-dev
+    CUR_PWD=`pwd`
+    echo "Installing rubygems ..."
+    cd /tmp
+    sudo wget https://rubygems.org/rubygems/rubygems-2.6.8.tgz
+    sudo tar xzf rubygems-2.6.8.tgz
+    cd rubygems-2.6.8
+    sudo ruby setup.rb
+    sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem1.9.1 99
+    cd $CUR_PWD
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
