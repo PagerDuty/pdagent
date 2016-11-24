@@ -20,7 +20,6 @@ For example:
 Current machine states:
 
 agent-minimal-centos65    not created (virtualbox)
-agent-minimal-ubuntu1004  running (virtualbox)
 agent-minimal-ubuntu1204  running (virtualbox)
 agent-minimal-ubuntu1404  running (virtualbox)
 agent-minimal-ubuntu1604  running (virtualbox)
@@ -33,7 +32,7 @@ VM, run `vagrant status NAME`.
 You can bring up all VM at the same time by running `vagrant up` or bring up
 an individual VM by specifying its name. For example:
 
-    ~/w/pdagent$ vagrant up agent-minimal-ubuntu1004
+    ~/w/pdagent$ vagrant up agent-minimal-ubuntu1204
 
 **Note**: the first time that you bring up a VM may require a large download of the
 "box" that the VM is based on.  The box downloads will be cached in the
@@ -47,7 +46,7 @@ You can manage the VMs using the Vagrant commands: `up`, `halt`, `reload`,
 
 You can ssh into a VM by using `vagrant ssh <machine-name>`. For example:
 
-    ~/w/pdagent$ vagrant ssh agent-minimal-ubuntu1004
+    ~/w/pdagent$ vagrant ssh agent-minimal-ubuntu1204
 
 
 ## Deleting VMs
