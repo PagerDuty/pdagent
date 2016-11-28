@@ -84,8 +84,8 @@ mkdir -p \
     data/var/lib/pdagent/outqueue/err \
     data/var/lib/pdagent/outqueue/suc
 mkdir -p data/var/lib/pdagent/scripts
-cp init-script.sh data/var/lib/pdagent/scripts/pdagent.init
-cp systemd-service.sh data/var/lib/pdagent/scripts/pdagent.service
+cp pdagent.init data/var/lib/pdagent/scripts/pdagent.init
+cp pdagent.service data/var/lib/pdagent/scripts/pdagent.service
 
 echo = /etc/...
 mkdir -p data/etc/
