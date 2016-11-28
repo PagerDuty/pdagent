@@ -38,9 +38,6 @@ install_init () {
 }
 
 install_systemd () {
-    touch /var/log/pdagent/pdagentd.log
-    chmod 640 /var/log/pdagent/pdagentd.log
-    chown -R pdagent:pdagent /var/log/pdagent/pdagentd.log
     cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
     systemctl enable pdagent
     systemctl start pdagent
