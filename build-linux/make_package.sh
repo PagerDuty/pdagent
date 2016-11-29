@@ -31,6 +31,9 @@
 
 set -e  # fail on errors
 
+# source common variables
+. ./make_common.env
+
 # params
 pkg_type=""
 
@@ -134,7 +137,7 @@ fi
 _PKG_MAINTAINER="$_PKG_MAINTAINER (PagerDuty, Inc.) <packages@pagerduty.com>"
 if [ "$pkg_type" = "rpm" ]; then
     source /opt/rh/ruby193/enable
-    FPM=/opt/rh/ruby193/root/usr/local/share/gems/gems/fpm-1.6.3/bin/fpm
+    FPM=/opt/rh/ruby193/root/usr/local/share/gems/gems/fpm-$FPM_VERSION/bin/fpm
 else
     FPM=fpm
 fi

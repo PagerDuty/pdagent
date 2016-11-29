@@ -35,6 +35,9 @@ set -e
 basedir=$(dirname $0)
 cd $basedir
 
+# source common variables
+. ./make_common.env
+
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
     exit 2
@@ -65,7 +68,7 @@ rpm_install_root=$install_root/rpm
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
     echo "Installing fpm gem..."
-    sudo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" /opt/rh/ruby193/root/usr/bin/gem install -q fpm
+    sudo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" /opt/rh/ruby193/root/usr/bin/gem install -q -v $FPM_VERSION fpm
     echo "Done installing."
 }
 
