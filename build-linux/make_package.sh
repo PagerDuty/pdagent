@@ -87,12 +87,21 @@ mkdir -p \
     data/var/lib/pdagent/outqueue/err \
     data/var/lib/pdagent/outqueue/suc
 mkdir -p data/var/lib/pdagent/scripts
+# stage sysV & systemd service files for deb postinst
 cp pdagent.init data/var/lib/pdagent/scripts/pdagent.init
 cp pdagent.service data/var/lib/pdagent/scripts/pdagent.service
 
 echo = /etc/...
 mkdir -p data/etc/
 cp ../conf/pdagent.conf data/etc/
+
+if [ "$pkg_type" = "rpm" ]; then
+    # marks /etc/init.d/pdagent as co-owned by old_rpm && new_rpm and saves it from removal
+    # during yum update cleanu of old_rpm (yum cleanup internals regardless of prerm script)
+    mkdir -p data/etc/init.d
+    cp pdagent.init data/etc/init.d/pdagent
+    chmod 755 data/etc/init.d/pdagent
+fi
 
 if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
@@ -141,24 +150,48 @@ if [ "$pkg_type" = "rpm" ]; then
 else
     FPM=fpm
 fi
-$FPM -s dir \
-    -t $pkg_type \
-    --name "pdagent" \
-    --description "$_DESC" \
-    --version "$_VERSION" \
-    --architecture all \
-    --url "http://www.pagerduty.com" \
-    --license 'Open Source' \
-    --vendor 'PagerDuty, Inc.' \
-    --maintainer "$_PKG_MAINTAINER" \
-    $_FPM_DEPENDS \
-    $_SIGN_OPTS \
-    --${pkg_type}-user root \
-    --${pkg_type}-group root \
-    --config-files /etc/pdagent.conf \
-    --after-install ../$pkg_type/postinst \
-    --before-remove ../$pkg_type/prerm \
-    -C ../data \
-    etc usr var
+
+if [ "$pkg_type" = "rpm" ]; then
+    $FPM -s dir \
+         -t $pkg_type \
+         --name "pdagent" \
+         --description "$_DESC" \
+         --version "$_VERSION" \
+         --architecture all \
+         --url "http://www.pagerduty.com" \
+         --license 'Open Source' \
+         --vendor 'PagerDuty, Inc.' \
+         --maintainer "$_PKG_MAINTAINER" \
+         $_FPM_DEPENDS \
+         $_SIGN_OPTS \
+         --${pkg_type}-user root \
+         --${pkg_type}-group root \
+         --config-files /etc/pdagent.conf \
+         --after-install ../$pkg_type/postinst \
+         --before-remove ../$pkg_type/prerm \
+         -C ../data \
+         etc usr var
+else # deb needs preinst
+    $FPM -s dir \
+         -t $pkg_type \
+         --name "pdagent" \
+         --description "$_DESC" \
+         --version "$_VERSION" \
+         --architecture all \
+         --url "http://www.pagerduty.com" \
+         --license 'Open Source' \
+         --vendor 'PagerDuty, Inc.' \
+         --maintainer "$_PKG_MAINTAINER" \
+         $_FPM_DEPENDS \
+         $_SIGN_OPTS \
+         --${pkg_type}-user root \
+         --${pkg_type}-group root \
+         --config-files /etc/pdagent.conf \
+         --before-install ../$pkg_type/preinst \
+         --after-install ../$pkg_type/postinst \
+         --before-remove ../$pkg_type/prerm \
+         -C ../data \
+         etc usr var
+fi
 
 exit 0

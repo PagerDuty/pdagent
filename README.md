@@ -127,6 +127,12 @@ scripts/kill_pids.sh
 This will kill stray pdagent processes and cleanup the pidfile on all vagrant machines.  Run this
 if your changes are causing integration tests to fail due to improper process managment via `service` or `systemctl`.
 
+```
+scripts/setup_upgrade_test.sh
+```
+
+This will vagrant destroy, up and install the latest public repo pdagent package on machines for upgrade testing via `scons test-integration`.
+
 ### Release Packages
 
 The steps here and the project scons targets are written assuming that S3 is
