@@ -151,47 +151,29 @@ else
     FPM=fpm
 fi
 
-if [ "$pkg_type" = "rpm" ]; then
-    $FPM -s dir \
-         -t $pkg_type \
-         --name "pdagent" \
-         --description "$_DESC" \
-         --version "$_VERSION" \
-         --architecture all \
-         --url "http://www.pagerduty.com" \
-         --license 'Open Source' \
-         --vendor 'PagerDuty, Inc.' \
-         --maintainer "$_PKG_MAINTAINER" \
-         $_FPM_DEPENDS \
-         $_SIGN_OPTS \
-         --${pkg_type}-user root \
-         --${pkg_type}-group root \
-         --config-files /etc/pdagent.conf \
-         --after-install ../$pkg_type/postinst \
-         --before-remove ../$pkg_type/prerm \
-         -C ../data \
-         etc usr var
-else # deb needs preinst
-    $FPM -s dir \
-         -t $pkg_type \
-         --name "pdagent" \
-         --description "$_DESC" \
-         --version "$_VERSION" \
-         --architecture all \
-         --url "http://www.pagerduty.com" \
-         --license 'Open Source' \
-         --vendor 'PagerDuty, Inc.' \
-         --maintainer "$_PKG_MAINTAINER" \
-         $_FPM_DEPENDS \
-         $_SIGN_OPTS \
-         --${pkg_type}-user root \
-         --${pkg_type}-group root \
-         --config-files /etc/pdagent.conf \
-         --before-install ../$pkg_type/preinst \
-         --after-install ../$pkg_type/postinst \
-         --before-remove ../$pkg_type/prerm \
-         -C ../data \
-         etc usr var
+if [ "$pkg_type" = "deb" ]; then
+    _BEFORE_AND_AFTER_OPTS="--before-install ../$pkg_type/preinst --after-install ../$pkg_type/postinst --before-remove ../$pkg_type/prerm"
+else
+    _BEFORE_AND_AFTER_OPTS="--after-install ../$pkg_type/postinst --before-remove ../$pkg_type/prerm"
 fi
+
+$FPM -s dir \
+     -t $pkg_type \
+     --name "pdagent" \
+     --description "$_DESC" \
+     --version "$_VERSION" \
+     --architecture all \
+     --url "http://www.pagerduty.com" \
+     --license 'Open Source' \
+     --vendor 'PagerDuty, Inc.' \
+     --maintainer "$_PKG_MAINTAINER" \
+     $_FPM_DEPENDS \
+     $_SIGN_OPTS \
+     --${pkg_type}-user root \
+     --${pkg_type}-group root \
+     --config-files /etc/pdagent.conf \
+     $_BEFORE_AND_AFTER_OPTS \
+     -C ../data \
+     etc usr var
 
 exit 0
