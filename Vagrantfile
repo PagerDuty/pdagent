@@ -6,21 +6,25 @@ _bento_centos65 = {
     "box"       => "bento_centos65",
     "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-6.5_chef-provisionerless.box",
 }
-_bento_ubuntu1004 = {
-    "box"       => "bento_ubuntu1004",
-    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-10.04_chef-provisionerless.box",
-}
 _bento_ubuntu1204 = {
     "box"       => "bento_ubuntu1204",
     "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-12.04_chef-provisionerless.box",
 }
+_bento_ubuntu1404 = {
+    "box"       => "bento_ubuntu1404",
+    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-14.04_chef-provisionerless.box",
+}
+_bento_ubuntu1604 = {
+    "box"       => "bento_ubuntu1604",
+    "box_url"   => "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_ubuntu-16.04_chef-provisionerless.box",
+}
 
 vms = {
     "agent-minimal-centos65"    => _bento_centos65,
-    "agent-minimal-ubuntu1004"  => _bento_ubuntu1004,
     "agent-minimal-ubuntu1204"  => _bento_ubuntu1204,
+    "agent-minimal-ubuntu1404"  => _bento_ubuntu1404,
+    "agent-minimal-ubuntu1604"  => _bento_ubuntu1604
 }
-
 
 Vagrant.configure("2") do |conf_outer|
 
@@ -39,4 +43,3 @@ Vagrant.configure("2") do |conf_outer|
     end # vms.each
 
 end # Vagrant.configure
-

@@ -1,0 +1,18 @@
+[Unit]
+Description=PagerDuty Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /var/run/pdagent
+ExecStartPre=/bin/chown -R pdagent:pdagent /var/run/pdagent
+ExecStart=/usr/share/pdagent/bin/pdagentd.py -f
+KillMode=process
+TimeoutStopSec=15
+RestartSec=15
+User=pdagent
+Group=pdagent
+PermissionsStartOnly=true
+
+[Install]
+WantedBy=multi-user.target

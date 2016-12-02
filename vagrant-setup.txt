@@ -1,4 +1,3 @@
-
 # Vagrant Setup
 
 Vagrant setup notes for OS X 10.8 (Mountain Lion).
@@ -21,8 +20,9 @@ For example:
 Current machine states:
 
 agent-minimal-centos65    not created (virtualbox)
-agent-minimal-ubuntu1004  running (virtualbox)
 agent-minimal-ubuntu1204  running (virtualbox)
+agent-minimal-ubuntu1404  running (virtualbox)
+agent-minimal-ubuntu1604  running (virtualbox)
 
 This environment represents multiple VMs. The VMs are all listed
 above with their current state. For more information about a specific
@@ -32,7 +32,7 @@ VM, run `vagrant status NAME`.
 You can bring up all VM at the same time by running `vagrant up` or bring up
 an individual VM by specifying its name. For example:
 
-    ~/w/pdagent$ vagrant up agent-minimal-ubuntu1004
+    ~/w/pdagent$ vagrant up agent-minimal-ubuntu1204
 
 **Note**: the first time that you bring up a VM may require a large download of the
 "box" that the VM is based on.  The box downloads will be cached in the
@@ -46,7 +46,7 @@ You can manage the VMs using the Vagrant commands: `up`, `halt`, `reload`,
 
 You can ssh into a VM by using `vagrant ssh <machine-name>`. For example:
 
-    ~/w/pdagent$ vagrant ssh agent-minimal-ubuntu1004
+    ~/w/pdagent$ vagrant ssh agent-minimal-ubuntu1204
 
 
 ## Deleting VMs
@@ -66,5 +66,3 @@ Are you sure you want to destroy the 'agent-minimal-ubuntu1204' VM? [y/N] y
 Vagrant caches VM downloads in `~/.vagrant.d/boxes`.  These are reused when you
 destroy and rebuild a VM in the same project or in another project.  You may
 want to check for and clean out old downloads here to recover disk space.
-
-

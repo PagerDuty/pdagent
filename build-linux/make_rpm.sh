@@ -35,6 +35,9 @@ set -e
 basedir=$(dirname $0)
 cd $basedir
 
+# source common variables
+. ./make_common.env
+
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
     exit 2
@@ -45,17 +48,27 @@ rpm_install_root=$install_root/rpm
 [ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 
 # install required packages.
-[ $(sudo rpm -q rpm-build ruby-devel rubygems createrepo \
+[ $(sudo rpm -q rpm-build ruby193 createrepo \
         gcc gcc-c++ kernel-devel | \
         grep -vc 'not installed') -eq 7 ] || {
     echo "Installing required packages. This may take a few minutes..."
-    sudo yum install -y -q rpm-build ruby-devel rubygems createrepo \
-        gcc gcc-c++ kernel-devel
+    sudo yum install -y -q rpm-build createrepo gcc gcc-c++ kernel-devel
+    sudo yum install -y -q centos-release-SCL
+    sudo yum install -y -q ruby193 ruby193-ruby-devel
+    source /opt/rh/ruby193/enable
+    CUR_PWD=`pwd`
+    echo "Installing rubygems ..."
+    cd /tmp
+    sudo wget --no-check-certificate https://rubygems.org/rubygems/rubygems-2.6.8.tgz
+    sudo tar xzf rubygems-2.6.8.tgz
+    cd rubygems-2.6.8
+    sudo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" /opt/rh/ruby193/root/usr/bin/ruby setup.rb
+    cd $CUR_PWD
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
     echo "Installing fpm gem..."
-    sudo gem install -q fpm
+    sudo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" /opt/rh/ruby193/root/usr/bin/gem install -q -v $FPM_VERSION fpm
     echo "Done installing."
 }
 

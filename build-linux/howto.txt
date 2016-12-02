@@ -38,7 +38,7 @@ Building the .deb:
 
 Install & test the .deb:
 
-    vagrant ssh agent-minimal-ubuntu1004 # or agent-minimal-ubuntu1204
+    vagrant ssh agent-minimal-ubuntu1204
 
     sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
     sudo sh -c 'echo "deb file:///vagrant/target deb/" \
@@ -88,4 +88,3 @@ Uninstall & test cleanup:
     sudo yum remove -y pdagent
 
     # rerun the test commands to ensure files are gone
-

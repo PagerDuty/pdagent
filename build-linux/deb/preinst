@@ -30,26 +30,12 @@
 
 set -e
 
-uninstall_init () {
-    service pdagent stop
-    update-rc.d -f pdagent remove
-}
-
-uninstall_systemd () {
-    systemctl stop pdagent
-    systemctl disable pdagent
-}
-
-if [ "$1" = "remove" ]; then  # remove-only; not upgrade.
-    if which systemctl >/dev/null; then
-        uninstall_systemd
-    else
-        uninstall_init
-    fi
-
-    pyclean -p pdagent
-    rm -rf /usr/lib/python2.7/dist-packages/pdagent
-    rm -rf /usr/lib/pymodules/python2.7/pdagent
+if [ $# -gt 1 ]; then # this is an upgrade - shutdown the old agent
+   if which systemctl >/dev/null; then
+      systemctl stop pdagent
+   else
+      service pdagent stop
+   fi
 fi
 
 exit 0

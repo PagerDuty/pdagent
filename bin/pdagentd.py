@@ -404,6 +404,8 @@ def init_logging(log_dir):
 
 
 # ---- Daemonize and run agent
-
-daemonize(pidfile, umask=_DEFAULT_UMASK)
+if not (len(sys.argv) > 1 and sys.argv[1] == '-f'):
+    daemonize(pidfile, umask=_DEFAULT_UMASK)
+else:
+    os.umask(_DEFAULT_UMASK)
 run()
