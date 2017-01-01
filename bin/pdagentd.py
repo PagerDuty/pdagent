@@ -177,22 +177,26 @@ def make_sendevent_task():
     send_interval_secs = main_config['send_interval_secs']
     cleanup_interval_secs = main_config['cleanup_interval_secs']
     cleanup_threshold_secs = main_config['cleanup_threshold_secs']
+    source_address = main_config['source_address']
     return SendEventTask(
         pd_queue,
         send_interval_secs,
         cleanup_interval_secs,
-        cleanup_threshold_secs
+        cleanup_threshold_secs,
+        source_address
         )
 
 
 def make_heartbeat_task():
     # by default, heartbeat every hour
     heartbeat_interval_secs = 60 * 60
+    source_address = main_config['source_address']
     return HeartbeatTask(
         heartbeat_interval_secs,
         agent_id,
         pd_queue,
-        system_stats
+        system_stats,
+        source_address
         )
 
 

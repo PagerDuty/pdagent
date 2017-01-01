@@ -51,12 +51,14 @@ class SendEventTask(RepeatingTask):
             send_interval_secs,
             cleanup_interval_secs,
             cleanup_threshold_secs,
+            source_address,
             ):
         RepeatingTask.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
         self.cleanup_interval_secs = cleanup_interval_secs
         self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
+        self._source_address = source_address
         self._urllib2 = httpswithverify  # to ease unit testing.
 
     def tick(self):
@@ -87,7 +89,8 @@ class SendEventTask(RepeatingTask):
         request.add_data(json_event_str)
 
         try:
-            response = self._urllib2.urlopen(request)
+            response = self._urllib2.urlopen(request,
+                source_address=self._source_address)
             status_code = response.getcode()
             result_str = response.read()
             response.close()
