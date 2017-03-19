@@ -51,7 +51,7 @@ class SendEventTask(RepeatingTask):
             send_interval_secs,
             cleanup_interval_secs,
             cleanup_threshold_secs,
-            source_address,
+            source_address='0.0.0.0',
             ):
         RepeatingTask.__init__(self, send_interval_secs, False)
         self.pd_queue = pd_queue
