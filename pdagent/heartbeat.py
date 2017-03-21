@@ -54,13 +54,15 @@ class HeartbeatTask(RepeatingTask):
             heartbeat_interval_secs,
             agent_id,
             pd_queue,
-            system_info
+            system_info,
+            source_address='0.0.0.0',
             ):
         RepeatingTask.__init__(self, heartbeat_interval_secs, True)
         self._agent_id = agent_id
         self._pd_queue = pd_queue
         self._system_info = system_info
         # The following variables exist to ease unit testing:
+        self._source_address = source_address
         self._urllib2 = httpswithverify
         self._retry_gap_secs = RETRY_GAP_SECS
         self._heartbeat_max_retries = HEARTBEAT_MAX_RETRIES
@@ -136,7 +138,8 @@ class HeartbeatTask(RepeatingTask):
         request.add_header("Content-Type", "application/json")
         heartbeat_json_str = json.dumps(heartbeat_data)
         request.add_data(heartbeat_json_str)
-        response = self._urllib2.urlopen(request)
+        response = self._urllib2.urlopen(request,
+            source_address=self._source_address)
         response_str = response.read()
         response.close()
         return response_str

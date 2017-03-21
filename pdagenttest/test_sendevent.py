@@ -62,12 +62,13 @@ SAMPLE_EVENT = json.dumps({
 
 class SendEventTest(unittest.TestCase):
 
-    def new_send_event_task(self):
+    def new_send_event_task(self, source_address='0.0.0.0'):
         s = SendEventTask(
             self.mock_queue(),
             FREQUENCY_SEC,
             CLEANUP_FREQUENCY_SEC,
-            CLEANUP_AGE_SEC
+            CLEANUP_AGE_SEC,
+            source_address
         )
         s._urllib2 = MockUrlLib()
         return s
@@ -80,6 +81,13 @@ class SendEventTest(unittest.TestCase):
 
     def mock_response(self, code=200, data=DEFAULT_RESPONSE_DATA):
         return MockResponse(code, data)
+
+    def test_source_address_send_and_cleanup(self):
+        s = self.new_send_event_task('127.0.0.1')
+        s._urllib2.response = self.mock_response()
+        s.tick()
+        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertTrue(s.pd_queue.cleaned_up)
 
     def test_send_and_cleanup(self):
         s = self.new_send_event_task()

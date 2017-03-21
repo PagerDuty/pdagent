@@ -50,12 +50,13 @@ RESPONSE_FREQUENCY_SEC = 30
 
 class HeartbeatTest(unittest.TestCase):
 
-    def new_heartbeat_task(self):
+    def new_heartbeat_task(self, source_address='0.0.0.0'):
         hb = HeartbeatTask(
             RESPONSE_FREQUENCY_SEC + 10,  # something different from response.
             AGENT_ID,
             self.mock_queue(),
-            SYSTEM_INFO
+            SYSTEM_INFO,
+            source_address
             )
         hb._urllib2 = MockUrlLib()
         return hb
@@ -65,6 +66,17 @@ class HeartbeatTest(unittest.TestCase):
             status={"foo": "bar"},
             detailed_snapshot=False
             )
+
+    def test_source_address_and_data(self):
+        hb = self.new_heartbeat_task('127.0.0.1')
+        hb.tick()
+        expected = {
+            "agent_id": AGENT_ID,
+            "agent_version": pdagent.__version__,
+            "system_info": SYSTEM_INFO,
+            "agent_stats": hb._pd_queue.status
+            }
+        self.assertEqual(json.loads(hb._urllib2.request.get_data()), expected)
 
     def test_data(self):
         hb = self.new_heartbeat_task()
