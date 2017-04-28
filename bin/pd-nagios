@@ -1,0 +1,174 @@
+#!/usr/bin/python
+#
+# Python script to enqueue an event from Nagios to send to PagerDuty.
+#
+# Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#   * Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+class NagiosEvent:
+    def __init__(self, service_key, event_type, notification_type, details, incident_key=None):
+        self.__service_key = service_key
+        self.__event_type = event_type
+        self.__notification_type = notification_type
+        self.__details = details
+        self.__incident_key = incident_key
+
+    def enqueue(self):
+        from pdagent.config import load_agent_config
+        from pdagent.pdagentutil import queue_event
+        agent_config = load_agent_config()
+        self._check_required_fields()
+        return queue_event(
+            agent_config.get_enqueuer(),
+            self._pagerduty_event_type(),
+            self.__service_key,
+            self._incident_key(),
+            self._event_description(),
+            self.__details,
+            agent_config.get_agent_id(),
+            "pd-nagios"
+        )
+
+    def _event_description(self):
+        if self.__notification_type == "service":
+            return "SERVICEDESC={0}; SERVICESTATE={1}; HOSTNAME={2}".format(
+                self.__details['SERVICEDESC'],
+                self.__details['SERVICESTATE'],
+                self.__details['HOSTNAME']
+                )
+        elif self.__notification_type == "host":
+            return "HOSTNAME={0}; HOSTSTATE={1}".format(
+                self.__details['HOSTNAME'],
+                self.__details['HOSTSTATE']
+                )
+
+    def _incident_key(self):
+        if self.__incident_key is None:
+            if self.__notification_type == "service":
+                return "event_source=service;host_name={0};service_desc={1}".format(
+                    self.__details["HOSTNAME"],
+                    self.__details["SERVICEDESC"]
+                )
+            elif self.__notification_type == "host":
+                return "event_source=host;host_name={0}".format(self.__details["HOSTNAME"])
+            else:
+                raise ValueError("notification_type must be one of 'service' or 'host'")
+        else:
+            return self.__incident_key
+
+    def _check_required_fields(self):
+        if not self._required_fields().issubset(self.__details.keys()):
+            msg = "Missing fields for type '{0}'.  {1} required".format(
+                self.__notification_type,
+                ", ".join(self._required_fields()))
+            raise ValueError(msg)
+
+    def _required_fields(self):
+        return {
+            "host": set(["HOSTNAME","HOSTSTATE"]),
+            "service": set(["HOSTNAME", "SERVICEDESC","SERVICESTATE"])
+        }[self.__notification_type]
+
+    def _pagerduty_event_type(self):
+        return {
+            "PROBLEM": "trigger",
+            "ACKNOWLEDGEMENT": "acknowledge",
+            "RECOVERY": "resolve",
+            "NOP": "nop"
+        }[self.__event_type]
+
+def main():
+    description = "Enqueue an event from Nagios to PagerDuty."
+    parser = build_queue_arg_parser(description)
+    args = parser.parse_args()
+    details = parse_fields(args.fields)
+
+    event = NagiosEvent(
+        args.service_key,
+        args.event_type,
+        args.notification_type,
+        details,
+        args.incident_key)
+
+    try:
+        incident_key = event.enqueue()
+        print "Event processed. Incident Key:", incident_key
+    except ValueError as e:
+        parser.error(e.message)
+
+def build_queue_arg_parser(description):
+    from pdagent.thirdparty.argparse import ArgumentParser
+    parser = ArgumentParser(description=description)
+    parser.add_argument(
+        "-k",
+        "--service-key",
+        dest="service_key",
+        required=True,
+        help="Service API Key")
+    parser.add_argument(
+        "-t",
+        "--event-type",
+        dest="event_type",
+        required=True,
+        help="Event type",
+        choices=["PROBLEM", "ACKNOWLEDGEMENT", "RECOVERY", "NOP"])
+    parser.add_argument(
+        "-i",
+        "--incident-key",
+        dest="incident_key",
+        help="Incident Key"),
+    parser.add_argument(
+        "-f",
+        "--field",
+        action="append",
+        dest="fields",
+        help="Add given KEY=VALUE pair to the event details")
+    parser.add_argument(
+        "-n",
+        "--notification-type",
+        dest="notification_type",
+        required=True,
+        help="Nagios notification type (host or service)",
+        choices=["service", "host"])
+    return parser
+
+def parse_fields(fields):
+    if fields is None:
+        return {}
+    return dict(f.split("=", 2) for f in fields)
+
+if __name__ == "__main__":
+    try:
+        import pdagent.config
+    except ImportError:
+        # Fix up for dev layout
+        import sys
+        from os.path import realpath, dirname
+        sys.path.append(dirname(dirname(realpath(__file__))))
+        import pdagent.config
+    main()
