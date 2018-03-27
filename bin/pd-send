@@ -47,6 +47,15 @@ def build_queue_arg_parser(description):
         help="Short description of the problem"
         )
     parser.add_argument(
+        "-src", "--source", dest="source",
+        help="Source of issue"
+        )
+    parser.add_argument(
+        "-s", "--severity", dest="severity",
+        choices=["critical", "warning", "error","info"],
+        help="Severity value for the problem ('critical', 'warning', 'error' or 'info')"
+        )
+    parser.add_argument(
         "-i", "--incident-key", dest="incident_key",
         help="Incident Key"
         )
@@ -86,6 +95,10 @@ def main():
     if args.event_type == "trigger":
         if (not args.description) or (not args.description.strip()):
             parser.error("Event type '%s' requires description" % args.event_type)
+        if (not args.severity) or ( not args.severity.strip()):
+            parser.error("Event type '%s' requires severity" % args.event_type)
+        if (not args.source) or ( not args.source.strip()):
+            parser.error("Event type '%s' requires origin" % args.event_type)
     else:
         if not args.incident_key:
             parser.error("Event type '%s' requires incident key" % args.event_type)
@@ -95,7 +108,7 @@ def main():
     enqueuer = agent_config.get_enqueuer()
     incident_key, problems = queue_event(
         enqueuer,
-        args.event_type, args.service_key, args.incident_key, args.description,
+        args.event_type, args.severity, args.source,args.service_key, args.incident_key, args.description,
         args.client, args.client_url, details,
         agent_config.get_agent_id(), "pd-send",
         )

@@ -68,7 +68,7 @@ def utcnow_isoformat(time_calc=None):
 
 def queue_event(
         enqueuer,
-        event_type, service_key, incident_key, description, client, client_url, details,
+        event_type, event_severity, event_source, service_key, incident_key, description, client, client_url, details,
         agent_id, queued_by,
         ):
     agent_context = {
@@ -77,7 +77,7 @@ def queue_event(
         "queued_at": utcnow_isoformat()
         }
     event = _build_event_json_str(
-        event_type, service_key, incident_key, description, client, client_url, details,
+        event_type, event_severity, event_source, service_key, incident_key, description, client, client_url, details,
         agent_context
         )
     _, problems = enqueuer.enqueue(service_key, event)
@@ -97,18 +97,25 @@ def get_stats(queue, service_key):
 
 
 def _build_event_json_str(
-    event_type, service_key, incident_key, description, client, client_url, details,
+    event_type, event_severity, event_source, service_key, incident_key, description, client, client_url, details,
     agent_context=None
     ):
+    p = {
+        "custom_details": details
+        }
     d = {
-        "service_key": service_key,
-        "event_type": event_type,
-        "details": details,
+        "payload": p,
+        "routing_key": service_key,
+        "event_action": event_type
         }
     if incident_key is not None:
-        d["incident_key"] = incident_key
+        d["dedup_key"] = incident_key
     if description is not None:
-        d["description"] = description
+        p["summary"] = description
+    if event_source is not None:
+        p["source"] = event_source
+    if event_severity is not None:
+        p["severity"] = event_severity
     if client is not None:
         d["client"] = client
     if client_url is not None:

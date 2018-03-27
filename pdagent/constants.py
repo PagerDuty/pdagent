@@ -45,7 +45,7 @@ EnqueueWarnings = enum('UMASK_TOO_RESTRICTIVE')
 
 # PD event integration API.
 EVENTS_API_BASE = \
-    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+    "https://events.pagerduty.com/v2/enqueue"
 
 # PD heartbeat end-point.
 HEARTBEAT_URI = "https://api.pagerduty.com/agent/2014-03-14/heartbeat"
