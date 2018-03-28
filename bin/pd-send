@@ -53,7 +53,7 @@ def build_queue_arg_parser(description):
     parser.add_argument(
         "-s", "--severity", dest="severity",
         choices=["critical", "warning", "error","info"],
-        help="Severity value for the problem ('critical', 'warning', 'error' or 'info')"
+        help="Severity value for the problem"
         )
     parser.add_argument(
         "-i", "--incident-key", dest="incident_key",
