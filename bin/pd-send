@@ -35,7 +35,7 @@ def build_queue_arg_parser(description):
     parser = ArgumentParser(description=description)
     parser.add_argument(
         "-k", "--service-key", dest="service_key", required=True,
-        help="Service API Key"
+        help="Service API Key/Routing key"
         )
     parser.add_argument(
         "-t", "--event-type", dest="event_type", required=True,
@@ -44,20 +44,32 @@ def build_queue_arg_parser(description):
         )
     parser.add_argument(
         "-d", "--description", dest="description",
-        help="Short description of the problem"
+        help="(Payload)Summary of the problem"
         )
     parser.add_argument(
         "-src", "--source", dest="source",
-        help="Source of issue"
+        help="(Payload)Source of issue"
         )
     parser.add_argument(
         "-s", "--severity", dest="severity",
         choices=["critical", "warning", "error","info"],
-        help="Severity value for the problem"
+        help="(Payload)Severity value for the problem"
+        )
+    parser.add_argument(
+        "-c", "--component", dest="component",
+        help="(Payload)Component value for the problem"
+        )
+    parser.add_argument(
+        "-g", "--group", dest="group",
+        help="(Payload)Group value for the problem"
+        )
+    parser.add_argument(
+        "-cls", "--class", dest="prob_class",
+        help="(Payload)Class value for the problem"
         )
     parser.add_argument(
         "-i", "--incident-key", dest="incident_key",
-        help="Incident Key"
+        help="Incident Key/Dedup key"
         )
     parser.add_argument(
         "-c", "--client", dest="client",
@@ -69,7 +81,7 @@ def build_queue_arg_parser(description):
         )
     parser.add_argument(
         "-f", "--field", action="append", dest="fields",
-        help="Add given KEY=VALUE pair to the event details"
+        help="Add given KEY=VALUE pair to the (Payload)custom details"
         )
     parser.add_argument(
         "-q", "--quiet", action="store_true", dest="quiet",
@@ -108,7 +120,8 @@ def main():
     enqueuer = agent_config.get_enqueuer()
     incident_key, problems = queue_event(
         enqueuer,
-        args.event_type, args.severity, args.source,args.service_key, args.incident_key, args.description,
+        args.event_type, args.severity, args.source, args.component, args.group, args.prob_class,
+        args.service_key, args.incident_key, args.description,
         args.client, args.client_url, details,
         agent_config.get_agent_id(), "pd-send",
         )
