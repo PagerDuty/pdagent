@@ -56,7 +56,7 @@ def build_queue_arg_parser(description):
         help="(Payload)Severity value for the problem"
         )
     parser.add_argument(
-        "-c", "--component", dest="component",
+        "-cmp", "--component", dest="component",
         help="(Payload)Component value for the problem"
         )
     parser.add_argument(
