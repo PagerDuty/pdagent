@@ -40,7 +40,7 @@ def build_queue_arg_parser(description):
     parser.add_argument(
         "-api", "--apiVersion", dest="api_version", 
         choices=["V1", "V2",], default="V1",
-        help="API version to target"
+        help="API version to target (default is V1 if not set)"
         )
     parser.add_argument(
         "-t", "--event-type", dest="event_type", required=True,
@@ -58,19 +58,19 @@ def build_queue_arg_parser(description):
     parser.add_argument(
         "-s", "--severity", dest="severity",
         choices=["critical", "warning", "error","info"],
-        help="(Payload)Severity value for the problem"
+        help="(Payload)Severity value for the problem (-api V2 only)"
         )
     parser.add_argument(
         "-cmp", "--component", dest="component",
-        help="(Payload)Component value for the problem"
+        help="(Payload)Component value for the problem (-api V2 only)" 
         )
     parser.add_argument(
         "-g", "--group", dest="group",
-        help="(Payload)Group value for the problem"
+        help="(Payload)Group value for the problem (-api V2 only)"
         )
     parser.add_argument(
         "-cls", "--class", dest="prob_class",
-        help="(Payload)Class value for the problem"
+        help="(Payload)Class value for the problem (-api V2 only)"
         )
     parser.add_argument(
         "-i", "--incident-key", dest="incident_key",

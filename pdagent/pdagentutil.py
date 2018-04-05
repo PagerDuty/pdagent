@@ -78,7 +78,7 @@ def queue_event(
         }
     if api_version=="V1":
         event = _build_event_json_str_V1(
-            event_type, service_key, incident_key, description, client, client_url, details,
+            event_type, service_key, incident_key, description, client, client_url, details, agent_context
             )      
     else:
         event = _build_event_json_str_V2(
