@@ -38,6 +38,11 @@ def build_queue_arg_parser(description):
         help="Service API Key/Routing key"
         )
     parser.add_argument(
+        "-api", "--apiVersion", dest="api_version", 
+        choices=["V1", "V2",], default="V1",
+        help="API version to target"
+        )
+    parser.add_argument(
         "-t", "--event-type", dest="event_type", required=True,
         choices=["trigger", "acknowledge", "resolve"],
         help="Event type"
@@ -119,7 +124,7 @@ def main():
 
     enqueuer = agent_config.get_enqueuer()
     incident_key, problems = queue_event(
-        enqueuer,
+        enqueuer, args.api_version,
         args.event_type, args.severity, args.source, args.component, args.group, args.prob_class,
         args.service_key, args.incident_key, args.description,
         args.client, args.client_url, details,
