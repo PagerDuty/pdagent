@@ -111,11 +111,11 @@ def main():
 
     if args.event_type == "trigger":
         if (not args.description) or (not args.description.strip()):
-            parser.error("Event type '%s' requires description" % args.event_type)
+            parser.error("Event type '%s' requires description(-d)" % args.event_type)
         if ((not args.severity) or ( not args.severity.strip()) and args.api_version == "V2"):
-            parser.error("Event type '%s' requires severity" % args.event_type)
+            parser.error("Event type '%s' requires severity(-s)" % args.event_type)
         if ((not args.source) or ( not args.source.strip()) and args.api_version == "V2"):
-            parser.error("Event type '%s' requires origin" % args.event_type)
+            parser.error("Event type '%s' requires source(-src)" % args.event_type)
     else:
         if not args.incident_key:
             parser.error("Event type '%s' requires incident key" % args.event_type)
