@@ -102,7 +102,14 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
 
         args = [(self.host, self.port), self.timeout, (self.source_addr, 0)]
         sock = socket.create_connection(*args)
+        end_host = self.host
         if self._tunnel_host:
+            # In this context, self.host is the proxy hostname, whereas
+            # _tunnel_host is the hostname beyond the proxy.
+            #
+            # _tunnel_host is what is used in the CONNECT request sent to the
+            # proxy server. See: httplib.HTTPConnection._tunnel()
+            end_host = self._tunnel_host
             self.sock = sock
             self._tunnel()
 
@@ -116,7 +123,7 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
             ca_certs=self.ca_certs
             )
         try:
-            match_hostname(self.sock.getpeercert(), self.host)
+            match_hostname(self.sock.getpeercert(), end_host)
         except CertificateError:
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
