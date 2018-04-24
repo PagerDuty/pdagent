@@ -38,6 +38,7 @@ import os
 import sys
 import time
 
+from constants import MAX_DESCRIPTION_LEN
 
 def find_in_sys_path(file_path):
     for directory in sys.path:
@@ -108,7 +109,7 @@ def _build_event_json_str(
     if incident_key is not None:
         d["incident_key"] = incident_key
     if description is not None:
-        d["description"] = description[:1024]
+        d["description"] = description[:MAX_DESCRIPTION_LEN]
     if client is not None:
         d["client"] = client
     if client_url is not None:
