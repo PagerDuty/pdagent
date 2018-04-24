@@ -108,7 +108,7 @@ def _build_event_json_str(
     if incident_key is not None:
         d["incident_key"] = incident_key
     if description is not None:
-        d["description"] = description
+        d["description"] = description[:1024]
     if client is not None:
         d["client"] = client
     if client_url is not None:

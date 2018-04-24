@@ -93,17 +93,23 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
 
     def __init__(self, host, **kwargs):
         self.ca_certs = kwargs.pop("ca_certs", None)
+        self.source_addr = kwargs.pop("source_address", '0.0.0.0')
         httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
     def connect(self):
         """Connects to a host on a given (SSL) port, using a
         certificate-verifying socket wrapper."""
 
-        args = [(self.host, self.port), self.timeout]
-        if hasattr(self, 'source_address'):
-            args.append(self.source_address)
+        args = [(self.host, self.port), self.timeout, (self.source_addr, 0)]
         sock = socket.create_connection(*args)
+        end_host = self.host
         if self._tunnel_host:
+            # In this context, self.host is the proxy hostname, whereas
+            # _tunnel_host is the hostname beyond the proxy.
+            #
+            # _tunnel_host is what is used in the CONNECT request sent to the
+            # proxy server. See: httplib.HTTPConnection._tunnel()
+            end_host = self._tunnel_host
             self.sock = sock
             self._tunnel()
 
@@ -117,7 +123,7 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
             ca_certs=self.ca_certs
             )
         try:
-            match_hostname(self.sock.getpeercert(), self.host)
+            match_hostname(self.sock.getpeercert(), end_host)
         except CertificateError:
             self.sock.shutdown(socket.SHUT_RDWR)
             self.sock.close()
@@ -130,6 +136,7 @@ class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
 
     def __init__(self, **kwargs):
         self.ca_certs = kwargs.pop("ca_certs", None)
+        self.source_address = kwargs.pop("source_address", None)
         urllib2.HTTPSHandler.__init__(self, **kwargs)
 
     def https_open(self, req):
@@ -137,7 +144,8 @@ class VerifyingHTTPSHandler(urllib2.HTTPSHandler):
 
     def _proxyHTTPSConnection(self, host, **kwargs):
         new_kwargs = {
-            "ca_certs": self.ca_certs
+            "ca_certs": self.ca_certs,
+            "source_address": self.source_address
             }
         new_kwargs.update(kwargs)  # allows overriding ca_certs
         return VerifyingHTTPSConnection(host, **new_kwargs)
@@ -146,8 +154,10 @@ url_opener_cache = dict()
 
 def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
+    source_address = kwargs.pop("source_address", "0.0.0.0")
     if ca_certs not in url_opener_cache:
         # create and cache an opener; not thread-safe, but doesn't matter.
         url_opener_cache[ca_certs] = \
-            urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs))
+            urllib2.build_opener(VerifyingHTTPSHandler(ca_certs=ca_certs,
+                source_address=source_address))
     return url_opener_cache[ca_certs].open(url, **kwargs)

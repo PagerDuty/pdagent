@@ -95,6 +95,7 @@ mv Release deb/
 [ ! -e deb/Release.gpg ] || rm deb/Release.gpg
 gpg --homedir $gpg_home --lock-never \
     --output deb/Release.gpg \
+    --digest-algo SHA256 \
     --detach-sign --armor deb/Release
 
 echo "Local install-worthy repository created at: $deb_install_root"
