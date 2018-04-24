@@ -49,3 +49,6 @@ EVENTS_API_BASE = \
 
 # PD heartbeat end-point.
 HEARTBEAT_URI = "https://api.pagerduty.com/agent/2014-03-14/heartbeat"
+
+# Maximum length of the description field (any longer and API will send 400)
+MAX_DESCRIPTION_LEN = 1024
