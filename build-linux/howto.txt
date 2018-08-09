@@ -1,4 +1,3 @@
-
 # Linux Build Instructions
 
 These instructions assume you're running this on a Mac with Vagrant installed,
@@ -8,6 +7,11 @@ should happen automatically)
 ## One-time setup of GPG keys:
 
 To build Linux packages, you will need GPG keys to sign the packages.
+
+NOTE: you'll need to generate your dev keys with gpg1 not gpg2.  The command
+sequence below should generate files: pubring.gpg, secring.gpg and trustdb.gpg.
+If you see a file called pubring.kbx and a bunch of socket files then you're using
+gpg2.
 
 For development, you can generate new keys as follows:
 
