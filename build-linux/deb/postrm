@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
@@ -27,64 +28,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-AGENT_USER=pdagent
-BIN_PD_QUEUE=pd-queue
-BIN_PD_SEND=pd-send
-CONFIG_FILE=/etc/pdagent.conf
-PID_FILE=/var/run/pdagent/pdagentd.pid
-LOG_FILE=/var/log/pdagent/pdagentd.log
-DATA_DIR=/var/lib/pdagent
-OUTQUEUE_DIR=$DATA_DIR/outqueue
-AGENT_SVC_NAME=pdagent
-SEND_INTERVAL_SECS=5
-# The service key to use for testing commands like pd-send etc.
-SVC_KEY=24124788d819478298bd55f0b8c3a19f
+set -e
 
-# return OS type of current system.
-os_type() {
-  if [ -e /etc/debian_version ]; then
-    echo "debian"
-  elif [ -e /etc/redhat-release ]; then
-    echo "redhat"
-  fi
-}
+if [ $# -gt 1 ]; then # this is an upgrade
+    : # no-op
+else # this is a remove
+    : # no-op
+fi
 
-# return pid if agent is running, or empty string if not running.
-agent_pid() {
-    ps aux | grep /usr/share/pdagent/bin/pdagentd.py | grep -v grep | awk '{print $2}'
-}
-
-# start agent if not running.
-start_agent() {
-    if [ -z "$(agent_pid)" ]; then
-        if which systemctl >/dev/null; then
-            sudo systemctl start $AGENT_SVC_NAME
-        else
-            sudo service $AGENT_SVC_NAME start
-        fi
-    else
-        return 0
-    fi
-}
-
-# stop agent if running.
-stop_agent() {
-    if [ -n "$(agent_pid)" ]; then
-            if which systemctl >/dev/null; then
-                sudo systemctl stop $AGENT_SVC_NAME
-            else
-                sudo service $AGENT_SVC_NAME stop
-            fi
-    else
-        return 0
-    fi
-}
-
-# restart agent if running.
-restart_agent() {
-    if which systemctl >/dev/null; then
-        sudo systemctl restart $AGENT_SVC_NAME
-    else
-        sudo service $AGENT_SVC_NAME restart
-    fi
-}
+exit 0

@@ -39,8 +39,9 @@ Vagrant.configure("2") do |conf_outer|
       config.vm.box = conf["box"]
       config.vm.box_url = conf["box_url"]
 
+      ## no longer necessary with Vagrant 2.1.2?
       # Public/bridged network so VM can install packages from the internet
-      config.vm.network :public_network, :bridge => "en0: Wi-Fi (AirPort)"
+      # config.vm.network :public_network, :bridge => "en0: Wi-Fi (AirPort)"
 
     end # conf_outer.vm.define
 

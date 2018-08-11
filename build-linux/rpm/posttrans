@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
@@ -27,64 +28,23 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-AGENT_USER=pdagent
-BIN_PD_QUEUE=pd-queue
-BIN_PD_SEND=pd-send
-CONFIG_FILE=/etc/pdagent.conf
-PID_FILE=/var/run/pdagent/pdagentd.pid
-LOG_FILE=/var/log/pdagent/pdagentd.log
-DATA_DIR=/var/lib/pdagent
-OUTQUEUE_DIR=$DATA_DIR/outqueue
-AGENT_SVC_NAME=pdagent
-SEND_INTERVAL_SECS=5
-# The service key to use for testing commands like pd-send etc.
-SVC_KEY=24124788d819478298bd55f0b8c3a19f
+set -e
 
-# return OS type of current system.
-os_type() {
-  if [ -e /etc/debian_version ]; then
-    echo "debian"
-  elif [ -e /etc/redhat-release ]; then
-    echo "redhat"
-  fi
+reinstate_init () {
+    cp /var/lib/pdagent/scripts/pdagent.init /etc/init.d/pdagent
+    chmod +x /etc/init.d/pdagent
 }
 
-# return pid if agent is running, or empty string if not running.
-agent_pid() {
-    ps aux | grep /usr/share/pdagent/bin/pdagentd.py | grep -v grep | awk '{print $2}'
-}
-
-# start agent if not running.
-start_agent() {
-    if [ -z "$(agent_pid)" ]; then
-        if which systemctl >/dev/null; then
-            sudo systemctl start $AGENT_SVC_NAME
-        else
-            sudo service $AGENT_SVC_NAME start
-        fi
-    else
-        return 0
-    fi
-}
-
-# stop agent if running.
-stop_agent() {
-    if [ -n "$(agent_pid)" ]; then
-            if which systemctl >/dev/null; then
-                sudo systemctl stop $AGENT_SVC_NAME
-            else
-                sudo service $AGENT_SVC_NAME stop
-            fi
-    else
-        return 0
-    fi
-}
-
-# restart agent if running.
-restart_agent() {
+if [ -e "/tmp/pdagent_upgrade.txt" ]; then
+    # reinstate /etc/init.d/pdagent that was deleted by v1.4 pkg removal
     if which systemctl >/dev/null; then
-        sudo systemctl restart $AGENT_SVC_NAME
+        :
     else
-        sudo service $AGENT_SVC_NAME restart
+        reinstate_init
     fi
-}
+
+    # cleanup tmp file
+    rm /tmp/pdagent_upgrade.txt
+fi
+
+exit 0
