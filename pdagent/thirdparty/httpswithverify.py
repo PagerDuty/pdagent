@@ -64,6 +64,7 @@
 import httplib
 import urllib2
 import socket
+import sys
 
 from pdagent.pdagentutil import find_in_sys_path
 from pdagent.thirdparty.ssl_match_hostname import \
@@ -94,13 +95,22 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
     def __init__(self, host, **kwargs):
         self.ca_certs = kwargs.pop("ca_certs", None)
         self.source_addr = kwargs.pop("source_address", '0.0.0.0')
+
+        if sys.version_info[1] > 6:
+            self.gt_python_26 = True
+        else:
+            self.gt_python_26 = False
+
         httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
     def connect(self):
         """Connects to a host on a given (SSL) port, using a
         certificate-verifying socket wrapper."""
 
-        args = [(self.host, self.port), self.timeout, (self.source_addr, 0)]
+        args = [(self.host, self.port), self.timeout]
+        if self.gt_python_26:
+            args.append((self.source_addr, 0))
+
         sock = socket.create_connection(*args)
         end_host = self.host
         if self._tunnel_host:

@@ -30,33 +30,10 @@
 
 set -e
 
-uninstall_init () {
-    service pdagent stop
-    chkconfig --del pdagent
-}
-
-uninstall_systemd () {
-    systemctl stop pdagent
-    systemctl disable pdagent
-}
-
-VERSION=`python -c "import platform; print platform.python_version()"`
-if [[ $VERSION == 2.7.* ]]; then
-    INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
-else
-    INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
-fi
-
-if [ $1 -gt 0 ]; then # this is an upgrade
+if [ $# -gt 1 ]; then # this is an upgrade
     : # no-op
 else # this is a remove
-    if which systemctl >/dev/null; then
-        uninstall_systemd
-    else
-        uninstall_init
-    fi
-
-    rm -rf $INSTALL_PATH
+    : # no-op
 fi
 
 exit 0

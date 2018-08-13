@@ -87,21 +87,13 @@ mkdir -p \
     data/var/lib/pdagent/outqueue/err \
     data/var/lib/pdagent/outqueue/suc
 mkdir -p data/var/lib/pdagent/scripts
-# stage sysV & systemd service files for deb postinst
+# stage sysV & systemd service files for pkg postinst
 cp pdagent.init data/var/lib/pdagent/scripts/pdagent.init
 cp pdagent.service data/var/lib/pdagent/scripts/pdagent.service
 
 echo = /etc/...
 mkdir -p data/etc/
 cp ../conf/pdagent.conf data/etc/
-
-if [ "$pkg_type" = "rpm" ]; then
-    # marks /etc/init.d/pdagent as co-owned by old_rpm && new_rpm and saves it from removal
-    # during yum update cleanu of old_rpm (yum cleanup internals regardless of prerm script)
-    mkdir -p data/etc/init.d
-    cp pdagent.init data/etc/init.d/pdagent
-    chmod 755 data/etc/init.d/pdagent
-fi
 
 if [ "$pkg_type" = "deb" ]; then
     _PY_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
@@ -118,7 +110,6 @@ find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
     -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
 cd -
 
-
 # copy the libraries for python2.7 rpm users
 if [ "$pkg_type" = "rpm" ]; then
     mkdir -p "$_PY27_SITE_PACKAGES"
@@ -133,6 +124,11 @@ if [ "$pkg_type" = "rpm" ]; then
     _SIGN_OPTS="--rpm-sign"
 fi
 
+_POST_TRANS_OPT=""
+if [ "$pkg_type" = "rpm" ]; then
+    _POST_TRANS_OPT="--rpm-posttrans ../rpm/posttrans"
+fi
+
 cd target
 
 _DESC="The PagerDuty Agent package
@@ -145,16 +141,10 @@ else
 fi
 _PKG_MAINTAINER="$_PKG_MAINTAINER (PagerDuty, Inc.) <packages@pagerduty.com>"
 if [ "$pkg_type" = "rpm" ]; then
-    source /opt/rh/ruby193/enable
-    FPM=/opt/rh/ruby193/root/usr/local/share/gems/gems/fpm-$FPM_VERSION/bin/fpm
+    source /opt/rh/rh-ruby23/enable
+    FPM=/opt/rh/rh-ruby23/root/usr/local/share/gems/gems/fpm-$FPM_VERSION/bin/fpm
 else
     FPM=fpm
-fi
-
-if [ "$pkg_type" = "deb" ]; then
-    _BEFORE_AND_AFTER_OPTS="--before-install ../$pkg_type/preinst --after-install ../$pkg_type/postinst --before-remove ../$pkg_type/prerm"
-else
-    _BEFORE_AND_AFTER_OPTS="--after-install ../$pkg_type/postinst --before-remove ../$pkg_type/prerm"
 fi
 
 $FPM -s dir \
@@ -172,7 +162,11 @@ $FPM -s dir \
      --${pkg_type}-user root \
      --${pkg_type}-group root \
      --config-files /etc/pdagent.conf \
-     $_BEFORE_AND_AFTER_OPTS \
+     --before-install ../$pkg_type/preinst \
+     --after-install ../$pkg_type/postinst \
+     --before-remove ../$pkg_type/prerm \
+     --after-remove ../$pkg_type/postrm \
+     $_POST_TRANS_OPT \
      -C ../data \
      etc usr var
 

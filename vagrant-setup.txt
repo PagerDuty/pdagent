@@ -3,10 +3,11 @@
 Vagrant setup notes for OS X 10.8 (Mountain Lion).
 
 
-## Installation
+## Installation/Upgrade
 
 1. Install Vagrant.  See instructions at http://www.vagrantup.com/
 
+NOTE: If you experience issues in the 'Configuring and enabling network interfaces...' phase when bringing up centos instances, upgrade your vagrant to the latest.  My upgrade from v1.9.0 to v2.1.2 fixed this.
 
 ## Managing VMs
 
@@ -20,6 +21,7 @@ For example:
 Current machine states:
 
 agent-minimal-centos65    not created (virtualbox)
+agent-minimal-centos72    not created (virtualbox)
 agent-minimal-ubuntu1204  running (virtualbox)
 agent-minimal-ubuntu1404  running (virtualbox)
 agent-minimal-ubuntu1604  running (virtualbox)

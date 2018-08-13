@@ -30,33 +30,17 @@
 
 set -e
 
-uninstall_init () {
-    service pdagent stop
-    chkconfig --del pdagent
-}
+if [ $1 -gt 1 ]; then # this is an upgrade
+    # drop a file so posttrans knows this is an upgrade
+    touch /tmp/pdagent_upgrade.txt
 
-uninstall_systemd () {
-    systemctl stop pdagent
-    systemctl disable pdagent
-}
-
-VERSION=`python -c "import platform; print platform.python_version()"`
-if [[ $VERSION == 2.7.* ]]; then
-    INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
-else
-    INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
-fi
-
-if [ $1 -gt 0 ]; then # this is an upgrade
-    : # no-op
-else # this is a remove
-    if which systemctl >/dev/null; then
-        uninstall_systemd
-    else
-        uninstall_init
+    # try to shutdown v1.4 agent via sysV script on systemd enabled envs
+    # this is a one-time fix and can be removed on the next version rev (v1.6)
+    if which systemctl >/dev/null && [ -e /etc/init.d/pdagent ]; then
+        /etc/init.d/pdagent stop
     fi
-
-    rm -rf $INSTALL_PATH
+else # this is a remove
+    : # no-op
 fi
 
 exit 0
