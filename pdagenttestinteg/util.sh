@@ -38,7 +38,7 @@ OUTQUEUE_DIR=$DATA_DIR/outqueue
 AGENT_SVC_NAME=pdagent
 SEND_INTERVAL_SECS=5
 # The service key to use for testing commands like pd-send etc.
-SVC_KEY=24124788d819478298bd55f0b8c3a19f
+SVC_KEY=CHANGEME
 
 # return OS type of current system.
 os_type() {
