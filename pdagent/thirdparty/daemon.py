@@ -19,6 +19,7 @@
 import atexit
 import os
 import sys
+import psutil
 
 
 def daemonize(
@@ -42,9 +43,11 @@ def daemonize(
     except (IOError, ValueError):
         pid = None
 
-    if pid:
-        message = "pidfile %s already exists. Is it already running?\n"
+    if (pid and psutil.pid_exists(pid)):
+        message = "pidfile %s already exists and the process is running!\n"
         raise SystemExit(message % pidfile)
+    if pid:
+        os.remove(pidfile)
 
     # Do first fork
     try:
