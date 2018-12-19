@@ -35,7 +35,7 @@ from urllib2 import HTTPError, Request, URLError
 
 from pdagent.thirdparty import httpswithverify
 from pdagent.thirdparty.ssl_match_hostname import CertificateError
-from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
+from pdagent.constants import ConsumeEvent, EVENTS_API_BASE_V1, SERVICE_KEY_KEY_V1, EVENTS_API_BASE_V2, SERVICE_KEY_KEY_V2
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.pdthread import RepeatingTask
 
@@ -84,7 +84,17 @@ class SendEventTask(RepeatingTask):
 
     def send_event(self, json_event_str, event_id):
         # Note that Request here is from urllib2, not self._urllib2.
-        request = Request(EVENTS_API_BASE)
+        # choose api version based on means of ""
+        if SERVICE_KEY_KEY_V1 in json_event_str:
+            logger.debug("Sending event to V1 Api: ")
+            request = Request(EVENTS_API_BASE_V1)
+        elif  SERVICE_KEY_KEY_V2 in json_event_str:
+            logger.debug("Sending event to V2 Api: ")
+            request = Request(EVENTS_API_BASE_V2)
+        else: 
+            logger.debug("Unknown service key sending to V1 api ")
+            request = Request(EVENTS_API_BASE_V1)
+            
         request.add_header("Content-type", "application/json")
         request.add_data(json_event_str)
 

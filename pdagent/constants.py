@@ -43,9 +43,18 @@ ConsumeEvent = enum(
 # PDEnqueue warnings.
 EnqueueWarnings = enum('UMASK_TOO_RESTRICTIVE')
 
-# PD event integration API.
-EVENTS_API_BASE = \
-    "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+# PD event integration API V1.
+EVENTS_API_BASE_V2 = \
+    "https://events.pagerduty.com/v2/enqueue"
+
+# PD event service 
+SERVICE_KEY_KEY_V2 = "routing_key"    
+
+# PD event integration API V2.
+EVENTS_API_BASE_V1 = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+
+# PD event service 
+SERVICE_KEY_KEY_V1 = "service_key"
 
 # PD heartbeat end-point.
 HEARTBEAT_URI = "https://api.pagerduty.com/agent/2014-03-14/heartbeat"

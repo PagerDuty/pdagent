@@ -68,19 +68,24 @@ def utcnow_isoformat(time_calc=None):
     return time_calc.strftime("%Y-%m-%dT%H:%M:%SZ", time_calc.gmtime())
 
 def queue_event(
-        enqueuer,
-        event_type, service_key, incident_key, description, client, client_url, details,
-        agent_id, queued_by,
+    enqueuer, api_version,
+        event_type, event_severity, event_source, event_component, event_group, event_class, service_key, incident_key, 
+        description, client, client_url, details, agent_id, queued_by,
         ):
     agent_context = {
         "agent_id": agent_id,
         "queued_by": queued_by,
         "queued_at": utcnow_isoformat()
         }
-    event = _build_event_json_str(
-        event_type, service_key, incident_key, description, client, client_url, details,
-        agent_context
-        )
+    if api_version=="V1":
+        event = _build_event_json_str_V1(
+            event_type, service_key, incident_key, description, client, client_url, details, agent_context
+            )      
+    else:
+        event = _build_event_json_str_V2(
+            event_type, event_severity, event_source, event_component, event_group, event_class, service_key, incident_key, 
+            description, client, client_url, details, agent_context
+            )
     _, problems = enqueuer.enqueue(service_key, event)
     return incident_key, problems
 
@@ -97,7 +102,48 @@ def get_stats(queue, service_key):
         )
 
 
-def _build_event_json_str(
+def _build_event_json_str_V2(
+    event_type, event_severity, event_source, event_component, event_group, event_class, service_key, incident_key, 
+        description, client, client_url, details,
+        agent_context=None
+        ):
+    p = {
+        "custom_details": details
+        }
+    d = {
+        "payload": p,
+        "routing_key": service_key,
+        "event_action": event_type
+        }
+    if incident_key is not None:
+        d["dedup_key"] = incident_key
+    if description is not None:
+        p["summary"] = description
+    if event_source is not None:
+        p["source"] = event_source
+    if event_component is not None:
+        p["component"] = event_component
+    if event_group is not None:
+        p["group"] = event_group
+    if event_class is not None:
+        p["class"] = event_class
+    if event_severity is not None:
+        p["severity"] = event_severity
+    if client is not None:
+        d["client"] = client
+    if client_url is not None:
+        d["client_url"] = client_url
+    if agent_context is not None:
+        d["agent"] = agent_context
+
+    return json.dumps(
+        d,
+        separators=(',', ':'),  # compact json str
+        sort_keys=True
+        )
+
+
+def _build_event_json_str_V1(
     event_type, service_key, incident_key, description, client, client_url, details,
     agent_context=None
     ):

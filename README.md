@@ -19,6 +19,20 @@ the source code and customize it for your needs.
 The Agent requires Python 2.6 or 2.7. The instructions here assume that you're
 on a Mac.
 
+## About this version
+
+This version of the PagerDuty Agent supports both V1
+(https://v2.developer.pagerduty.com/docs/events-api) and V2
+(https://v2.developer.pagerduty.com/docs/events-api-v2) Event APIs. If a version
+is not explicitly stated with the -api argument, it will default to V1, and
+should perform identically to the previous version. The V2 Api supports a richer
+set of parameters that may be useful.
+
+In the background it determines the API endpoint by the checking if the
+generated message contains "service_key" (V1) or "routing_key"
+(V2) - in a simple textual manner (by the time it is on the queue it is a string
+containing JSON and not a tree structure)
+
 
 ## Developing
 
@@ -36,8 +50,11 @@ Similarly, you can use the `pd-send` command immediately.
 
 ```
 ~/w/pdagent/bin$ ./pd-send -h
-usage: pd-send [-h] -k SERVICE_KEY -t {trigger,acknowledge,resolve}
-               [-d DESCRIPTION] [-i INCIDENT_KEY] [-f FIELDS]
+usage: pd-send [-h] -k SERVICE_KEY [-api {V1,V2}] -t
+               {trigger,acknowledge,resolve} [-d DESCRIPTION] [-src SOURCE]
+               [-s {critical,warning,error,info}] [-cmp COMPONENT] [-g GROUP]
+               [-cls PROB_CLASS] [-i INCIDENT_KEY] [-c CLIENT] [-u CLIENT_URL]
+               [-f FIELDS] [-q]
 
 Queue up a trigger, acknowledge, or resolve event to PagerDuty.
 ...
