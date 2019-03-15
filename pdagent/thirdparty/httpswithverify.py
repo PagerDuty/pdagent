@@ -121,6 +121,7 @@ class VerifyingHTTPSConnection(httplib.HTTPSConnection):
             # proxy server. See: httplib.HTTPConnection._tunnel()
             end_host = self._tunnel_host
             self.sock = sock
+            self._tunnel_headers = {"Host": end_host}
             self._tunnel()
 
         # require server certificate to be provided, and pass along
