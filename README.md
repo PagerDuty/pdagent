@@ -11,7 +11,7 @@ incidents.
 
 The supported events are those listed in the PagerDuty Integration API:
 
-> <http://developer.pagerduty.com/documentation/integration/events>
+> <https://v2.developer.pagerduty.com/docs/events-api>
 
 The PagerDuty Agent is completely open-source which means that you can download
 the source code and customize it for your needs.
@@ -19,15 +19,26 @@ the source code and customize it for your needs.
 The Agent requires Python 2.6 or 2.7. The instructions here assume that you're
 on a Mac.
 
-
 ## Developing
 
 ### Running in Development
 
+Python 2.7 is the system default on OSX but check to see if the package manager is installed:
+
+`which pip`
+
+If pip isn't found then execute the following to install it:
+
+`sudo easy_install pip`
+
+Next, install package dependencies:
+
+`sudo pip install psutil`
+
 You can run the Agent in development without any setup. Start the Agent daemon
 as follows:
 
-    ~/w/pdagent/bin$ ./pdagentd.py
+`bin/pdagentd.py`
 
 When run in development the daemon automatically creates a `tmp` directory
 inside the project where it stores its various work files.
@@ -35,7 +46,7 @@ inside the project where it stores its various work files.
 Similarly, you can use the `pd-send` command immediately.
 
 ```
-~/w/pdagent/bin$ ./pd-send -h
+bin/pd-send -h
 usage: pd-send [-h] -k SERVICE_KEY -t {trigger,acknowledge,resolve}
                [-d DESCRIPTION] [-i INCIDENT_KEY] [-f FIELDS]
 
@@ -48,32 +59,25 @@ directory exists.
 
 You can stop the daemon as follows:
 
-    ~/w/pdagent/bin$ kill `cat ../tmp/pdagentd.pid`
-
+`kill $(cat tmp/pdagentd.pid)`
 
 ### IDE Setup
 
-For IDE setup instructions see `pydev-setup.txt` or `idea-setup.txt`. Apart
-from the usual benefits, the IDEs provide PEP-8 warnings which we care about.
-
+For IDE setup instructions see [PyDev Setup](pydev-setup.md) or [IDEA Setup](idea-setup.md). Apart from the usual benefits, the IDEs provide PEP-8 warnings which we care about.
 
 ### Build Tools
 
-To perform a complete automated build, you'll need to install Scons and Vagrant
-(along with VirtualBox - other combinations not tested).
-
-See the files `scons-setup.txt` and `vagrant-setup.txt` for setup instructions.
-
+To perform a complete automated build, you'll need to install Vagrant and Scons.  See [Vagrant Setup](vagrant-setup.md) and [Scons Setup](scons-setup.md) for instructions.
 
 ### Running Unit Tests
 
 You can run the unit tests with the following command:
 
-    scons test-local
+`scons test-local`
 
 To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
 
-    python run-tests.py pdagenttest/test_*.py pdagenttest/thirdparty/test_*.py
+`python run-tests.py pdagenttest/test_*.py pdagenttest/thirdparty/test_*.py`
 
 
 ### Building Packages
@@ -81,33 +85,32 @@ To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
 For development builds, you can perform a full automated clean build of the
 Agent with the following steps:
 
-1. Configure signing keys by following the _One-time Setup_ instructions in
-`build-linux/howto.txt`.
+1. Configure signing keys by following the [One-time setup of GPG keys](build-linux/howto.md#one-time-setup-of-gpg-keys) instructions.
 
 2. Run the following commands:
-
-        scons --clean
-        scons local-repo gpg-home=build-linux/gnupg
-
-    Note that this will spin up multiple virtual machines using Vagrant to run
-    tests and perform builds on.
+```
+scons --clean
+scons local-repo gpg-home=build-linux/gnupg
+```
+Note that this will spin up multiple virtual machines using Vagrant to run
+tests and perform builds on.
 
 3. Run integration tests on the packages as follows:
 
-    (i) Edit the file `pdagenttestinteg/util.sh` and change the line
-    `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key suitable for testing.
+(i) Edit the file `pdagenttestinteg/util.sh` and change the line
+`SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
 
-    (ii) Run the command:
+(ii) Run the command:
+```
+scons test-integration
+```
 
-        scons test-integration
+This will run the integration tests on the various VMs using the packages
+built in the previous step. Note that the tests will trigger and resolve
+some incidents when they run.
 
-    This will run the integration tests on the various VMs using the packages
-    built in the previous step. Note that the tests will trigger and resolve
-    some incidents when they run.
-
-
-If you want to build packages by hand, follow the instructions in
-`build-linux/howto.txt`.
+If you want to build packages by hand, follow the instructions in the
+[Build Linux Howto](build-linux/howto.md).
 
 Similarly, you can check the SCons targets using `scons -h` for instructions on
 performing specific builds tasks and on specific VMs.
@@ -144,18 +147,18 @@ the relevant steps.
 
 1. Install **s3cmd** from http://s3tools.org/download. This should involve:
 
-        python setup.py install
+`python setup.py install`
 
-    or, for a custom location, something like:
+Or, for a custom location, something like:
 
-        python setup.py install --prefix=~/opt/
+`python setup.py install --prefix=~/opt/`
 
 2. Configure it by running `s3cmd --configure`.
 
+# TODO - make this clearer
 3. In the S3 related build commands below, remember to replace $S3_BUCKET with
 `s3://<your_bucket_name>` or `s3://<your_bucket_name>/<path>` depending on how
 you host your repository.
-
 
 #### Release build, test & upload:
 
@@ -163,78 +166,82 @@ Before you start: did you remember to commit the new Agent version?
 
 1. Ensure your `pdagent` checkout is clean. Either start with a fresh git clone
 or:
-    - Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
+- Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
 destroy-virt`
-    - Use `git clean -dxf` to remove all ignored files
-    - Use `git reset`/`git checkout`/etc to ensure no local changes
-
+- Use `git clean -dxf` to remove all ignored files
+- Use `git reset`/`git checkout`/etc to ensure no local changes
 
 2. Copy the release GPG signing keys to the `pdagent` project directory so that
-the VMs can access it. (via `/vagrant/...`)
+the VMs can access it:
 
-        cp -r /path/to/pd-release-keys/gpg-* .
+`cp -r /path/to/pd-release-keys/gpg-* .`
 
-    This should copy two directories `gpg-deb` and `gpg-rpm`
-
+This should copy two directories `gpg-deb` and `gpg-rpm`
 
 3. Sync the current contents of the packages repo down from S3:
 
-        scons sync-from-remote-repo repo-root=$S3_BUCKET
-
-        cp -r target target-orig
-
+```
+scons sync-from-remote-repo repo-root=$S3_BUCKET
+cp -r target target-orig
+```
 
 4. Build the packages:
 
-    (a) Ubuntu:
+(a) Ubuntu:
+```
+vagrant up agent-minimal-ubuntu1204
+vagrant ssh agent-minimal-ubuntu1204
+sh /vagrant/build-linux/make_deb.sh /vagrant/gpg-deb /vagrant/target
+```
 
-        vagrant up agent-minimal-ubuntu1204
-        vagrant ssh agent-minimal-ubuntu1204
+This relies on `/vagrant` in the VM being a mount of the pdagent project directory.
 
-        sh /vagrant/build-linux/make_deb.sh /vagrant/gpg-deb /vagrant/target
+Enter the GPG key passphrase when prompted. Exit from the VM when done.
 
-    This relies on `/vagrant` in the VM being a mount of the pdagent project
-    directory.
+(b) CentOS:
+```
+vagrant up agent-minimal-centos65
+vagrant ssh agent-minimal-centos65
+sh /vagrant/build-linux/make_rpm.sh /vagrant/gpg-rpm /vagrant/target
+```
 
-    Enter the GPG key passphrase when prompted. Exit from the VM when done.
-
-    (b) CentOS:
-
-        vagrant up agent-minimal-centos65
-        vagrant ssh agent-minimal-centos65
-
-        sh /vagrant/build-linux/make_rpm.sh /vagrant/gpg-rpm /vagrant/target
-
-    Enter the GPG key passphrase when prompted. Exit from the VM when done.
-
+Enter the GPG key passphrase when prompted. Exit from the VM when done.
 
 5. Verify that the new packages are on the host machine in the `target`
-directory.
-
-        diff -qr target-orig target
-
+directory:
+```
+diff -qr target-orig target
+````
 
 6. Prepare keys for integration testing:
+```
+mkdir ./target/tmp
+gpg --homedir=./gpg-deb --export --armor > ./target/tmp/GPG-KEY-pagerduty
+gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
+````
 
-        mkdir ./target/tmp
-        gpg --homedir=./gpg-deb --export --armor > ./target/tmp/GPG-KEY-pagerduty
-        gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
+7. Run the integration tests on clean VMs:
+(i) Destroy VMs for a clean testing env:
+```
+vagrant destroy
+```
+(i) Edit the file `pdagenttestinteg/util.sh` and change the line
+`SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
 
-
-7. Run the integration tests on clean VMs. (use `vagrant destroy`, edit the
-service key in `util.sh`, and run `scons test-integration`)
-
-
+(ii) Run the command:
+```
+scons test-integration
+```
 
 8. Sync the packages repo back up to S3:
 
-        scons sync-to-remote-repo repo-root=$S3_BUCKET
-
+`scons sync-to-remote-repo repo-root=$S3_BUCKET`
 
 9. Optionally, tag your release in git:
-
-        git tag vX.Y
-        git push origin --tags
+```
+git tag vX.Y
+git push origin --tags
+```
 
 #License
 Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
