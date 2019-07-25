@@ -96,18 +96,13 @@ Note that this will spin up multiple virtual machines using Vagrant to run
 tests and perform builds on.
 
 3. Run integration tests on the packages as follows:
-
-(i) Edit the file `pdagenttestinteg/util.sh` and change the line
-`SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
-
-(ii) Run the command:
+  * Edit the file `pdagenttestinteg/util.sh` and change the line `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
+  * Run the command:
 ```
 scons test-integration
 ```
 
-This will run the integration tests on the various VMs using the packages
-built in the previous step. Note that the tests will trigger and resolve
-some incidents when they run.
+This will run the integration tests on the various VMs using the packagesbuilt in the previous step. Note that the tests will trigger and resolve some incidents when they run.
 
 If you want to build packages by hand, follow the instructions in the
 [Build Linux Howto](build-linux/howto.md).
@@ -166,10 +161,10 @@ Before you start: did you remember to commit the new Agent version?
 
 1. Ensure your `pdagent` checkout is clean. Either start with a fresh git clone
 or:
-- Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
+  * Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
 destroy-virt`
-- Use `git clean -dxf` to remove all ignored files
-- Use `git reset`/`git checkout`/etc to ensure no local changes
+  * Use `git clean -dxf` to remove all ignored files
+  * Use `git reset`/`git checkout`/etc to ensure no local changes
 
 2. Copy the release GPG signing keys to the `pdagent` project directory so that
 the VMs can access it:
@@ -187,7 +182,7 @@ cp -r target target-orig
 
 4. Build the packages:
 
-(a) Ubuntu:
+#### Ubuntu:
 ```
 vagrant up agent-minimal-ubuntu1204
 vagrant ssh agent-minimal-ubuntu1204
@@ -198,7 +193,7 @@ This relies on `/vagrant` in the VM being a mount of the pdagent project directo
 
 Enter the GPG key passphrase when prompted. Exit from the VM when done.
 
-(b) CentOS:
+#### CentOS:
 ```
 vagrant up agent-minimal-centos65
 vagrant ssh agent-minimal-centos65
@@ -211,24 +206,22 @@ Enter the GPG key passphrase when prompted. Exit from the VM when done.
 directory:
 ```
 diff -qr target-orig target
-````
+```
 
 6. Prepare keys for integration testing:
 ```
 mkdir ./target/tmp
 gpg --homedir=./gpg-deb --export --armor > ./target/tmp/GPG-KEY-pagerduty
 gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
-````
+```
 
 7. Run the integration tests on clean VMs:
-(i) Destroy VMs for a clean testing env:
+  * Destroy VMs for a clean testing env:
 ```
 vagrant destroy
 ```
-(i) Edit the file `pdagenttestinteg/util.sh` and change the line
-`SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
-
-(ii) Run the command:
+  * Edit the file `pdagenttestinteg/util.sh` and change the line `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
+  * Run the command:
 ```
 scons test-integration
 ```
