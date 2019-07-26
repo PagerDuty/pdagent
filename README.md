@@ -23,18 +23,6 @@ on a Mac.
 
 ### Running in Development
 
-Python 2.7 is the system default on OSX but check to see if the package manager is installed:
-
-`which pip`
-
-If pip isn't found then execute the following to install it:
-
-`sudo easy_install pip`
-
-Next, install package dependencies:
-
-`sudo pip install psutil`
-
 You can run the Agent in development without any setup. Start the Agent daemon
 as follows:
 
@@ -130,111 +118,6 @@ scripts/setup_upgrade_test.sh
 ```
 
 This will vagrant destroy, up and install the latest public repo pdagent package on machines for upgrade testing via `scons test-integration`.
-
-### Release Packages
-
-The steps here and the project scons targets are written assuming that S3 is
-used to host the package repository. If you use other methods, please modify
-the relevant steps.
-
-
-#### S3 Setup:
-
-1. Install **s3cmd** from http://s3tools.org/download. This should involve:
-
-`python setup.py install`
-
-Or, for a custom location, something like:
-
-`python setup.py install --prefix=~/opt/`
-
-2. Configure it by running `s3cmd --configure`.
-
-# TODO - make this clearer
-3. In the S3 related build commands below, remember to replace $S3_BUCKET with
-`s3://<your_bucket_name>` or `s3://<your_bucket_name>/<path>` depending on how
-you host your repository.
-
-#### Release build, test & upload:
-
-Before you start: did you remember to commit the new Agent version?
-
-1. Ensure your `pdagent` checkout is clean. Either start with a fresh git clone
-or:
-  * Destroy any existing Vagrant VMs using `vagrant destroy` or `scons
-destroy-virt`
-  * Use `git clean -dxf` to remove all ignored files
-  * Use `git reset`/`git checkout`/etc to ensure no local changes
-
-2. Copy the release GPG signing keys to the `pdagent` project directory so that
-the VMs can access it:
-
-`cp -r /path/to/pd-release-keys/gpg-* .`
-
-This should copy two directories `gpg-deb` and `gpg-rpm`
-
-3. Sync the current contents of the packages repo down from S3:
-
-```
-scons sync-from-remote-repo repo-root=$S3_BUCKET
-cp -r target target-orig
-```
-
-4. Build the packages:
-
-#### Ubuntu:
-```
-vagrant up agent-minimal-ubuntu1204
-vagrant ssh agent-minimal-ubuntu1204
-sh /vagrant/build-linux/make_deb.sh /vagrant/gpg-deb /vagrant/target
-```
-
-This relies on `/vagrant` in the VM being a mount of the pdagent project directory.
-
-Enter the GPG key passphrase when prompted. Exit from the VM when done.
-
-#### CentOS:
-```
-vagrant up agent-minimal-centos65
-vagrant ssh agent-minimal-centos65
-sh /vagrant/build-linux/make_rpm.sh /vagrant/gpg-rpm /vagrant/target
-```
-
-Enter the GPG key passphrase when prompted. Exit from the VM when done.
-
-5. Verify that the new packages are on the host machine in the `target`
-directory:
-```
-diff -qr target-orig target
-```
-
-6. Prepare keys for integration testing:
-```
-mkdir ./target/tmp
-gpg --homedir=./gpg-deb --export --armor > ./target/tmp/GPG-KEY-pagerduty
-gpg --homedir=./gpg-rpm --export --armor > ./target/tmp/GPG-KEY-RPM-pagerduty
-```
-
-7. Run the integration tests on clean VMs:
-  * Destroy VMs for a clean testing env:
-```
-vagrant destroy
-```
-  * Edit the file `pdagenttestinteg/util.sh` and change the line `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
-  * Run the command:
-```
-scons test-integration
-```
-
-8. Sync the packages repo back up to S3:
-
-`scons sync-to-remote-repo repo-root=$S3_BUCKET`
-
-9. Optionally, tag your release in git:
-```
-git tag vX.Y
-git push origin --tags
-```
 
 #License
 Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
