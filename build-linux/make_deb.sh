@@ -59,15 +59,6 @@ sudo apt-get install -y build-essential
     sudo add-apt-repository -y ppa:brightbox/ruby-ng-experimental
     sudo apt-get update -qq
     sudo apt-get install -y -q ruby2.3 ruby2.3-dev
-#    CUR_PWD=`pwd`
-#    echo "Installing rubygems ..."
-#    cd /tmp
-#    sudo wget https://rubygems.org/rubygems/rubygems-2.6.8.tgz
-#    sudo tar xzf rubygems-2.6.8.tgz
-#    cd rubygems-2.6.8
-#    sudo ruby setup.rb
-#    sudo update-alternatives --install /usr/bin/gem gem /usr/bin/gem2.0 99
-#    cd $CUR_PWD
     echo "Done installing."
 }
 { gem list fpm | grep fpm >/dev/null ; } || {
