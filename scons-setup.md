@@ -1,4 +1,3 @@
-
 # SCons Setup
 
 SCons 2.3.x setup notes for OS X 10.8 (Mountain Lion).
@@ -11,7 +10,7 @@ machines, and assume that Vagrant has been installed on this machine.
 ## Installation
 
 * Download the scons gzip tar file (or zip file) for the 2.3.x version from
-  http://scons.org/download.php
+  https://sourceforge.net/projects/scons/files/scons/2.3.6/scons-2.3.6.tar.gz/download
 * Extract it to any location.
 * Go to the scons-2.3.x directory in the extracted location, and run
   `python setup.py install`
@@ -26,4 +25,3 @@ machines, and assume that Vagrant has been installed on this machine.
 * Run `scons` to execute the default target for the current project.
 * If you are interested, run `scons -H` to see help on options supported
   by scons.
-

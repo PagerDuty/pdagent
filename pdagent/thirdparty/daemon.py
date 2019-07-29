@@ -19,8 +19,7 @@
 import atexit
 import os
 import sys
-import psutil
-
+import subprocess
 
 def daemonize(
         pidfile,
@@ -43,7 +42,7 @@ def daemonize(
     except (IOError, ValueError):
         pid = None
 
-    if (pid and psutil.pid_exists(pid)):
+    if (pid and _pid_exists(pid)):
         message = "pidfile %s already exists and the process is running!\n"
         raise SystemExit(message % pidfile)
     if pid:
@@ -99,3 +98,9 @@ def _redirect_std_file_descriptors(stdin, stdout, stderr):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
+
+def _pid_exists(pid):
+    cmd = "/bin/ps %s" % pid
+    child = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+    child.communicate()[0]
+    return child.returncode < 1
