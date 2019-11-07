@@ -30,5 +30,6 @@
 __version__ = "1.6"
 
 def enum(*sequential, **named):
-    enums = dict(zip(sequential, range(len(sequential))), **named)
+    # TODO(dobs): What are we trying to extract here?
+    enums = dict([x[::-1] for x in enumerate(sequential)], **named)
     return type('Enum', (), enums)

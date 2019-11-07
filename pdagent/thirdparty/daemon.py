@@ -36,7 +36,7 @@ def daemonize(
     """
     # Check for a pidfile to see if the daemon already runs
     try:
-        pf = file(pidfile, 'r')
+        pf = open(pidfile, 'r')
         pid = int(pf.read().strip())
         pf.close()
     except (IOError, ValueError):
@@ -58,7 +58,7 @@ def daemonize(
                 raise SystemExit("Error in second parent: %s" % status)
             else:
                 sys.exit(0)
-    except OSError, e:
+    except OSError as e:
         raise SystemExit("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
 
     # Decouple from parent environment
@@ -72,7 +72,7 @@ def daemonize(
         if pid > 0:
             # Exit from second parent
             sys.exit(0)
-    except OSError, e:
+    except OSError as e:
         raise SystemExit("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 
     if sys.platform != 'darwin':  # This block breaks on OS X
@@ -85,16 +85,16 @@ def daemonize(
 
     # Write pidfile
     pid = str(os.getpid())
-    file(pidfile, 'w+').write("%s\n" % pid)
+    open(pidfile, 'w+').write("%s\n" % pid)
 
 
 def _redirect_std_file_descriptors(stdin, stdout, stderr):
     # Redirect standard file descriptors
     sys.stdout.flush()
     sys.stderr.flush()
-    si = file(stdin, 'r')
-    so = file(stdout, 'a+')
-    se = file(stderr, 'a+', 0)
+    si = open(stdin, 'r')
+    so = open(stdout, 'a+')
+    se = open(stderr, 'a+', 0)
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())

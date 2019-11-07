@@ -28,14 +28,14 @@
 #
 
 import unittest
-
 import socket
-from ssl import SSLError
-import time
-from urllib2 import URLError
-from pdagent.thirdparty.httpswithverify import urlopen
-from pdagent.thirdparty.ssl_match_hostname import CertificateError
+import ssl
+import six
+
+from six.moves.urllib.error import URLError
+from pdagent.http import urlopen
 from pdagenttest.simplehttpsserver import SimpleHTTPSServer
+from os.path import dirname, join, realpath
 
 
 def _make_url(host, protocol="https", port=None):
@@ -61,36 +61,36 @@ class PDVerifiedHttpsTest(unittest.TestCase):
         # connect using IP address instead of name in cert; this should fail
         # cert domain validation.
         url_cert_wrong_domain = _make_url(socket.gethostbyname(_SERVER))
-        self.assertRaises(CertificateError, urlopen, url_cert_wrong_domain)
+        if six.PY2:
+            self.assertRaises(ssl.CertificateError, urlopen, url_cert_wrong_domain)
+        else:
+            self.assertRaisesRegex(URLError, "CERTIFICATE_VERIFY_FAILED", urlopen, url_cert_wrong_domain)
 
     def test_self_signed_cert(self):
         # start and connect to a local https server using a self-signed cert.
         local_server = None
+        host = 'localhost'
+        port = 4443
+        cert_file_path = join(dirname(realpath(__file__)), 'self_signed.pem')
+
         try:
-            from os.path import dirname, join, realpath
-            host = 'localhost'
-            port = 4443
-            cert_file_path = join(
-                dirname(dirname(realpath(__file__))),
-                'self_signed.pem'
-                )
             local_server = SimpleHTTPSServer(
                 cert_file_path=cert_file_path,
                 host=host,
                 port=port
                 )
             local_server.start()
-            try:
-                urlopen(_make_url(host, port=port))
-            except URLError as e:
-                if e.reason and type(e.reason) is SSLError:
-                    # this is the right error.
-                    pass
-                else:
-                    raise
+
+            urlopen(_make_url(host, port=port))
+        except URLError as e:
+            if e.reason and isinstance(e.reason, ssl.SSLError):
+                # this is the right error.
+                pass
             else:
-                # we don't expect zero errors.
-                self.fail("Didn't encounter expected error")
+                raise
+        else:
+            # we don't expect zero errors.
+            self.fail("Didn't encounter expected error")
         finally:
             if local_server:
                 local_server.stop()

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # PagerDuty Agent daemon.
 # See https://github.com/PagerDuty/agent for details.
@@ -31,7 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-
 # standard python modules
 import logging.handlers
 import os
@@ -45,9 +44,9 @@ import uuid
 
 # Agent file permission masks:
 # files written by agent should be private since they contain service keys
-_DEFAULT_UMASK = 0137  # rw-r-----
+_DEFAULT_UMASK = 0o137  # rw-r-----
 # except for agent_id since pd-send needs it for agent context
-_AGENT_ID_FILE_UMASK = 0133  # rw-r--r--
+_AGENT_ID_FILE_UMASK = 0o133  # rw-r--r--
 
 
 # Check we're running as main
@@ -58,9 +57,9 @@ if __name__ != '__main__':
         )
 
 # Check Python version.
-if sys.version_info[0:2] not in ((2, 6), (2, 7)):
+if sys.version_info.major == 2 and sys.version_info.minor < 7:
     raise SystemExit(
-        "Agent requires Python version 2.6 or 2.7.\n" +
+        "Agent requires Python version 2.7 or higher.\n" +
         "Agent will now quit"
         )
 

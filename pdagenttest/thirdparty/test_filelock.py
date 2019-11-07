@@ -31,6 +31,9 @@ import inspect
 import os
 import time
 import unittest
+import six
+import warnings
+
 
 from pdagent.thirdparty.filelock import FileLock, LockTimeoutException
 
@@ -47,9 +50,8 @@ def run_helper(test_name=None):
         # default to the same name as the calling test method
         test_name = inspect.stack()[1][3]
     e = os.system("python %s %s" % (TEST_HELPER_PY, test_name))
-    exit_code, signal = e / 256, e % 256
+    exit_code, signal = e // 256, e % 256
     return exit_code, signal
-
 
 class FileLockTest(unittest.TestCase):
 
@@ -90,9 +92,11 @@ class FileLockTest(unittest.TestCase):
         self.assertFalse(os.path.exists(TEST_LOCK_FILE))
 
     def test_simple_lock_file_exists(self):
-        open(TEST_LOCK_FILE, "w").write("-1\n")
+        f = open(TEST_LOCK_FILE, "w")
+        f.write("-1\n")
         self.assertEqual(run_helper("test_simple_lock"), (20, 0))
         self.assertFalse(os.path.exists(TEST_LOCK_FILE))
+        f.close()
 
     def test_lock_wait(self):
         trace = []

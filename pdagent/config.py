@@ -28,19 +28,18 @@
 #
 
 
-import ConfigParser
-import logging
 import os
 import sys
 import time
 import uuid
+from six.moves import configparser
 
 from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
 
 
-_ENQUEUE_FILE_MODE = 0644  # rw-r--r--
-_ENQUEUE_DEFAULT_UMASK = 0022  # default umask for world-readability of files.
+_ENQUEUE_FILE_MODE = 0o644  # rw-r--r--
+_ENQUEUE_DEFAULT_UMASK = 0o022  # default umask for world-readability of files.
 
 
 class AgentConfig:
@@ -139,9 +138,9 @@ def load_agent_config():
 
     # Load config file
     try:
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.read(conf_file)
-    except ConfigParser.Error, e:
+    except configparser.Error as e:
         raise SystemExit(
             "Error loading config: %s\nAgent will now quit"
             % e.message
@@ -166,8 +165,8 @@ def load_agent_config():
         try:
             cfg[key] = int(cfg[key])
         except ValueError:
-            print 'Bad %s in config file: %s' % (key, conf_file)
-            print 'Agent will now quit'
+            print('Bad %s in config file: %s' % (key, conf_file))
+            print('Agent will now quit')
             sys.exit(1)
 
     _agent_config = AgentConfig(dev_layout, default_dirs, cfg)

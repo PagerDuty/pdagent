@@ -136,13 +136,13 @@ class RepeatingTaskThread(Thread):
         assert isinstance(repeating_task, RepeatingTask)
         Thread.__init__(self, name=repeating_task.get_name())
         self._rtask = repeating_task
-        self._stop = False
+        self._customStop = False
         logger.info("RepeatingTaskThread created for %s" % self.getName())
 
     def run(self):
         next_run_time = time.time()
         try:
-            while not self._stop:
+            while not self._customStop:
                 s = next_run_time - time.time()
                 if s <= 0:
                     self._rtask.tick()
@@ -173,7 +173,7 @@ class RepeatingTaskThread(Thread):
         1 second. If the thread is in the task's tick() it will only stop after
         tick() is complete.
         """
-        self._stop = True
+        self._customStop = True
         self._rtask.stop_async()
 
     def stop_and_join(self):

@@ -75,7 +75,7 @@ esac
 
 # check installation status.
 which $BIN_PD_SEND
-python -c "import pdagent; print pdagent.__file__"
+python -c "import pdagent; print(pdagent.__file__)"
 
 # check that agent has started up.
 test -n "$(agent_pid)"
