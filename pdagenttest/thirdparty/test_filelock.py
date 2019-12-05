@@ -31,8 +31,6 @@ import inspect
 import os
 import time
 import unittest
-import six
-import warnings
 
 
 from pdagent.thirdparty.filelock import FileLock, LockTimeoutException

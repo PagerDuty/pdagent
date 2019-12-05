@@ -1774,7 +1774,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                 if not hasattr(namespace, action.dest):
                     if action.default is not SUPPRESS:
                         default = action.default
-                        if isinstance(action.default, str):
+                        if isinstance(action.default, basestring):
                             default = self._get_value(action, default)
                         setattr(namespace, action.dest, default)
 
@@ -2252,7 +2252,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                 value = action.const
             else:
                 value = action.default
-            if isinstance(value, str):
+            if isinstance(value, basestring):
                 value = self._get_value(action, value)
                 self._check_value(action, value)
 
