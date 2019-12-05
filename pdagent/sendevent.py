@@ -60,7 +60,7 @@ class SendEventTask(RepeatingTask):
         self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
         self._source_address = source_address
-        self._urllib2 = http  # to ease unit testing.
+        self._http = http  # to ease unit testing.
 
     def tick(self):
         # flush the event queue.
@@ -84,13 +84,12 @@ class SendEventTask(RepeatingTask):
             self.last_cleanup_time = int(time.time())
 
     def send_event(self, json_event_str, event_id):
-        # Note that Request here is from urllib2, not self._urllib2.
         request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
         request.data = json_event_str.encode()
 
         try:
-            response = self._urllib2.urlopen(request,
+            response = self._http.urlopen(request,
                 source_address=self._source_address)
             status_code = response.getcode()
             result_str = response.read()
