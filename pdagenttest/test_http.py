@@ -64,7 +64,10 @@ class PDVerifiedHttpsTest(unittest.TestCase):
         if six.PY2:
             self.assertRaises(ssl.CertificateError, urlopen, url_cert_wrong_domain)
         else:
-            self.assertRaisesRegex(URLError, "CERTIFICATE_VERIFY_FAILED", urlopen, url_cert_wrong_domain)
+            # self.assertRaisesRegex(URLError, "CERTIFICATE_VERIFY_FAILED", urlopen, url_cert_wrong_domain)
+            with self.assertRaises(URLError) as cm:
+                urlopen(url_cert_wrong_domain)
+            self.assertIsInstance(cm.exception.reason, ssl.CertificateError)
 
     def test_self_signed_cert(self):
         # start and connect to a local https server using a self-signed cert.
