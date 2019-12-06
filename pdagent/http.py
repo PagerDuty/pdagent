@@ -55,22 +55,44 @@ import ssl
 
 from pdagent.pdagentutil import find_in_sys_path
 
+from six.moves.http_client import HTTPSConnection
 from six.moves.urllib import request
 
 DEFAULT_CA_CERTS_FILE = find_in_sys_path("pdagent/root_certs/ca_certs.pem")
 
-# For caching SSL contexts based on provided `ca_certs`.
+# For caching SSL contexts and openersbased on provided `ca_certs`.
 #
 # This imitates the previous caching behavior of this module. It isn't thread
 # safe, doesn't provide much optimization in its current form, so may be worth
 # removing or otherwise reevaluating.
 ssl_context_cache = dict()
+url_opener_cache = dict()
+
+
+# Custom HTTPS handler primarily for allowing us to pass a `source_address`
+# through to `HTTPSConnection`
+class CustomHTTPSHandler(request.HTTPSHandler):
+    def __init__(self, **kwargs):
+        self.source_address = kwargs.pop("source_address", None)
+        request.HTTPSHandler.__init__(self, **kwargs)
+
+    # Overrides `HTTPSHandler.https_open`.
+    def https_open(self, req):
+        return self.do_open(self._connection, req)
+
+    def _connection(self, host, **kwargs):
+        kwargs["source_address"] = self.source_address
+        return HTTPSConnection(host, **kwargs)
 
 
 def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
     context = kwargs.pop("context", _get_cached_context(ca_certs=ca_certs))
-    return request.urlopen(url, context=context)
+    source_address = kwargs.pop("source_address", None)
+
+    opener = _get_cached_opener(context, source_address)
+
+    return opener.open(url, **kwargs)
 
 
 def _get_cached_context(ca_certs):
@@ -91,3 +113,12 @@ def _create_ssl_context(ca_certs):
 
     context.load_verify_locations(cafile=ca_certs)
     return context
+
+
+def _get_cached_opener(context, source_address):
+    if context not in url_opener_cache:
+        url_opener_cache[context] = request.build_opener(CustomHTTPSHandler(
+            context=context,
+            source_address=source_address
+        ))
+    return url_opener_cache[context]
