@@ -39,7 +39,7 @@ class JsonStore(object):
     """
 
     def __init__(self, db_name, db_dir):
-        from pdagentutil import \
+        from .pdagentutil import \
             ensure_readable_directory, ensure_writable_directory
         ensure_readable_directory(db_dir)
         ensure_writable_directory(db_dir)

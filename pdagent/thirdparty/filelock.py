@@ -65,10 +65,10 @@ class FileLock(object):
             try:
                 self.f = open(self.lockfile, "w")
                 fcntl.lockf(self.f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                os.write(self.f.fileno(), "%d\n" % pid)
+                os.write(self.f.fileno(), ("%d\n" % pid).encode())
                 self.f.flush()
                 break
-            except IOError, e:
+            except IOError as e:
                 if e.errno != errno.EWOULDBLOCK:
                     raise
                 if (time.time() - start_time) >= self.timeout:

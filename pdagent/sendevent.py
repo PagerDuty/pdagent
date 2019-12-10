@@ -31,10 +31,11 @@ import json
 import logging
 import socket
 import time
-from urllib2 import HTTPError, Request, URLError
+from ssl import CertificateError
+from six.moves.urllib.error import HTTPError, URLError
+from six.moves.urllib.request import Request
 
-from pdagent.thirdparty import httpswithverify
-from pdagent.thirdparty.ssl_match_hostname import CertificateError
+from pdagent import http
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.pdthread import RepeatingTask
@@ -59,7 +60,7 @@ class SendEventTask(RepeatingTask):
         self.cleanup_threshold_secs = cleanup_threshold_secs
         self.last_cleanup_time = 0
         self._source_address = source_address
-        self._urllib2 = httpswithverify  # to ease unit testing.
+        self._http = http  # to ease unit testing.
 
     def tick(self):
         # flush the event queue.
@@ -83,13 +84,12 @@ class SendEventTask(RepeatingTask):
             self.last_cleanup_time = int(time.time())
 
     def send_event(self, json_event_str, event_id):
-        # Note that Request here is from urllib2, not self._urllib2.
         request = Request(EVENTS_API_BASE)
         request.add_header("Content-type", "application/json")
-        request.add_data(json_event_str)
+        request.data = json_event_str.encode()
 
         try:
-            response = self._urllib2.urlopen(request,
+            response = self._http.urlopen(request,
                 source_address=self._source_address)
             status_code = response.getcode()
             result_str = response.read()

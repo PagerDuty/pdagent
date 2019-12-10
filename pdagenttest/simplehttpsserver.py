@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-import BaseHTTPServer
+from six.moves.BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import ssl
 from threading import Thread
 
@@ -38,9 +38,9 @@ class SimpleHTTPSServer(Thread):
         Thread.__init__(self, name=self.__class__.__name__)
         self.cert_file_path = cert_file_path
         self.address = (host, port)
-        self.httpd = BaseHTTPServer.HTTPServer(
+        self.httpd = HTTPServer(
             self.address,
-            BaseHTTPServer.BaseHTTPRequestHandler
+            BaseHTTPRequestHandler
             )
         self.httpd.socket = ssl.wrap_socket(
             self.httpd.socket,
@@ -52,5 +52,6 @@ class SimpleHTTPSServer(Thread):
         self.httpd.serve_forever()
 
     def stop(self):
+        self.httpd.socket.close()
         self.httpd.shutdown()
         self.join()

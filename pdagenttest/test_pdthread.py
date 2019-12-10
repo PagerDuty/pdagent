@@ -53,14 +53,14 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         try:
             time.sleep(0.1)
             # check that tick() is run once immediately on startup
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
         finally:
             t.stop_and_join()
         # sanity test stopped
         time.sleep(1.0)
-        self.assertEquals(trace, [42, 42])
+        self.assertEqual(trace, [42, 42])
 
     def test_quick_stop(self):
         def f():
@@ -86,13 +86,13 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(0.5)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
             time.sleep(1.5)
-            self.assertEquals(trace, [42, 42, 42])
+            self.assertEqual(trace, [42, 42, 42])
         finally:
             t.stop_and_join()
 
@@ -100,11 +100,11 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 1, True)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42, 42])
+            self.assertEqual(trace, [42, 42, 42])
         finally:
             t.stop_and_join()
 
@@ -118,11 +118,11 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 2, True)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
         finally:
             t.stop_and_join()
 
@@ -134,14 +134,14 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             t._rtask.set_interval_secs(2)
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42])
+            self.assertEqual(trace, [42, 42])
             time.sleep(1.0)
-            self.assertEquals(trace, [42, 42, 42])
+            self.assertEqual(trace, [42, 42, 42])
         finally:
             t.stop_and_join()
 
@@ -153,7 +153,7 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 1, False)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [42])
+            self.assertEqual(trace, [42])
             time.sleep(1.0)
             self.assertFalse(t.is_alive())
         finally:
@@ -170,14 +170,14 @@ class RepeatingTaskThreadTest(unittest.TestCase):
         t = _start_repeating_thread(f, 1, True)
         try:
             time.sleep(0.1)
-            self.assertEquals(trace, [1])
+            self.assertEqual(trace, [1])
             time.sleep(3.0)
-            self.assertEquals(trace, [1, 2, 1])
+            self.assertEqual(trace, [1, 2, 1])
             slow = False
             time.sleep(3.0)
             # 6.1 seconds in we should have run 7 times but first 2 were slow
             # we want to have run only once to catch up, not 5 times
-            self.assertEquals(trace, [1, 2, 1, 2, 1, 2])
+            self.assertEqual(trace, [1, 2, 1, 2, 1, 2])
         finally:
             t.stop_and_join()
 

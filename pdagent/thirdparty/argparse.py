@@ -160,8 +160,7 @@ try:
 except NameError:
     # for python < 2.4 compatibility:
     def sorted(iterable, reverse=False):
-        result = list(iterable)
-        result.sort()
+        result = sorted(iterable)
         if reverse:
             result.reverse()
         return result

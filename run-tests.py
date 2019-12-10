@@ -28,6 +28,7 @@
 #
 
 import os, subprocess, sys
+import six
 
 
 def runtests(test_files):
@@ -37,12 +38,12 @@ def runtests(test_files):
     test_env["PYTHONPATH"] = \
         test_env.get("PYTHONPATH", "") + os.pathsep + os.getcwd()
     for test_file in test_files:
-        print >> sys.stderr, "FILE:", test_file
+        six.print_("FILE:", test_file, file=sys.stderr)
         exit_code = subprocess.call([sys.executable, test_file], env=test_env)
         total += 1
         errs += (exit_code != 0)
-    print >> sys.stderr, "SUMMARY: %s total / %s error (%s)" \
-        % (total, errs, sys.executable)
+    six.print_("SUMMARY: %s total / %s error (%s)" \
+          % (total, errs, sys.executable), file=sys.stderr)
     return errs
 
 

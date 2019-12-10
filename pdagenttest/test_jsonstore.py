@@ -43,6 +43,7 @@ _TEST_DIR = os.path.join("/tmp", "test_db")
 _TEST_STORE_NAME = "test"
 _TEST_STORE_FILE = os.path.join(_TEST_DIR, _TEST_STORE_NAME)
 
+
 class JsonStoreTest(unittest.TestCase):
 
     def setUp(self):

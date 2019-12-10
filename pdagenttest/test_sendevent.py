@@ -29,12 +29,12 @@
 
 import json
 import unittest
-from urllib2 import URLError
+from ssl import CertificateError
+from six.moves.urllib.error import URLError
 
 from pdagent.constants import ConsumeEvent
 from pdagent.sendevent import SendEventTask
-from pdagent.thirdparty import httpswithverify
-from pdagent.thirdparty.ssl_match_hostname import CertificateError
+from pdagent import http
 from pdagenttest.mockqueue import MockQueue
 from pdagenttest.mockresponse import MockResponse
 from pdagenttest.mockurllib import MockUrlLib
@@ -70,7 +70,7 @@ class SendEventTest(unittest.TestCase):
             CLEANUP_AGE_SEC,
             source_address
         )
-        s._urllib2 = MockUrlLib()
+        s._http = MockUrlLib()
         return s
 
     def mock_queue(self):
@@ -84,16 +84,16 @@ class SendEventTest(unittest.TestCase):
 
     def test_source_address_send_and_cleanup(self):
         s = self.new_send_event_task('127.0.0.1')
-        s._urllib2.response = self.mock_response()
+        s._http.response = self.mock_response()
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertEqual(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def test_send_and_cleanup(self):
         s = self.new_send_event_task()
-        s._urllib2.response = self.mock_response()
+        s._http.response = self.mock_response()
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertEqual(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
 
     # --------------------------------------------------------------------------
@@ -101,7 +101,7 @@ class SendEventTest(unittest.TestCase):
     # --------------------------------------------------------------------------
 
     def test_empty_queue(self):
-        def empty_queue_flush(**args):
+        def empty_queue_flush(*args, **kwargs):
             from pdagent.pdqueue import EmptyQueueError
             raise EmptyQueueError
 
@@ -113,7 +113,7 @@ class SendEventTest(unittest.TestCase):
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def test_queue_errors(self):
-        def erroneous_queue_flush(**args):
+        def erroneous_queue_flush(*args, **kwargs):
             raise Exception
 
         s = self.new_send_event_task()
@@ -127,24 +127,24 @@ class SendEventTest(unittest.TestCase):
         import time
 
         s = self.new_send_event_task()
-        s._urllib2.response = self.mock_response()
+        s._http.response = self.mock_response()
         s.last_cleanup_time = int(time.time()) - 1
         s.tick()
         # queue is flushed normally...
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertEqual(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         # ... and cleanup is not invoked because it is not time for it.
         self.assertFalse(s.pd_queue.cleaned_up)
 
     def test_cleanup_errors(self):
-        def erroneous_cleanup(**args):
+        def erroneous_cleanup(*args, **kwargs):
             raise Exception
 
         s = self.new_send_event_task()
-        s._urllib2.response = self.mock_response()
+        s._http.response = self.mock_response()
         s.pd_queue.cleanup = erroneous_cleanup
         s.tick()
         # queue is flushed normally...
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertEqual(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         # ... and cleanup errors have been handled.
 
     # --------------------------------------------------------------------------
@@ -156,12 +156,12 @@ class SendEventTest(unittest.TestCase):
 
     def test_url_connection_error(self):
         def error(*args, **kwargs):
-            httpswithverify.urlopen("https://localhost/error")
+            http.urlopen("https://localhost/error")
 
         s = self.new_send_event_task()
-        s._urllib2.urlopen = error
+        s._http.urlopen = error
         s.tick()
-        self.assertEquals(
+        self.assertEqual(
             s.pd_queue.consume_code,
             ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
             )
@@ -223,9 +223,9 @@ class SendEventTest(unittest.TestCase):
     def test_bad_response(self):
         # bad response should not matter for our processing.
         s = self.new_send_event_task()
-        s._urllib2.response = self.mock_response(data="bad")
+        s._http.response = self.mock_response(data="bad")
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
+        self.assertEqual(s.pd_queue.consume_code, ConsumeEvent.CONSUMED)
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def _verifyConsumeCodeForError(self, exception, expected_code):
@@ -233,17 +233,17 @@ class SendEventTest(unittest.TestCase):
             raise exception
 
         s = self.new_send_event_task()
-        s._urllib2.urlopen = error
+        s._http.urlopen = error
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, expected_code)
+        self.assertEqual(s.pd_queue.consume_code, expected_code)
         # error handled; cleanup is still invoked.
         self.assertTrue(s.pd_queue.cleaned_up)
 
     def _verifyConsumeCodeForHTTPError(self, error_code, expected_code):
         s = self.new_send_event_task()
-        s._urllib2.response = self.mock_response(code=error_code)
+        s._http.response = self.mock_response(code=error_code)
         s.tick()
-        self.assertEquals(s.pd_queue.consume_code, expected_code)
+        self.assertEqual(s.pd_queue.consume_code, expected_code)
         # error handled; cleanup is still invoked.
         self.assertTrue(s.pd_queue.cleaned_up)
 

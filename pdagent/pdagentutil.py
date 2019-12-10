@@ -32,13 +32,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-from datetime import datetime
 import json
 import os
 import sys
 import time
 
-from constants import MAX_DESCRIPTION_LEN
+from .constants import MAX_DESCRIPTION_LEN
 
 def find_in_sys_path(file_path):
     for directory in sys.path:

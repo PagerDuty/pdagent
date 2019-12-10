@@ -31,14 +31,14 @@
 import json
 import logging
 import time
-from urllib2 import Request, URLError, HTTPError
+from six.moves.http_client import HTTPException
+from six.moves.urllib.request import Request
+from six.moves.urllib.error import URLError, HTTPError
 
 import pdagent
 from pdagent.constants import HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
-from pdagent.thirdparty import httpswithverify
-from httplib import HTTPException
-
+from pdagent import http
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class HeartbeatTask(RepeatingTask):
         self._system_info = system_info
         # The following variables exist to ease unit testing:
         self._source_address = source_address
-        self._urllib2 = httpswithverify
+        self._urllib2 = http
         self._retry_gap_secs = RETRY_GAP_SECS
         self._heartbeat_max_retries = HEARTBEAT_MAX_RETRIES
 
@@ -71,7 +71,7 @@ class HeartbeatTask(RepeatingTask):
         try:
             logger.debug("Sending heartbeat")
             # max time is half an interval
-            retry_time_limit = time.time() + (self.get_interval_secs() / 2)
+            retry_time_limit = time.time() + (self.get_interval_secs() // 2)
             attempt_number = 0
             while not self.is_stop_invoked():
                 attempt_number += 1
@@ -89,10 +89,8 @@ class HeartbeatTask(RepeatingTask):
                         logger.error(
                             "HTTPError sending heartbeat (will retry): %s" % e
                             )
-                        e.close()
                     else:
                         error = HTTPError(e.url, e.code, e.msg, e.hdrs, None)
-                        e.close()
                         raise error
                 except (URLError, HTTPException) as e:
                     # assumes 2.6 where socket.error is a sub-class of IOError
@@ -110,7 +108,7 @@ class HeartbeatTask(RepeatingTask):
                     break
                 # sleep before retry
                 logger.debug("Sleeping before retry...")
-                for _ in xrange(self._retry_gap_secs):
+                for _ in range(self._retry_gap_secs):
                     if self.is_stop_invoked():
                         break
                     time.sleep(1)
@@ -137,7 +135,7 @@ class HeartbeatTask(RepeatingTask):
         request = Request(HEARTBEAT_URI)
         request.add_header("Content-Type", "application/json")
         heartbeat_json_str = json.dumps(heartbeat_data)
-        request.add_data(heartbeat_json_str)
+        request.data = heartbeat_json_str
         response = self._urllib2.urlopen(request,
             source_address=self._source_address)
         response_str = response.read()

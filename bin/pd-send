@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Python script to queue an incident event for delayed send to PagerDuty.
 #
@@ -30,8 +30,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+
 def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
+
     parser = ArgumentParser(description=description)
     parser.add_argument(
         "-k", "--service-key", dest="service_key", required=True,
@@ -68,10 +70,12 @@ def build_queue_arg_parser(description):
         )
     return parser
 
+
 def parse_fields(fields):
     if fields is None:
         return {}
     return dict(f.split("=", 1) for f in fields)
+
 
 def main():
     from pdagent.pdagentutil import queue_event
@@ -110,7 +114,7 @@ def main():
                     "(For umask requirements, please refer: %s)" %
                     "https://www.pagerduty.com/docs/guides/agent-install-guide/"
                     )
-        print "Event processed. Incident Key:", incident_key
+        print("Event processed. Incident Key:", incident_key)
 
 
 if __name__ == "__main__":

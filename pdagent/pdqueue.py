@@ -51,8 +51,8 @@ import errno
 import logging
 import os
 
-from constants import ConsumeEvent, EnqueueWarnings
-from pdagentutil import ensure_readable_directory, ensure_writable_directory, \
+from .constants import ConsumeEvent, EnqueueWarnings
+from .pdagentutil import ensure_readable_directory, ensure_writable_directory, \
     utcnow_isoformat
 
 
@@ -101,7 +101,7 @@ class PDQEnqueuer(PDQueueBase):
             "tmp",
             "%%d_%s.txt" % service_key
             )
-        os.write(tmp_fd, s)
+        os.write(tmp_fd, s.encode())
         os.close(tmp_fd)
         # link to an exclusive queue entry file
         pdq_fname, _ = self._link_with_retry(
@@ -192,8 +192,7 @@ class PDQueue(PDQueueBase):
 
     # Get the list of queued files from the queue directory in enqueue order
     def _queued_files(self, ftype="pdq"):
-        fnames = os.listdir(os.path.join(self.queue_dir, ftype))
-        fnames.sort()
+        fnames = sorted(os.listdir(os.path.join(self.queue_dir, ftype)))
         return fnames
 
     def dequeue(self, consume_func, stop_check_func=lambda: False):
@@ -244,7 +243,7 @@ class PDQueue(PDQueueBase):
                 try:
                     _, svc_key = _get_event_metadata(fname)
                 except _BadFileNameError:
-                    logger.warn("Badly named event " + fname)
+                    logger.warning("Badly named event " + fname)
                     self._unsafe_change_event_type(fname, 'pdq', 'err')
                     continue
                 if svc_key not in err_svc_keys and \
@@ -462,7 +461,7 @@ class PDQueue(PDQueueBase):
             throttled_keys = set()
             now = int(self.time.time())
             for key, retry_at in \
-                    self.backoff_info._current_retry_at.iteritems():
+                    self.backoff_info._current_retry_at.items():
                 if retry_at > now:
                     throttled_keys.add(key)
             snapshot_stats["throttled_service_keys_count"] = len(throttled_keys)
@@ -490,7 +489,7 @@ class PDQueue(PDQueueBase):
 def _open_creat_excl(fname_abs, mode):
     try:
         return os.open(fname_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.EEXIST:
             return None
         else:
@@ -501,7 +500,7 @@ def _link(orig_abs, new_abs):
     try:
         os.link(orig_abs, new_abs)
         return True
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.EEXIST:
             return False
         else:
@@ -594,7 +593,7 @@ class _BackoffInfo(object):
         new_retry_at = {}
 
         # copy over all still-unexpired current back-offs to new data.
-        for (svc_key, retry_at) in self._current_retry_at.iteritems():
+        for (svc_key, retry_at) in self._current_retry_at.items():
             if retry_at > time_now:
                 new_attempts[svc_key] = self._current_attempts.get(svc_key)
                 new_retry_at[svc_key] = retry_at
@@ -639,7 +638,7 @@ class _CounterInfo(object):
 
         # validate that counter values are indeed integers. If not, reset data.
         for key in (k for k in self._data if k != "started_on"):
-            if type(self._data[key]) is not int:
+            if not isinstance(self._data[key], int):
                 logger.error(
                     "Invalid counter value %s=%s" % (key, self._data[key])
                     )
