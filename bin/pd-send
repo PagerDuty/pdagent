@@ -61,6 +61,10 @@ def build_queue_arg_parser(description):
         help="Client URL"
         )
     parser.add_argument(
+        "-v", "--vendor", dest="vendor",
+        help="Vendor"
+        )
+    parser.add_argument(
         "-f", "--field", action="append", dest="fields",
         help="Add given KEY=VALUE pair to the event details"
         )
@@ -100,7 +104,7 @@ def main():
     incident_key, problems = queue_event(
         enqueuer,
         args.event_type, args.service_key, args.incident_key, args.description,
-        args.client, args.client_url, details,
+        args.client, args.client_url, args.vendor, details,
         agent_config.get_agent_id(), "pd-send",
         )
     if not args.quiet:
