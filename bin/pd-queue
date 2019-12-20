@@ -30,7 +30,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-import six
+
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 
 def build_queue_arg_parser(description):
