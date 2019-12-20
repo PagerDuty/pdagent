@@ -58,6 +58,14 @@ from pdagent.pdagentutil import find_in_sys_path
 from six.moves.http_client import HTTPSConnection
 from six.moves.urllib import request
 
+
+try:
+    # For Python > 3.6
+    from ssl import PROTOCOL_TLS_CLIENT as ssl_client_protocol
+except ImportError:
+    # From Python > 2.7.9, < 3.6.
+    from ssl import PROTOCOL_TLSv1_2 as ssl_client_protocol
+
 DEFAULT_CA_CERTS_FILE = find_in_sys_path("pdagent/root_certs/ca_certs.pem")
 
 # For caching SSL contexts and openersbased on provided `ca_certs`.
@@ -102,15 +110,11 @@ def _get_cached_context(ca_certs):
 
 
 def _create_ssl_context(ca_certs):
-    try:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    except:
-        # Fallback for versions of Python that don't support
-        # `PROTOCOL_TLS_CLIENT`, notably Python < 3.
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-        context.verify_mode = ssl.CERT_REQUIRED
-        context.check_hostname = True
-
+    # Some of this configuration is redundant for PROTOCOL_TLS_CLIENT, but
+    # repeating for the benefit of legacy protocols.
+    context = ssl.SSLContext(ssl_client_protocol)
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.check_hostname = True
     context.load_verify_locations(cafile=ca_certs)
     return context
 
@@ -119,6 +123,6 @@ def _get_cached_opener(context, source_address):
     if context not in url_opener_cache:
         url_opener_cache[context] = request.build_opener(CustomHTTPSHandler(
             context=context,
-            source_address=source_address
+            source_address=(source_address, 0)
         ))
     return url_opener_cache[context]
