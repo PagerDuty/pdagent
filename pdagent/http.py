@@ -79,14 +79,21 @@ url_opener_cache = dict()
 
 # Custom HTTPS handler primarily for allowing us to pass a `source_address`
 # through to `HTTPSConnection`
+#
+# TODO: Investigate removing as we may not need `source_address` and relying
+# on subclassing `request.HTTPSHandler` is somewhat brittle.
 class CustomHTTPSHandler(request.HTTPSHandler):
     def __init__(self, **kwargs):
         self.source_address = kwargs.pop("source_address", None)
+        self.context = kwargs.get("context", None)
         request.HTTPSHandler.__init__(self, **kwargs)
 
     # Overrides `HTTPSHandler.https_open`.
+    #
+    # TODO: More recent version of Python 3 apply `check_hostname` here, a
+    # feature we'll want to support unless we deprecate this class.
     def https_open(self, req):
-        return self.do_open(self._connection, req)
+        return self.do_open(self._connection, req, context=self.context)
 
     def _connection(self, host, **kwargs):
         kwargs["source_address"] = self.source_address
