@@ -38,6 +38,8 @@ cd $basedir
 # source common variables
 . ./make_common.env
 
+mkdir -p $2
+
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
     exit 2
@@ -46,26 +48,6 @@ gpg_home="$1"
 install_root="$2"
 deb_install_root=$install_root/deb
 [ -d "$deb_install_root" ] || mkdir -p $deb_install_root
-
-# update packages
-sudo apt-get update -qq
-
-# install build tools
-sudo apt-get install -y build-essential
-
-[ $(sudo dpkg -l ruby2.3-dev | grep -c '^i') -eq 2 ] || {
-    echo "Installing required packages. This may take a few minutes..."
-    sudo apt-get install -y -q python-software-properties
-    sudo add-apt-repository -y ppa:brightbox/ruby-ng-experimental
-    sudo apt-get update -qq
-    sudo apt-get install -y -q ruby2.3 ruby2.3-dev
-    echo "Done installing."
-}
-{ gem list fpm | grep fpm >/dev/null ; } || {
-    echo "Installing fpm gem..."
-    sudo gem install -q -v $FPM_VERSION fpm
-    echo "Done installing."
-}
 
 sh make_package.sh deb
 

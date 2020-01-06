@@ -38,6 +38,8 @@ cd $basedir
 # source common variables
 . ./make_common.env
 
+mkdir -p $2
+
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
     exit 2
@@ -46,24 +48,6 @@ gpg_home="$1"
 install_root="$2"
 rpm_install_root=$install_root/rpm
 [ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
-
-# install required packages.
-[ $(sudo rpm -q rpm-build rh-ruby23 createrepo \
-        gcc gcc-c++ kernel-devel | \
-        grep -vc 'not installed') -eq 7 ] || {
-    echo "Installing required packages. This may take a few minutes..."
-    sudo yum install -y -q rpm-build createrepo gcc gcc-c++ kernel-devel
-    sudo yum install -y -q centos-release-scl
-    sudo yum install -y -q rh-ruby23 rh-ruby23-ruby-devel
-}
-
-source /opt/rh/rh-ruby23/enable
-
-{ sudo /opt/rh/rh-ruby23/root/usr/bin/gem list fpm | grep fpm >/dev/null ; } || {
-    echo "Installing fpm gem..."
-    sudo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" /opt/rh/rh-ruby23/root/usr/bin/gem install -q -v $FPM_VERSION fpm
-    echo "Done installing."
-}
 
 echo "Setting up GPG information for RPM..."
 # fingerprint to use for signing = first fingerprint in GPG keyring

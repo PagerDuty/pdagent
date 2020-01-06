@@ -96,24 +96,30 @@ mkdir -p data/etc/
 cp ../conf/pdagent.conf data/etc/
 
 if [ "$pkg_type" = "deb" ]; then
-    _PY_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
+    _PY27_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
+    _PY3_SITE_PACKAGES=data//usr/lib/python3/dist-packages
 else
-    _PY_SITE_PACKAGES=data/usr/lib/python2.6/site-packages
     _PY27_SITE_PACKAGES=data/usr/lib/python2.7/site-packages
+    _PY36_SITE_PACKAGES=data/usr/lib/python3.6/site-packages
+    _PY37_SITE_PACKAGES=data/usr/lib/python3.7/site-packages
 fi
 
 echo = python modules...
-mkdir -p $_PY_SITE_PACKAGES
+mkdir -p $_PY27_SITE_PACKAGES
 cd ..
-find pdagent -type d -exec mkdir -p build-linux/$_PY_SITE_PACKAGES/{} \;
+find pdagent -type d -exec mkdir -p build-linux/$_PY27_SITE_PACKAGES/{} \;
 find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
-    -exec cp {} build-linux/$_PY_SITE_PACKAGES/{} \;
+    -exec cp {} build-linux/$_PY27_SITE_PACKAGES/{} \;
 cd -
 
-# copy the libraries for python2.7 rpm users
-if [ "$pkg_type" = "rpm" ]; then
-    mkdir -p "$_PY27_SITE_PACKAGES"
-    cp -r $_PY_SITE_PACKAGES/* "$_PY27_SITE_PACKAGES"
+if [ "$pkg_type" = "deb" ]; then
+    mkdir -p "$_PY3_SITE_PACKAGES"
+    cp -r $_PY27_SITE_PACKAGES/* "$_PY3_SITE_PACKAGES"
+else
+    mkdir -p "$_PY36_SITE_PACKAGES"
+    cp -r $_PY27_SITE_PACKAGES/* "$_PY36_SITE_PACKAGES"
+    mkdir -p "$_PY37_SITE_PACKAGES"
+    cp -r $_PY27_SITE_PACKAGES/* "$_PY37_SITE_PACKAGES"
 fi
 
 echo = FPM!

@@ -13,7 +13,10 @@ RUN yum install -y -q gcc
 RUN yum install -y -q gcc-c++
 RUN yum install -y -q kernel-devel
 RUN yum install -y -q make
+RUN yum install -y -q python27-python-pip
+RUN yum install -y -q python3-pip
 RUN yum install -y -q rpm-build
+RUN yum install -y -q rpm-sign
 RUN yum install -y -q rh-ruby23
 RUN yum install -y -q rh-ruby23-ruby-devel
 RUN yum install -y -q sudo
