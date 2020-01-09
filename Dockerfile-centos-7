@@ -4,8 +4,8 @@ ARG FPM_VERSION=1.11.0
 ARG PYTHON_VERSION=3
 ENV PYTHON_VERSION ${PYTHON_VERSION}
 
-RUN mkdir /pdagent
-WORKDIR /pdagent
+RUN mkdir -p /usr/share/pdagent
+WORKDIR /usr/share/pdagent
 
 RUN yum install -y -q centos-release-scl
 RUN yum install -y -q createrepo
@@ -22,11 +22,14 @@ RUN source /opt/rh/rh-ruby23/enable && \
   /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v $FPM_VERSION fpm
 RUN yum install -y python${PYTHON_VERSION}
 
-COPY . /pdagent
+COPY . /usr/share/pdagent
+RUN cp /usr/share/pdagent/build-linux/pdagent.service /lib/systemd/system
 
 RUN useradd --create-home --shell /bin/bash pdagent \
-  && chown -R pdagent /pdagent \
+  && chown -R pdagent /usr/share/pdagent \
   # Primarily for handling sudo use during build and testing.
   && echo "pdagent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# CMD python${PYTHON_VERSION} bin/pdagentd.py -f
+RUN systemctl enable pdagent
+
+CMD ["/usr/sbin/init"]

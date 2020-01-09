@@ -1,0 +1,59 @@
+ARG UBUNTU_VERSION=16.04
+FROM ubuntu:${UBUNTU_VERSION}
+
+ARG FPM_VERSION=1.11.0
+ARG PYTHON_VERSION=3
+ENV PYTHON_VERSION ${PYTHON_VERSION}
+ENV container docker
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN mkdir -p /usr/share/pdagent
+WORKDIR /usr/share/pdagent
+
+RUN apt-get update -y -qq
+RUN apt-get install -y -q apt-utils
+RUN apt-get install -y -q build-essential
+RUN apt-get install -y -q ca-certificates
+RUN apt-get install -y -q python-software-properties
+RUN apt-get install -y -q ruby2.3
+RUN apt-get install -y -q ruby2.3-dev
+RUN apt-get install -y -q software-properties-common
+RUN apt-get install -y -q sudo
+RUN update-ca-certificates
+
+RUN gem install -q --no-ri --no-rdoc -v ${FPM_VERSION} fpm
+RUN apt-get install -y -q python${PYTHON_VERSION}
+
+COPY . /usr/share/pdagent
+RUN cp /usr/share/pdagent/build-linux/pdagent.service /lib/systemd/system
+
+RUN useradd --create-home --shell /bin/bash pdagent \
+  && chown -R pdagent /usr/share/pdagent \
+  # Primarily for handling sudo use during build and testing.
+  && echo "pdagent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN apt-get update \
+    && apt-get install -y systemd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN cd /lib/systemd/system/sysinit.target.wants/ \
+    && ls | grep -v systemd-tmpfiles-setup | xargs rm -f $1
+
+RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
+    /etc/systemd/system/*.wants/* \
+    /lib/systemd/system/local-fs.target.wants/* \
+    /lib/systemd/system/sockets.target.wants/*udev* \
+    /lib/systemd/system/sockets.target.wants/*initctl* \
+    /lib/systemd/system/basic.target.wants/* \
+    /lib/systemd/system/anaconda.target.wants/* \
+    /lib/systemd/system/plymouth* \
+    /lib/systemd/system/systemd-update-utmp*
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+RUN systemctl enable pdagent
+
+CMD ["/lib/systemd/systemd"]
+
+#CMD python${PYTHON_VERSION} bin/pdagentd.py -f
