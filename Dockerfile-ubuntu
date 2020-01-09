@@ -55,5 +55,3 @@ VOLUME [ "/sys/fs/cgroup" ]
 RUN systemctl enable pdagent
 
 CMD ["/lib/systemd/systemd"]
-
-#CMD python${PYTHON_VERSION} bin/pdagentd.py -f

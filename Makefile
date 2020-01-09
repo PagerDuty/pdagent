@@ -9,16 +9,6 @@ ubuntu: target/deb target/tmp/GPG-KEY-pagerduty
 
 centos: target/rpm target/tmp/GPG-KEY-pagerduty
 
-run-%-console: run-%
-	docker exec \
-	-it $(docker ps -q -f ancestor=pdagent-$*) /bin/bash
-
-run-ubuntu: build-ubuntu
-	docker run \
-		--privileged \
-		-v /sys/fs/cgroup:/sys/fs/cgroup:ro \
-		-it pdagent-ubuntu
-
 build-ubuntu:
 	docker build . \
 		-t pdagent-ubuntu \
@@ -26,15 +16,6 @@ build-ubuntu:
 		--build-arg FPM_VERSION="${FPM_VERSION}" \
 		--build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
 		--build-arg UBUNTU_VERSION="${UBUNTU_VERSION}"
-
-run-centos: build-centos
-	docker run \
-		-p 5000:80 \
-		--privileged=true \
-		--tmpfs /tmp \
-		--tmpfs /run \
-		-v /sys/fs/cgroup:/sys/fs/cgroup:ro \
-		-it pdagent-centos 
 
 build-centos:
 	docker build . \
