@@ -46,7 +46,3 @@ target/tmp/GPG-KEY-pagerduty:
 clean:
 	rm -rf dist
 	rm -rf target
-
-
-
-
