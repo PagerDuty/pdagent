@@ -83,13 +83,12 @@ Agent with the following steps:
 
 1. Configure signing keys by following the [One-time setup of GPG keys](build-linux/howto.md#one-time-setup-of-gpg-keys) instructions.
 
+
 2. Run the following commands:
 ```
-scons --clean
-scons local-repo gpg-home=build-linux/gnupg
+make ubuntu
+make centos
 ```
-Note that this will spin up multiple virtual machines using Vagrant to run
-tests and perform builds on.
 
 3. Run integration tests on the packages as follows:
   * Edit the file `pdagenttestinteg/util.sh` and change the line `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
