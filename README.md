@@ -23,6 +23,8 @@ on a Mac.
 
 ### Running in Development
 
+#### Locally
+
 You can run the Agent in development without any setup. Start the Agent daemon
 as follows:
 
@@ -48,6 +50,12 @@ directory exists.
 You can stop the daemon as follows:
 
 `kill $(cat tmp/pdagentd.pid)`
+
+#### With Docker
+
+To run the Agent in a production-like environment, use Docker. We currently have two supported operating systems: Ubuntu 16.04 and CentOS 7. With Docker installed, run `./scripts/run-console.sh <ubuntu>` or `./scripts/run-console.sh <centos>` to spin up the Docker container, run the Agent, and drop into a console. 
+
+Once in the console, you can send events via `pd-send`.
 
 ### IDE Setup
 
