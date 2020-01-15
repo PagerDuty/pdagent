@@ -27,21 +27,21 @@ build-centos:
 
 target/deb: build-ubuntu
 	docker run \
-		-v `pwd`:/pdagent \
+		-v `pwd`:/usr/share/pdagent \
 		-it pdagent-ubuntu \
-			/bin/sh -c "/bin/sh build-linux/make_deb.sh /pdagent/tmp/gnupg /pdagent/target"
+			/bin/sh -c "/bin/sh build-linux/make_deb.sh /usr/share/pdagent/build-linux/gnupg /usr/share/pdagent/target"
 
 target/rpm: build-centos
 	docker run \
-		-v `pwd`:/pdagent \
+		-v `pwd`:/usr/share/pdagent \
 		-it pdagent-centos \
-			/bin/sh -c "/bin/sh build-linux/make_rpm.sh /pdagent/tmp/gnupg /pdagent/target"
+			/bin/sh -c "/bin/sh build-linux/make_rpm.sh /usr/share/pdagent/build-linux/gnupg /usr/share/pdagent/target"
 
 target/tmp/GPG-KEY-pagerduty:
 	docker run \
-		-v `pwd`:/pdagent \
+		-v `pwd`:/usr/share/pdagent \
 		-it pdagent-ubuntu \
-			/bin/sh -c "mkdir -p /pdagent/target/tmp; gpg --armor --export --homedir /pdagent/tmp/gnupg > /pdagent/target/tmp/GPG-KEY-pagerduty"
+			/bin/sh -c "mkdir -p /usr/share/pdagent/target/tmp; gpg --armor --export --homedir /usr/share/pdagent/build-linux/gnupg > /usr/share/pdagent/target/tmp/GPG-KEY-pagerduty"
 
 clean:
 	rm -rf dist
