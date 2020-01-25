@@ -43,10 +43,8 @@ test "$SVC_KEY" != "CHANGEME" || {
 test -z "$(agent_pid)" || stop_agent
 test -d $OUTQUEUE_DIR
 sudo find $OUTQUEUE_DIR -type f -exec rm -f {} \;
-
-
 # modify agent check frequency so we wait for lesser time.
-sudo sed -i "s#^\#send_interval_secs.*#send_interval_secs=$SEND_INTERVAL_SECS#" $CONFIG_FILE
+sudo sed -i "s#^send_interval_secs.*#send_interval_secs=$SEND_INTERVAL_SECS#" $CONFIG_FILE
 
 # agent must flush out queue when it starts up.
 test_startup() {
