@@ -77,6 +77,7 @@ cp ../bin/pd-* data/usr/bin
 echo = /usr/share/pdagent/bin
 mkdir -p data/usr/share/pdagent/bin
 cp ../bin/pdagentd.py data/usr/share/pdagent/bin
+chmod a+rx data/usr/share/pdagent/bin/pdagentd.py
 
 echo = /var/...
 mkdir -p data/var/log/pdagent
@@ -90,10 +91,12 @@ mkdir -p data/var/lib/pdagent/scripts
 # stage sysV & systemd service files for pkg postinst
 cp pdagent.init data/var/lib/pdagent/scripts/pdagent.init
 cp pdagent.service data/var/lib/pdagent/scripts/pdagent.service
+chmod a+r data/var/lib/pdagent/scripts/pdagent.service
 
 echo = /etc/...
 mkdir -p data/etc/
 cp ../conf/pdagent.conf data/etc/
+chmod a+r data/etc/pdagent.conf
 
 if [ "$pkg_type" = "deb" ]; then
     _PY27_SITE_PACKAGES=data/usr/lib/python2.7/dist-packages
@@ -115,11 +118,16 @@ cd -
 if [ "$pkg_type" = "deb" ]; then
     mkdir -p "$_PY3_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY3_SITE_PACKAGES"
+    chmod a+r $_PY27_SITE_PACKAGES/*
+    chmod a+r $_PY3_SITE_PACKAGES/*
 else
     mkdir -p "$_PY36_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY36_SITE_PACKAGES"
+    chmod a+r $_PY36_SITE_PACKAGES/*
     mkdir -p "$_PY37_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY37_SITE_PACKAGES"
+    chmod a+r $_PY37_SITE_PACKAGES/*
+
 fi
 
 echo = FPM!
