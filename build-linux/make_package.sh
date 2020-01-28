@@ -118,15 +118,15 @@ cd -
 if [ "$pkg_type" = "deb" ]; then
     mkdir -p "$_PY3_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY3_SITE_PACKAGES"
-    chmod a+r $_PY27_SITE_PACKAGES/*
-    chmod a+r $_PY3_SITE_PACKAGES/*
+    chmod -R a+r $_PY27_SITE_PACKAGES/*
+    chmod -R a+r $_PY3_SITE_PACKAGES/*
 else
     mkdir -p "$_PY36_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY36_SITE_PACKAGES"
-    chmod a+r $_PY36_SITE_PACKAGES/*
+    chmod -R a+r $_PY36_SITE_PACKAGES/*
     mkdir -p "$_PY37_SITE_PACKAGES"
     cp -r $_PY27_SITE_PACKAGES/* "$_PY37_SITE_PACKAGES"
-    chmod a+r $_PY37_SITE_PACKAGES/*
+    chmod -R a+r $_PY37_SITE_PACKAGES/*
 
 fi
 

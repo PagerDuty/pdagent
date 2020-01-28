@@ -58,9 +58,13 @@ if [ "$1" = "configure" ]; then
     # users cannot be seen, but set to -wx for enqueue-related directories
     # to allow any user to write events.
     chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
-    chmod 750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
-    chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
-
+    chown -R pdagent:pdagent /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
+    chown -R pdagent:pdagent /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
+    chown -R pdagent:pdagent /usr/bin/pd-send /usr/bin/pd-queue
+    
+    chmod 2770 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
+    chmod 2773 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
+    
     pycompile -p pdagent
 
     if which systemctl >/dev/null; then
