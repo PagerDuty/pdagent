@@ -43,11 +43,11 @@ VOLUME [ "/sys/fs/cgroup" ]
 
 WORKDIR /pd-agent-install
 COPY . /pd-agent-install
-RUN  mkdir -p /pd-agent-install/build-linux/fancycat
-RUN  cd /pd-agent-install/build-linux && ./make_deb.sh /pd-agent-install/build-linux/gnupg /pd-agent-install/build-linux/fancycat
+RUN  mkdir -p /pd-agent-install/build-linux/release
+RUN  cd /pd-agent-install/build-linux && ./make_deb.sh /pd-agent-install/build-linux/gnupg /pd-agent-install/build-linux/release
 RUN  echo "Installing debian package"
 
 # Installing the debian package will also enable pdagent in systemd
-RUN dpkg -i /pd-agent-install/build-linux/fancycat/deb/pdagent_1.6_all.deb
+RUN dpkg -i /pd-agent-install/build-linux/release/deb/pdagent_1.6_all.deb
 
 CMD ["/lib/systemd/systemd"]
