@@ -1,1 +1,0 @@
-{"agent":{"agent_id":"SOME_ID","queued_at":"SOME_TIME","queued_by":"pd-send"},"description":"Test incident 1","details":{"key1":"value1","key2":"subkey=subvalue"},"event_type":"trigger","incident_key":"test1","service_key":"SOME_SERVICE_KEY"}
