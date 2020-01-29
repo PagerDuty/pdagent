@@ -113,6 +113,7 @@ cd ..
 find pdagent -type d -exec mkdir -p build-linux/$_PY27_SITE_PACKAGES/{} \;
 find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
     -exec cp {} build-linux/$_PY27_SITE_PACKAGES/{} \;
+ cp -a ./six.py build-linux/$_PY27_SITE_PACKAGES/
 cd -
 
 if [ "$pkg_type" = "deb" ]; then
