@@ -18,6 +18,7 @@ RUN apt-get install -y -q ruby2.3-dev
 RUN apt-get install -y -q software-properties-common
 RUN apt-get install -y -q sudo
 RUN apt-get install -y -q systemd
+RUN apt-get install -y -q bsdmainutils
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
