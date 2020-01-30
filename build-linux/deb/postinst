@@ -57,14 +57,12 @@ if [ "$1" = "configure" ]; then
     # outqueue/* world permission is set to 000 so that service keys of other
     # users cannot be seen, but set to -wx for enqueue-related directories
     # to allow any user to write events.
-    chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
-    chown -R pdagent:pdagent /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
-    chown -R pdagent:pdagent /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
-    chown -R pdagent:pdagent /usr/bin/pd-send /usr/bin/pd-queue
     
-    chmod 2770 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
-    chmod 2773 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
-    
+    chmod -R 007 /var/lib/pdagent \
+                 /var/log/pdagent \
+                 /usr/bin/pd-send \
+                 /usr/bin/pd-queue
+
     pycompile -p pdagent
 
     if which systemctl >/dev/null; then

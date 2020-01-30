@@ -61,4 +61,4 @@ test_utf8_trigger() {
 
 
 test_utf8_trigger
-
+echo "Test $0 successful"
