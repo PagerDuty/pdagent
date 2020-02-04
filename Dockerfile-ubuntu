@@ -6,9 +6,7 @@ ARG PYTHON_VERSION=3
 ENV PYTHON_VERSION ${PYTHON_VERSION}
 ENV container docker
 ENV DEBIAN_FRONTEND noninteractive
-
-RUN mkdir -p /usr/share/pdagent
-WORKDIR /usr/share/pdagent
+ENV DOCKER_DEV_ENV true
 
 RUN apt-get update -y -qq
 RUN apt-get install -y -q apt-utils
@@ -20,6 +18,7 @@ RUN apt-get install -y -q ruby2.3-dev
 RUN apt-get install -y -q software-properties-common
 RUN apt-get install -y -q sudo
 RUN apt-get install -y -q systemd
+RUN apt-get install -y -q bsdmainutils
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -27,15 +26,6 @@ RUN update-ca-certificates
 
 RUN gem install -q --no-ri --no-rdoc -v ${FPM_VERSION} fpm
 RUN apt-get install -y -q python${PYTHON_VERSION}
-
-COPY . /usr/share/pdagent
-RUN cp /usr/share/pdagent/build-linux/pdagent.service /lib/systemd/system
-
-RUN useradd --create-home --shell /bin/bash pdagent \
-  && chown -R pdagent /usr/share/pdagent \
-  # Primarily for handling sudo use during build and testing.
-  && echo "pdagent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
 RUN cd /lib/systemd/system/sysinit.target.wants/ \
     && ls | grep -v systemd-tmpfiles-setup | xargs rm -f $1
 
@@ -51,6 +41,13 @@ RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
 
 VOLUME [ "/sys/fs/cgroup" ]
 
-RUN systemctl enable pdagent
+WORKDIR /pd-agent-install
+COPY . /pd-agent-install
+RUN  mkdir -p /pd-agent-install/build-linux/release
+RUN  cd /pd-agent-install/build-linux && ./make_deb.sh /pd-agent-install/build-linux/gnupg /pd-agent-install/build-linux/release
+RUN  echo "Installing debian package"
+
+# Installing the debian package will also enable pdagent in systemd
+RUN dpkg -i /pd-agent-install/build-linux/release/deb/pdagent_1.6_all.deb
 
 CMD ["/lib/systemd/systemd"]

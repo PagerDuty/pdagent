@@ -1,4 +1,6 @@
 #
+# Checks charset encoding.
+#
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
 # All rights reserved.
 #
@@ -27,64 +29,36 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-AGENT_USER=pdagent
-BIN_PD_QUEUE=pd-queue
-BIN_PD_SEND=pd-send
-CONFIG_FILE=/etc/pdagent.conf
-PID_FILE=/var/run/pdagent/pdagentd.pid
-LOG_FILE=/var/log/pdagent/pdagentd.log
-DATA_DIR=/var/lib/pdagent
-OUTQUEUE_DIR=$DATA_DIR/outqueue
-AGENT_SVC_NAME=pdagent
-SEND_INTERVAL_SECS=5
-# The service key to use for testing commands like pd-send etc.
-SVC_KEY=CHANGEME
+. $(dirname $0)/util.sh
 
-# return OS type of current system.
-os_type() {
-  if [ -e /etc/debian_version ]; then
-    echo "debian"
-  elif [ -e /etc/redhat-release ]; then
-    echo "redhat"
-  fi
+set -e
+set -x
+
+# stop agent
+test -z "$(agent_pid)" || stop_agent
+
+# utf8 command line must enqueue correctly
+test_utf8_trigger() {
+
+  # clear outqueue
+  test -d $OUTQUEUE_DIR
+  sudo find $OUTQUEUE_DIR -type f -exec rm -f {} \;
+
+  /bin/bash -c "$BIN_PD_SEND -k DUMMY_SERVICE_KEY -t acknowledge -i server.fire -d $'\xC3\xA9'"
+
+  test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 1
+
+  sudo find $OUTQUEUE_DIR/pdq -type f \
+    | xargs sudo sed -i -r 's/"agent_id":"[a-f0-9-]+"/"agent_id":"SOME_ID"/g'
+  sudo find $OUTQUEUE_DIR/pdq -type f \
+    | xargs sudo sed -i -r 's/"queued_at":"[0-9]{4}(-[0-9]{2}){2}T[0-9]{2}(:[0-9]{2}){2}Z"/"queued_at":"SOME_TIME"/g'
+
+  sudo diff \
+    $(dirname $0)/test_30_encoding.pdq1.txt \
+    $(sudo find $OUTQUEUE_DIR/pdq -type f | tail -n1)
+
 }
 
-# return pid if agent is running, or empty string if not running.
-agent_pid() {
-    ps aux | grep /usr/share/pdagent/bin/pdagentd.py | grep -v grep | awk '{print $2}'
-}
 
-# start agent if not running.
-start_agent() {
-    if [ -z "$(agent_pid)" ]; then
-        if which systemctl >/dev/null; then
-            sudo systemctl start $AGENT_SVC_NAME
-        else
-            sudo service $AGENT_SVC_NAME start
-        fi
-    else
-        return 0
-    fi
-}
-
-# stop agent if running.
-stop_agent() {
-    if [ -n "$(agent_pid)" ]; then
-            if which systemctl >/dev/null; then
-                sudo systemctl stop $AGENT_SVC_NAME
-            else
-                sudo service $AGENT_SVC_NAME stop
-            fi
-    else
-        return 0
-    fi
-}
-
-# restart agent if running.
-restart_agent() {
-    if which systemctl >/dev/null; then
-        sudo systemctl restart $AGENT_SVC_NAME
-    else
-        sudo service $AGENT_SVC_NAME restart
-    fi
-}
+test_utf8_trigger
+echo "Test $0 successful"

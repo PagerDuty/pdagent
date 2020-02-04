@@ -40,7 +40,11 @@ install_init () {
 install_systemd () {
     cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
     systemctl enable pdagent
-    systemctl start pdagent
+    if [ -z $DOCKER_DEV_ENV ]; then
+        # Prevent starting pdagent in Docker environment because systemd 
+        # will do that after running the Docker systemd process
+        systemctl start pdagent
+    fi
 }
 
 if [ "$1" = "configure" ]; then
@@ -54,8 +58,9 @@ if [ "$1" = "configure" ]; then
     # users cannot be seen, but set to -wx for enqueue-related directories
     # to allow any user to write events.
     chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
-    chmod 750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
-    chmod 753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
+
+    chmod 2750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
+    chmod 2753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
     pycompile -p pdagent
 
