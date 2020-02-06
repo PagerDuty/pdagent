@@ -3,9 +3,8 @@ FROM centos/systemd
 ARG FPM_VERSION=1.11.0
 ARG PYTHON_VERSION=3
 ENV PYTHON_VERSION ${PYTHON_VERSION}
-
-RUN mkdir -p /usr/share/pdagent
-WORKDIR /usr/share/pdagent
+ENV container docker
+ENV DOCKER_DEV_ENV true
 
 RUN yum install -y -q centos-release-scl
 RUN yum install -y -q createrepo
@@ -25,14 +24,12 @@ RUN source /opt/rh/rh-ruby23/enable && \
   /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v $FPM_VERSION fpm
 RUN yum install -y python${PYTHON_VERSION}
 
-COPY . /usr/share/pdagent
-RUN cp /usr/share/pdagent/build-linux/pdagent.service /lib/systemd/system
+WORKDIR /pd-agent-install
+COPY . /pd-agent-install
+RUN  mkdir -p /pd-agent-install/build-linux/release
+RUN  cd /pd-agent-install/build-linux && ./make_rpm.sh /pd-agent-install/build-linux/gnupg /pd-agent-install/build-linux/release
+RUN  echo "Installing rpm package"
 
-RUN useradd --create-home --shell /bin/bash pdagent \
-  && chown -R pdagent /usr/share/pdagent \
-  # Primarily for handling sudo use during build and testing.
-  && echo "pdagent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-RUN systemctl enable pdagent
+RUN dpkg -i /pd-agent-install/build-linux/release/deb/pdagent_1.6_all.rpm
 
 CMD ["/usr/sbin/init"]
