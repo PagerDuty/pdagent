@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-from six.moves.BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from pdagent.thirdparty.six.moves.BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import ssl
 from threading import Thread
 

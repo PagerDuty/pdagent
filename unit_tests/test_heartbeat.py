@@ -31,17 +31,17 @@ import json
 import logging
 import unittest
 from mock import Mock
-from six.moves.urllib.error import URLError, HTTPError
-from six.moves.http_client import HTTPException
 
 import pdagent.heartbeat
 from pdagent import http
-from pdagenttest.mockqueue import MockQueue
-from pdagenttest.mockurllib import MockUrlLib
-from pdagenttest.mockresponse import MockResponse
+from pdagent.thirdparty.six.moves.urllib.error import URLError, HTTPError
+from pdagent.thirdparty.six.moves.http_client import HTTPException
+from unit_tests.mockqueue import MockQueue
+from unit_tests.mockurllib import MockUrlLib
+from unit_tests.mockresponse import MockResponse
 
-logger = logging.getLogger(pdagent.heartbeat.__name__)
-logger.setLevel(logging.CRITICAL)
+
+logging.basicConfig(level=logging.CRITICAL)
 
 AGENT_ID = "test123"
 SYSTEM_INFO = {

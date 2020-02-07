@@ -66,8 +66,8 @@ except ImportError:
 from types import ModuleType, MethodType
 from unittest.util import safe_repr
 
-import six
-from six import wraps
+import pdagent.thirdparty.six as six
+from pdagent.thirdparty.six import wraps
 
 __version__ = '3.0.5'
 version_info = tuple(int(p) for p in __version__.split('.'))

@@ -54,9 +54,8 @@
 import ssl
 
 from pdagent.pdagentutil import find_in_sys_path
-
-from six.moves.http_client import HTTPSConnection
-from six.moves.urllib import request
+from pdagent.thirdparty.six.moves.http_client import HTTPSConnection
+from pdagent.thirdparty.six.moves.urllib import request
 
 
 try:
@@ -81,7 +80,7 @@ url_opener_cache = dict()
 # through to `HTTPSConnection`
 class CustomHTTPSHandler(request.HTTPSHandler):
     def __init__(self, **kwargs):
-        self.source_address = kwargs.pop("source_address", None)
+        self.source_address = kwargs.pop("source_address", '0.0.0.0')
         request.HTTPSHandler.__init__(self, **kwargs)
 
     # Overrides `HTTPSHandler.https_open`.
@@ -96,7 +95,7 @@ class CustomHTTPSHandler(request.HTTPSHandler):
 def urlopen(url, **kwargs):
     ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
     context = kwargs.pop("context", _get_cached_context(ca_certs=ca_certs))
-    source_address = kwargs.pop("source_address", None)
+    source_address = kwargs.pop("source_address", '0.0.0.0')
 
     opener = _get_cached_opener(context, source_address)
 

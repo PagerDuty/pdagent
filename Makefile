@@ -43,6 +43,12 @@ target/tmp/GPG-KEY-pagerduty:
 		-it pdagent-ubuntu \
 			/bin/sh -c "mkdir -p /usr/share/pdagent/target/tmp; gpg --armor --export --homedir /usr/share/pdagent/build-linux/gnupg > /usr/share/pdagent/target/tmp/GPG-KEY-pagerduty"
 
+.PHONY: test
+test:
+	find unit_tests -name "test_*.py" | xargs python run-tests.py
+
+.PHONY: clean
 clean:
 	rm -rf dist
 	rm -rf target
+	rm unit_tests/test_filelock_lock.txt

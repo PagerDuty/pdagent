@@ -30,12 +30,12 @@
 import unittest
 import socket
 import ssl
-import six
-
-from six.moves.urllib.error import URLError
-from pdagent.http import urlopen
-from pdagenttest.simplehttpsserver import SimpleHTTPSServer
 from os.path import dirname, join, realpath
+
+import pdagent.thirdparty.six as six
+from pdagent.http import urlopen
+from pdagent.thirdparty.six.moves.urllib.error import URLError
+from unit_tests.simplehttpsserver import SimpleHTTPSServer
 
 
 def _make_url(host, protocol="https", port=None):

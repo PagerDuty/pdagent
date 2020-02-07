@@ -27,10 +27,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+import logging
 import time
 import unittest
 
+import pdagent
 from pdagent.pdthread import RepeatingTask, RepeatingTaskThread
+
+
+logging.basicConfig(level=logging.CRITICAL)
 
 
 def _start_repeating_thread(f, interval_secs, is_absolute):

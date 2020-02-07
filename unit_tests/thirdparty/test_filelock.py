@@ -28,10 +28,10 @@
 #
 
 import inspect
+import logging
 import os
 import time
 import unittest
-
 
 from pdagent.thirdparty.filelock import FileLock, LockTimeoutException
 

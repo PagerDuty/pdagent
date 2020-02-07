@@ -32,13 +32,13 @@ import logging
 import socket
 import time
 from ssl import CertificateError
-from six.moves.urllib.error import HTTPError, URLError
-from six.moves.urllib.request import Request
 
 from pdagent import http
 from pdagent.constants import ConsumeEvent, EVENTS_API_BASE
 from pdagent.pdqueue import EmptyQueueError
 from pdagent.pdthread import RepeatingTask
+from pdagent.thirdparty.six.moves.urllib.error import HTTPError, URLError
+from pdagent.thirdparty.six.moves.urllib.request import Request
 
 
 logger = logging.getLogger(__name__)
