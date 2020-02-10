@@ -31,7 +31,6 @@ import logging
 import time
 import unittest
 
-import pdagent
 from pdagent.pdthread import RepeatingTask, RepeatingTaskThread
 
 

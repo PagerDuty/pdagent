@@ -32,7 +32,6 @@ import logging
 import unittest
 from ssl import CertificateError
 
-import pdagent
 from pdagent import http
 from pdagent.constants import ConsumeEvent
 from pdagent.sendevent import SendEventTask
