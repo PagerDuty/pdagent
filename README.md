@@ -73,7 +73,7 @@ You can run the unit tests with the following command:
 
 To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
 
-`python run-tests.py pdagenttest/test_*.py pdagenttest/thirdparty/test_*.py`
+`python run-tests.py unit_tests/test_*.py unit_tests/thirdparty/test_*.py`
 
 
 ### Building Packages

@@ -33,7 +33,7 @@ import sys
 import time
 
 from pdagent.thirdparty.filelock import FileLock, LockTimeoutException
-from pdagenttest.thirdparty.test_filelock import TEST_LOCK_FILE
+from unit_tests.thirdparty.test_filelock import TEST_LOCK_FILE
 
 lock = FileLock(TEST_LOCK_FILE, timeout=1)
 

@@ -394,14 +394,14 @@ test                    Runs unit tests on specific virtual machines, bringing
                         By default, runs on all virtual machines. Specific
                         virtual machines can be provided using the `virt`
                         option, multiple times if required.
-                        By default, runs all tests in `pdagenttest` recursively.
+                        By default, runs all tests in `unit_tests` recursively.
                         (Test files should be named in the format `test_*.py`.)
                         Specific unit tests can be run by providing them as
                         arguments to the `test` option, multiple times if
                         required. Both test files and test directories are
                         supported.
                         e.g.
-                        scons test test=pdagenttest/test_foo.py \\
+                        scons test test=unit_tests/test_foo.py \\
                                    virt=agent-minimal-centos
 test-integration        Runs integration tests on specific virtual machines,
                         bringing the virtual machine up if required.
@@ -435,7 +435,7 @@ remote_project_root = os.sep + "vagrant"
 
 unit_test_local_task = env.Command(
     "test-local",
-    _get_arg_values("test", ["pdagenttest"]),
+    _get_arg_values("test", ["unit_tests"]),
     env.Action(run_unit_tests_local, "\n--- Running unit tests locally")
     )
 
@@ -456,7 +456,7 @@ destroy_virts_task = env.Command(
 
 unit_test_task = env.Command(
     "test",
-    _get_arg_values("test", ["pdagenttest"]),
+    _get_arg_values("test", ["unit_tests"]),
     env.Action(run_unit_tests, "\n--- Running unit tests on virtual boxes"),
     virts=_get_arg_values("virt")
     )

@@ -32,10 +32,10 @@ import os
 import sys
 import time
 import uuid
-from six.moves import configparser
 
 from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
+from pdagent.thirdparty.six.moves import configparser
 
 
 _ENQUEUE_FILE_MODE = 0o644  # rw-r--r--

@@ -31,12 +31,6 @@
 #
 
 
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
-
-
 def build_queue_arg_parser(description):
     from pdagent.thirdparty.argparse import ArgumentParser
 
@@ -101,8 +95,7 @@ def _status(agent_config, _, args):
     # key1                                        1         0         0
     # key2                                        1         0         1
 
-    from six.moves import zip_longest
-
+    from pdagent.thirdparty.six.moves import zip_longest
     from pdagent.pdagentutil import get_stats
 
     status = get_stats(

@@ -28,16 +28,20 @@
 #
 
 import json
+import logging
 import unittest
 from ssl import CertificateError
-from six.moves.urllib.error import URLError
 
+from pdagent import http
 from pdagent.constants import ConsumeEvent
 from pdagent.sendevent import SendEventTask
-from pdagent import http
-from pdagenttest.mockqueue import MockQueue
-from pdagenttest.mockresponse import MockResponse
-from pdagenttest.mockurllib import MockUrlLib
+from pdagent.thirdparty.six.moves.urllib.error import URLError
+from unit_tests.mockqueue import MockQueue
+from unit_tests.mockresponse import MockResponse
+from unit_tests.mockurllib import MockUrlLib
+
+
+logging.basicConfig(level=logging.CRITICAL)
 
 FREQUENCY_SEC = 30
 SEND_TIMEOUT_SEC = 1
