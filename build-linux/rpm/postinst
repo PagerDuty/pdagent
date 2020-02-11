@@ -66,6 +66,9 @@ else
     INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
 fi
 
+# ensure that our root certs are readable
+chmod -R a+r $INSTALL_PATH/root_certs
+
 # Compile module .py to .pyc
 python -m compileall -q -f "$INSTALL_PATH/"
 
