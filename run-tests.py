@@ -27,8 +27,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+from __future__ import print_function
+
 import os, subprocess, sys
-import six
 
 
 def runtests(test_files):
@@ -38,12 +39,11 @@ def runtests(test_files):
     test_env["PYTHONPATH"] = \
         test_env.get("PYTHONPATH", "") + os.pathsep + os.getcwd()
     for test_file in test_files:
-        six.print_("FILE:", test_file, file=sys.stderr)
+        print("FILE:", test_file, file=sys.stderr)
         exit_code = subprocess.call([sys.executable, test_file], env=test_env)
         total += 1
         errs += (exit_code != 0)
-    six.print_("SUMMARY: %s total / %s error (%s)" \
-          % (total, errs, sys.executable), file=sys.stderr)
+    print("SUMMARY: %s total / %s error (%s)" % (total, errs, sys.executable), file=sys.stderr)
     return errs
 
 

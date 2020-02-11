@@ -31,14 +31,14 @@
 import json
 import logging
 import time
-from six.moves.http_client import HTTPException
-from six.moves.urllib.request import Request
-from six.moves.urllib.error import URLError, HTTPError
 
 import pdagent
+from pdagent import http
 from pdagent.constants import HEARTBEAT_URI
 from pdagent.pdthread import RepeatingTask
-from pdagent import http
+from pdagent.thirdparty.six.moves.http_client import HTTPException
+from pdagent.thirdparty.six.moves.urllib.request import Request
+from pdagent.thirdparty.six.moves.urllib.error import URLError, HTTPError
 
 logger = logging.getLogger(__name__)
 

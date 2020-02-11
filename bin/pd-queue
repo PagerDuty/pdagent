@@ -101,8 +101,7 @@ def _status(agent_config, _, args):
     # key1                                        1         0         0
     # key2                                        1         0         1
 
-    from six.moves import zip_longest
-
+    from pdagent.thirdparty.six.moves import zip_longest
     from pdagent.pdagentutil import get_stats
 
     status = get_stats(
