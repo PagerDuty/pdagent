@@ -62,9 +62,9 @@ class PDVerifiedHttpsTest(unittest.TestCase):
         # cert domain validation.
         url_cert_wrong_domain = _make_url(socket.gethostbyname(_SERVER))
         if six.PY2:
-            self.assertRaises(ssl.CertificateError, urlopen, url_cert_wrong_domain)
+            with self.assertRaises((ssl.CertificateError, URLError)):
+                urlopen(url_cert_wrong_domain)
         else:
-            # self.assertRaisesRegex(URLError, "CERTIFICATE_VERIFY_FAILED", urlopen, url_cert_wrong_domain)
             with self.assertRaises(URLError) as cm:
                 urlopen(url_cert_wrong_domain)
             self.assertIsInstance(cm.exception.reason, ssl.CertificateError)
