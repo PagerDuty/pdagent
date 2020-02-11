@@ -75,6 +75,7 @@ test_startup() {
 
 # agent must flush out queue when it wakes up.
 test_wakeup() {
+  stop_agent
   test $(sudo find $OUTQUEUE_DIR -type f | wc -l) -eq 3
 
   i_key="test$$_2"
@@ -84,8 +85,8 @@ test_wakeup() {
   echo "bad json" \
     | sudo tee $(sudo find $OUTQUEUE_DIR/pdq -type f | tail -n1) >/dev/null
   $BIN_PD_SEND -k $SVC_KEY -t resolve -i $i_key -d "Testing"
-
-  sleep $(($SEND_INTERVAL_SECS * 3))  # sleep-time + extra-time for processing.
+  start_agent
+  sleep $(($SEND_INTERVAL_SECS))  # sleep-time + extra-time for processing.
   # there must be one error file in outqueue; everything else must be cleared.
   test $(sudo find $OUTQUEUE_DIR/pdq -type f | wc -l) -eq 0
   test $(sudo find $OUTQUEUE_DIR/err -type f | wc -l) -eq 1
