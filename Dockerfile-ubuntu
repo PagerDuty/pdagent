@@ -48,6 +48,6 @@ RUN  cd /pd-agent-install/build-linux && ./make_deb.sh /pd-agent-install/build-l
 RUN  echo "Installing debian package"
 
 # Installing the debian package will also enable pdagent in systemd
-RUN dpkg -i /pd-agent-install/build-linux/release/deb/pdagent_1.6_all.deb
+RUN ./scripts/build.sh ubuntu
 
 CMD ["/lib/systemd/systemd"]

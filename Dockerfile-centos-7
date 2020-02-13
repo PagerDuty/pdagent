@@ -32,7 +32,6 @@ RUN  mkdir -p /pd-agent-install/build-linux/release
 RUN  cd /pd-agent-install/build-linux && ./make_rpm.sh /pd-agent-install/build-linux/gnupg /pd-agent-install/build-linux/release
 RUN  echo "Installing rpm package"
 
-RUN rpm --import /pd-agent-install/target/tmp/GPG-KEY-pagerduty
-RUN yum install -y /pd-agent-install/build-linux/release/rpm/pdagent-1.6-1.noarch.rpm
+RUN ./scripts/build.sh centos
 
 CMD ["/usr/sbin/init"]
