@@ -105,4 +105,3 @@ test_retry() {
 
 test_status
 test_retry
-echo "Test $0 successful"

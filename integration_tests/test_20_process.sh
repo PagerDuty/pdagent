@@ -96,4 +96,3 @@ test_wakeup() {
 
 test_startup
 test_wakeup
-echo "Test $0 successful"

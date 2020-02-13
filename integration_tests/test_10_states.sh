@@ -62,4 +62,3 @@ start_agent
 pid4=$(agent_pid)
 test -n "$pid4"
 test $pid4 -ne $pid2
-echo "Test $0 successful"

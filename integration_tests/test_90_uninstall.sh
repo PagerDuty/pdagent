@@ -58,10 +58,10 @@ set +e
 # check uninstallation status -- no components must be present.
 # no binaries...
 which $BIN_PD_SEND
-test $? -ne 0 || exit 1
+test $? -ne 0
 # no libraries...
-python -c "import pdagent; print(pdagent.__file__)" && exit 1
-test $? -ne 0 || exit 1
+python -c "import pdagent; print(pdagent.__file__)"
+test $? -ne 0
 # no configuration files...
 test ! -e $CONFIG_FILE
 
