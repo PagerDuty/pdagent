@@ -75,6 +75,14 @@ To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
 
 `python run-tests.py unit_tests/test_*.py unit_tests/thirdparty/test_*.py`
 
+### Running Integration Tests
+
+You can run the integration tests with the following command:
+
+`./scripts/full-integration-test.sh <centos or ubuntu>`
+
+Make sure to run tests with both `centos` and `ubuntu` options, as those are the supported Linux distributions for `pdagent`.
+
 
 ### Building Packages
 
