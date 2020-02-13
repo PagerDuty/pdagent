@@ -12,9 +12,14 @@ jobs:
     steps:
       - checkout
       - run: make test
+  test-centos:
+    steps:
+      - checkout
+      - run: scripts/full-integration-test.sh centos
 workflows:
   version: 2
   build_and_test:
     jobs:
       - test-py2
       - test-py3
+      - test-centos
