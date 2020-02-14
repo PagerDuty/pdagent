@@ -59,8 +59,10 @@ chown -R pdagent:pdagent /var/lib/pdagent /var/log/pdagent
 chmod 2750 /var/lib/pdagent/outqueue/err /var/lib/pdagent/outqueue/suc
 chmod 2753 /var/lib/pdagent/outqueue/tmp /var/lib/pdagent/outqueue/pdq
 
-VERSION=`python -c "import platform; print platform.python_version()"`
-if [[ $VERSION == 2.7.* ]]; then
+VERSION=`python -c "import platform; print(platform.python_version())"`
+if [[ $VERSION == 3* ]]; then
+    INSTALL_PATH="/usr/lib/python3/site-packages/pdagent"
+elif [[ $VERSION == 2.7.* ]]; then
     INSTALL_PATH="/usr/lib/python2.7/site-packages/pdagent"
 else
     INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
