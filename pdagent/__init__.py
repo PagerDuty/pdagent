@@ -27,9 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-__version__ = "1.6"
+__version__ = "1.7"
 
 def enum(*sequential, **named):
-    # TODO(dobs): What are we trying to extract here?
     enums = dict([x[::-1] for x in enumerate(sequential)], **named)
     return type('Enum', (), enums)
