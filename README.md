@@ -63,15 +63,15 @@ For IDE setup instructions see [PyDev Setup](pydev-setup.md) or [IDEA Setup](ide
 
 ### Build Tools
 
-To perform a complete automated build, you'll need to install Vagrant and Scons.  See [Vagrant Setup](vagrant-setup.md) and [Scons Setup](scons-setup.md) for instructions.
+To perform a complete automated build, you'll need to install Docker and `make`.
 
 ### Running Unit Tests
 
 You can run the unit tests with the following command:
 
-`scons test-local`
+`make test`
 
-To run them without installing SCons, use the `run-tests.py` test runner, e.g.:
+To run them without using `make`, use the `run-tests.py` test runner, e.g.:
 
 `python run-tests.py unit_tests/test_*.py unit_tests/thirdparty/test_*.py`
 
@@ -98,41 +98,12 @@ make ubuntu
 make centos
 ```
 
-3. Run integration tests on the packages as follows:
-  * Edit the file `pdagenttestinteg/util.sh` and change the line `SVC_KEY=CHANGEME` to a real PagerDuty Service API Key in your pdt test account.
-  * Run the command:
-```
-scons test-integration
-```
-
-This will run the integration tests on the various VMs using the packagesbuilt in the previous step. Note that the tests will trigger and resolve some incidents when they run.
-
 If you want to build packages by hand, follow the instructions in the
 [Build Linux Howto](build-linux/howto.md).
 
 Similarly, you can check the SCons targets using `scons -h` for instructions on
 performing specific builds tasks and on specific VMs.
 
-#### Some helpful scripts
-
-```
-scripts/rev_pkgs.sh
-```
-
-This will remove the installed pdagent packages from the vagrant build machines, `agent-minimal-centos65` and `agent-minimal-ubuntu1204`, and run `scons local-repo gpg-home=build-linux/gnupg` to install them again.  Run this anytime you revise a package artifact like `build-linux/deb/postinst`.
-
-```
-scripts/kill_pids.sh
-```
-
-This will kill stray pdagent processes and cleanup the pidfile on all vagrant machines.  Run this
-if your changes are causing integration tests to fail due to improper process managment via `service` or `systemctl`.
-
-```
-scripts/setup_upgrade_test.sh
-```
-
-This will vagrant destroy, up and install the latest public repo pdagent package on machines for upgrade testing via `scons test-integration`.
 
 #License
 Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>

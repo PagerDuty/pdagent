@@ -40,11 +40,7 @@ install_init () {
 install_systemd () {
     cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
     systemctl enable pdagent
-    if [ -z $DOCKER_DEV_ENV ]; then
-        # Prevent starting pdagent in Docker environment because systemd 
-        # will do that after running the Docker systemd process
-        systemctl start pdagent
-    fi
+    systemctl start pdagent
 }
 
 # Create pdagent user & group

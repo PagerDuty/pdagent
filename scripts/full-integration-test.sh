@@ -13,4 +13,14 @@ then
     docker rm pdagent-centos
     docker run -d --privileged=true --tmpfs /tmp --tmpfs /run -v /sys/fs/cgroup:/sys/fs/cgroup:ro -it pdagent-centos
 fi
-docker exec $(docker ps -q -f ancestor=pdagent-${OS}) /bin/bash -c /pd-agent-install/integration_tests/run-tests.sh 
+
+_PID=$(docker ps -q -f ancestor=pdagent-${OS})
+docker exec $_PID /bin/bash /usr/share/pdagent/scripts/install.sh $OS
+
+if [ -z $TEST_FILE ]
+then
+    docker exec $_PID /bin/bash /usr/share/pdagent/integration_tests/run-tests.sh 
+else
+    docker exec -it $_PID /bin/bash ./integration_tests/${TEST_FILE}
+fi
+
