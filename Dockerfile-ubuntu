@@ -3,10 +3,11 @@ FROM ubuntu:${UBUNTU_VERSION}
 
 ARG FPM_VERSION=1.11.0
 ARG PYTHON_VERSION=3
+ARG DOCKER_WORKDIR /usr/share/pdagent
 ENV PYTHON_VERSION ${PYTHON_VERSION}
 ENV container docker
 ENV DEBIAN_FRONTEND noninteractive
-ENV DOCKER_WORKDIR /usr/share/pdagent
+ENV DOCKER_WORKDIR ${DOCKER_WORKDIR}
 
 RUN apt-get update -y -qq
 RUN apt-get install -y -q apt-utils
