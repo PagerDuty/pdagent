@@ -131,7 +131,7 @@ else
 fi
 
 echo = FPM!
-_FPM_DEPENDS="--depends sudo --depends python"
+_FPM_DEPENDS="--depends sudo"
 
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then

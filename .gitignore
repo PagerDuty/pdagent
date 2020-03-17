@@ -19,4 +19,5 @@
 /build-linux/data/
 /build-linux/gnupg/
 /build-linux/target/
-
+/build-linux/gpg-deb/
+/build-linux/gpg-rpm/
