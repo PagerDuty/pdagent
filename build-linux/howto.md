@@ -1,8 +1,8 @@
 # Linux Build Instructions
 
-These instructions assume you're running this on a Mac with Vagrant installed,
-and that the project directory ends up mounted in the VM at `/vagrant`. (this
-should happen automatically)
+These instructions assume you're running this on a Mac with Docker installed,
+and that the project directory ends up mounted in the VM at
+`/usr/share/pdagent`. (this should happen automatically)
 
 ## One-time setup of Development GPG keys:
 
@@ -26,17 +26,15 @@ the following instructions accordingly.
 Building the .deb:
 
 ```
-scons local-repo \
-  gpg-home=build-linux/gnupg \
-  virt=agent-minimal-ubuntu1204
+make ubuntu
 ```
 
 Install & test the .deb:
 ```
-vagrant ssh agent-minimal-ubuntu1204
+docker run -it pdagent-ubuntu /bin/bash
 
-sudo apt-key add /vagrant/target/tmp/GPG-KEY-pagerduty
-sudo sh -c 'echo "deb file:///vagrant/target deb/" \
+sudo apt-key add /usr/share/pdagent/target/tmp/GPG-KEY-pagerduty
+sudo sh -c 'echo "deb file:///usr/share/pdagent/target deb/" \
   >/etc/apt/sources.list.d/pdagent.list'
 sudo apt-get update
 sudo apt-get install pdagent
@@ -60,22 +58,20 @@ Rerun the test commands to ensure files are gone
 
 Building the .rpm:
 ```
-scons local-repo \
-  gpg-home=/gpg/path/used/earlier \
-  virt=agent-minimal-centos65
+make centos
 ```
 
 Install & test the .rpm:
 ```
-vagrant ssh agent-minimal-centos65
+docker run -it pdagent-centos /bin/bash
 
 sudo sh -c 'cat >/etc/yum.repos.d/pdagent.repo <<EOF
 [pdagent]
 name=PDAgent
-baseurl=file:///vagrant/target/rpm
+baseurl=file:///usr/share/pdagent/target/rpm
 enabled=1
 gpgcheck=1
-gpgkey=file:///vagrant/target/tmp/GPG-KEY-pagerduty
+gpgkey=file:///usr/share/pdagent/target/tmp/GPG-KEY-RPM-pagerduty
 EOF'
 
 sudo yum install -y pdagent

@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-__version__ = "1.7"
+__version__ = "1.7.1"
 
 def enum(*sequential, **named):
     enums = dict([x[::-1] for x in enumerate(sequential)], **named)
