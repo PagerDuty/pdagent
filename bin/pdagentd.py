@@ -57,7 +57,7 @@ if __name__ != '__main__':
         )
 
 # Check Python version.
-if sys.version_info.major == 2 and sys.version_info.minor < 7:
+if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     raise SystemExit(
         "Agent requires Python version 2.7 or higher.\n" +
         "Agent will now quit"
