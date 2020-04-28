@@ -66,6 +66,8 @@ if [ -z "$_VERSION" ]; then
     exit 1
 fi
 
+echo = building version $_VERSION
+
 echo = cleaning build directories
 rm -fr data target
 mkdir data target
@@ -74,10 +76,10 @@ echo = /usr/bin/...
 mkdir -p data/usr/bin
 cp ../bin/pd-* data/usr/bin
 
-echo = /usr/share/pdagent/bin
-mkdir -p data/usr/share/pdagent/bin
-cp ../bin/pdagentd.py data/usr/share/pdagent/bin
-chmod a+rx data/usr/share/pdagent/bin/pdagentd.py
+echo = ${DOCKER_WORKDIR}/bin
+mkdir -p data${DOCKER_WORKDIR}/bin
+cp ../bin/pdagentd.py data${DOCKER_WORKDIR}/bin
+chmod a+rx data${DOCKER_WORKDIR}/bin/pdagentd.py
 
 echo = /var/...
 mkdir -p data/var/log/pdagent
@@ -131,7 +133,7 @@ else
 fi
 
 echo = FPM!
-_FPM_DEPENDS="--depends sudo --depends python"
+_FPM_DEPENDS="--depends sudo"
 
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then

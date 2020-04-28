@@ -52,7 +52,7 @@ os_type() {
 
 # return pid if agent is running, or empty string if not running.
 agent_pid() {
-    ps aux | grep /usr/share/pdagent/bin/pdagentd.py | grep -v grep | awk '{print $2}'
+    ps aux | grep ${DOCKER_WORKDIR}/bin/pdagentd.py | grep -v grep | awk '{print $2}'
 }
 
 # start agent if not running.
