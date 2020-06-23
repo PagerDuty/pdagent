@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # Python script to work on the local queue maintained by PagerDuty Agent.
 #
 # Copyright (c) 2013-2014, PagerDuty, Inc. <info@pagerduty.com>
