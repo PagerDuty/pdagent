@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ -x "$(command -v python3)" ];
+then
+    python3 ./bin/pdagentd.py "$@"
+else
+    python ./bin/pdagentd.py "$@"
+fi
