@@ -1,8 +1,10 @@
 #!/bin/bash
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 if [ -x "$(command -v python3)" ];
 then
-    python3 ./bin/pd-send.py "$@"
+    python3 $DIR/pd-send.py "$@"
 else
-    python ./bin/pd-send.py "$@"
+    python $DIR/pd-send.py "$@"
 fi
