@@ -78,8 +78,8 @@ cp ../bin/pd-* data/usr/bin
 
 echo = ${DOCKER_WORKDIR}/bin
 mkdir -p data${DOCKER_WORKDIR}/bin
-cp ../bin/pdagentd.py data${DOCKER_WORKDIR}/bin
-chmod a+rx data${DOCKER_WORKDIR}/bin/pdagentd.py
+cp ../bin/pdagentd* data${DOCKER_WORKDIR}/bin
+chmod a+rx data${DOCKER_WORKDIR}/bin/pdagentd*
 
 echo = /var/...
 mkdir -p data/var/log/pdagent

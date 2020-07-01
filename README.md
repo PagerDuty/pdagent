@@ -28,7 +28,7 @@ on a Mac.
 You can run the Agent in development without any setup. Start the Agent daemon
 as follows:
 
-`bin/pdagentd.py`
+`bin/pdagentd`
 
 When run in development the daemon automatically creates a `tmp` directory
 inside the project where it stores its various work files.
