@@ -2,13 +2,13 @@ version: 2
 jobs:
   test-py2:
     docker:
-      image: circleci/python:2.7.17
+      - image: circleci/python:2.7.17
     steps:
       - checkout
       - run: make test
   test-py3:
     docker:
-      image: circleci/python:3.7.6
+      - image: circleci/python:3.7.6
     steps:
       - checkout
       - run: make test
