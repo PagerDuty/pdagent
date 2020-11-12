@@ -20,14 +20,14 @@ jobs:
     steps:
       - checkout
       - run:
-        environment:
-          PYTHON_VERSION: ''
-        command: make build-ubuntu && make install-ubuntu-test
+          environment:
+            PYTHON_VERSION: ''
+          command: make build-ubuntu && make install-ubuntu-test
 workflows:
   version: 2
   test:
     jobs:
       - test-py2
       - test-py3
-      - test-install-ubuntu-py3
       - test-install-ubuntu-py2
+      - test-install-ubuntu-py3
