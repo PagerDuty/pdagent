@@ -13,25 +13,25 @@ jobs:
       - checkout
       - run: make test
   test-install-ubuntu-py3:
-    docker:
-      - image: circleci/python:3.7.6
+    machine:
+      - image: ubuntu-1604:202010-01
     steps:
       - checkout
-      - run: make build-ubuntu && make install-ubuntu-test
-  test-install-ubuntu-py2:
-    docker:
-      - image: circleci/python:2.7.17
-    steps:
-      - checkout
-      - run:
-          environment:
-            PYTHON_VERSION: ''
-          command: make build-ubuntu && make install-ubuntu-test
+      - run: ./scripts/install-ubuntu-test.sh
+  # test-install-ubuntu-py2:
+  #   machine:
+  #     - image: ubuntu-1604:202010-01
+  #   steps:
+  #     - checkout
+  #     - run:
+  #         environment:
+  #           PYTHON_VERSION: ''
+  #         command: make test-install-ubuntu
 workflows:
   version: 2
   test:
     jobs:
       - test-py2
       - test-py3
-      - test-install-ubuntu-py2
+#      - test-install-ubuntu-py2
       - test-install-ubuntu-py3

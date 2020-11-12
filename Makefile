@@ -69,8 +69,8 @@ test-integration-ubuntu: ubuntu
 test-integration-centos: centos
 	scripts/full-integration-test.sh centos
 
-.PHONY: install-ubuntu-test
-install-ubuntu-test:
+.PHONY: test-install-ubuntu
+test-install-ubuntu:
 	-docker stop pdagent-ubuntu
 	-docker rm pdagent-ubuntu
 	docker run -d --privileged \
@@ -82,8 +82,8 @@ install-ubuntu-test:
 		-e PD_SERVICE_KEY=28225b979f624fd682b64d63793e08db \
 		pdagent-ubuntu /bin/sh -c "/bin/sh /usr/src/scripts/install-ubuntu-test.sh"
 
-.PHONY: install-centos-test
-install-centos-test:
+.PHONY: test-install-centos
+test-install-centos:
 	-docker stop pdagent-centos
 	-docker rm pdagent-centos
 	docker run -d --privileged=true \
