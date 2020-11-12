@@ -13,10 +13,14 @@ jobs:
       - checkout
       - run: make test
   test-install-ubuntu-py3:
+    docker:
+      - image: circleci/python:3.7.6
     steps:
       - checkout
       - run: make build-ubuntu && make install-ubuntu-test
   test-install-ubuntu-py2:
+    docker:
+      - image: circleci/python:2.7.17
     steps:
       - checkout
       - run:
