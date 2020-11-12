@@ -69,6 +69,33 @@ test-integration-ubuntu: ubuntu
 test-integration-centos: centos
 	scripts/full-integration-test.sh centos
 
+.PHONY: install-ubuntu-test
+install-ubuntu-test:
+	-docker stop pdagent-ubuntu
+	-docker rm pdagent-ubuntu
+	docker run -d --privileged \
+	  --name pdagent-ubuntu \
+		-v `pwd`:/usr/src \
+		-v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+		pdagent-ubuntu
+	docker exec -it \
+		-e PD_SERVICE_KEY=28225b979f624fd682b64d63793e08db \
+		pdagent-ubuntu /bin/sh -c "/bin/sh /usr/src/scripts/install-ubuntu-test.sh"
+
+.PHONY: install-centos-test
+install-centos-test:
+	-docker stop pdagent-centos
+	-docker rm pdagent-centos
+	docker run -d --privileged=true \
+	  --name pdagent-centos \
+	  --tmpfs /tmp --tmpfs /run \
+		-v `pwd`:/usr/src \
+		-v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+		pdagent-centos
+	docker exec -it \
+		-e PD_SERVICE_KEY=28225b979f624fd682b64d63793e08db \
+		pdagent-centos /bin/sh -c "/bin/sh /usr/src/scripts/install-centos-test.sh"
+
 .PHONY: clean
 clean:
 	rm -rf dist
