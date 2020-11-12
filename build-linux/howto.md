@@ -10,9 +10,14 @@ To build Linux packages, you will need GPG v1 keys to sign the packages.  Do the
 
 ```
 brew install gpg1
-mkdir build-linux/gnupg
-chmod 700 build-linux/gnupg
-gpg1 --homedir=build-linux/gnupg --gen-key
+
+mkdir build-linux/gpg-deb
+chmod 700 build-linux/gpg-deb
+gpg1 --homedir=build-linux/gpg-deb --gen-key
+
+mkdir build-linux/gpg-rpm
+chmod 700 build-linux/gpg-rpm
+gpg1 --homedir=build-linux/gpg-rpm --gen-key
 ```
 
 For key generation use the suggested defaults and *no passphrase*. (when

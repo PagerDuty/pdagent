@@ -12,9 +12,16 @@ jobs:
     steps:
       - checkout
       - run: make test
+  test-install-ubuntu-py3:
+    machine:
+      image: ubuntu-1604:202010-01
+    steps:
+      - checkout
+      - run: ./scripts/install-ubuntu-test.sh
 workflows:
   version: 2
-  build_and_test:
+  test:
     jobs:
       - test-py2
       - test-py3
+      - test-install-ubuntu-py3
