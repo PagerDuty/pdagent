@@ -17,7 +17,7 @@ jobs:
       - image: ubuntu-1604:202010-01
     steps:
       - checkout
-      - run: ./scripts/install-ubuntu-test.sh
+      - run: "./scripts/install-ubuntu-test.sh"
   # test-install-ubuntu-py2:
   #   machine:
   #     - image: ubuntu-1604:202010-01
