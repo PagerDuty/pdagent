@@ -756,8 +756,8 @@ class PDQueueTest(unittest.TestCase):
             q._unsafe_change_event_type(fnames[i], "pdq", "suc")
         # that leaves 1 pending for svckey1; 2 for svckey3
 
-        # also, let's throttle svckey2...
-        q.backoff_info.increment("svckey2")
+        # also, let's throttle svckey1...
+        q.backoff_info.increment("svckey1")
         # ... and increment some counters.
         for _ in range(20):
             q.counter_info.increment_success()
@@ -800,11 +800,13 @@ class PDQueueTest(unittest.TestCase):
 
         # test per-service-key stats.
         snapshot_stats.pop("pending_events")
+        snapshot_stats.pop("throttled_service_keys_count")
         snapshot_stats["svckey1"] = stats_by_state([
             ("pending", 1, 40, 40, 1),
             ("succeeded", 1, 35, 35, 1),
             ("failed", 1, 45, 45, 1),
             ])
+        snapshot_stats["svckey1"]["throttled"] = True
         snapshot_stats["svckey2"] = stats_by_state([
             ("pending", 0, 0, 0, 0),
             ("succeeded", 0, 0, 0, 0),
@@ -820,6 +822,7 @@ class PDQueueTest(unittest.TestCase):
             ("succeeded", 2, 10, 5, 1),
             ("failed", 0, 0, 0, 0),
             ])
+        self.maxDiff = None
         self.assertEqual(
             q.get_stats(detailed_snapshot=True, per_service_key_snapshot=True),
             expected_stats

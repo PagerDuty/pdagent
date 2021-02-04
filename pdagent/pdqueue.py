@@ -385,7 +385,7 @@ class PDQueue(PDQueueBase):
         e.g. if there are no erroneous events, there might be no "failed_events"
         entry.
 
-        Sample data returned:
+        Sample data returned (if per_service_key_snapshot == False):
         {
             "snapshot": {
                 "pending_events": {
@@ -407,6 +407,59 @@ class PDQueue(PDQueueBase):
                     "service_keys_count": 2
                 },
                 "throttled_service_keys_count": 1
+            },
+            "aggregate": {
+                "successful_events_count": 20,
+                "failed_events_count": 2,
+                "started_on": "2014-03-18T20:49:02Z"
+            }
+        }
+
+        Sample data returned (if per_service_key_snapshot == True):
+        {
+            "snapshot": {
+                "svckey1": {
+                    "pending_events": {
+                        "count": 3,
+                        "newest_age_secs": 15,
+                        "oldest_age_secs": 40,
+                        "service_keys_count": 1
+                    },
+                    "succeeded_events": {
+                        "count": 3,
+                        "newest_age_secs": 5,
+                        "oldest_age_secs": 35,
+                        "service_keys_count": 1
+                    },
+                    "failed_events": {
+                        "count": 3,
+                        "newest_age_secs": 25,
+                        "oldest_age_secs": 45,
+                        "service_keys_count": 1
+                    },
+                    "throttled": True
+                },
+                "svckey2": {
+                    "pending_events": {
+                        "count": 3,
+                        "newest_age_secs": 10,
+                        "oldest_age_secs": 35,
+                        "service_keys_count": 1
+                    },
+                    "succeeded_events": {
+                        "count": 3,
+                        "newest_age_secs": 2,
+                        "oldest_age_secs": 32,
+                        "service_keys_count": 1
+                    },
+                    "failed_events": {
+                        "count": 3,
+                        "newest_age_secs": 15,
+                        "oldest_age_secs": 35,
+                        "service_keys_count": 1
+                    },
+                    "throttled": False
+                },
             },
             "aggregate": {
                 "successful_events_count": 20,
@@ -464,7 +517,10 @@ class PDQueue(PDQueueBase):
                     self.backoff_info._current_retry_at.items():
                 if retry_at > now:
                     throttled_keys.add(key)
-            snapshot_stats["throttled_service_keys_count"] = len(throttled_keys)
+            if per_service_key_snapshot:
+                snapshot_stats[svc_key]["throttled"] = True
+            else:
+                snapshot_stats["throttled_service_keys_count"] = len(throttled_keys)
 
         stats = {
             "snapshot": snapshot_stats

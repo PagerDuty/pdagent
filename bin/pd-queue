@@ -108,9 +108,9 @@ def _status(agent_config, _, args):
         print("Nothing to report.")
     else:
         # left-aligned service key, right-aligned counts.
-        flags = ["-", "", "", ""]
-        widths = [35, 10, 10, 10]
-        types = ["s", "s", "s", "s"]
+        flags = ["-", "", "", "", ""]
+        widths = [35, 10, 10, 10, 10]
+        types = ["s", "s", "s", "s", "s"]
         column_fmts = [
             "%" + "".join(e)
             for e in zip_longest(flags, map(str, widths), types)
@@ -125,6 +125,7 @@ def _status(agent_config, _, args):
                 state.get("pending_events", empty_dict).get("count", 0),
                 state.get("succeeded_events", empty_dict).get("count", 0),
                 state.get("failed_events", empty_dict).get("count", 0)
+                (1 if state.get("throttled", False) else 0)
             ))
 
 
