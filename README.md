@@ -1,3 +1,6 @@
+## Notice
+PagerDuty is planning to deprecate this tool in favour of [go-pdagent](https://github.com/PagerDuty/go-pdagent). go-pdagent is not feature complete at this moment however it will be before an official deprecation notice.
+
 > This is the source code and project. For the PagerDuty Agent Install Guide,
 > see http://www.pagerduty.com/docs/guides/agent-install-guide/
 
