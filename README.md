@@ -21,7 +21,14 @@ The PagerDuty Agent is completely open-source which means that you can download
 the source code and customize it for your needs.
 
 The Agent requires Python 2.7 or higher. The instructions here assume that you're
-on a Mac.
+on a Mac
+# Notes
+- If PagerDuty Agent loses connectivity for whatever reason, 
+  - There is no hard limit on the number of events stored in the queue
+  - Once connectivity is regained, queued events will be pushed out automatically
+
+- If the agent runs up against the API Rate Limit, the rate limited events will be added to the queue of failed events, which will automatically be retried later 
+
 
 ## Developing
 
