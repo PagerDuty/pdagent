@@ -23,12 +23,16 @@ the source code and customize it for your needs.
 The Agent requires Python 2.7 or higher. The instructions here assume that you're
 on a Mac
 # Notes
-- If PagerDuty Agent loses connectivity for whatever reason, 
+Events are added to a local queue
+
+- If PagerDuty Agent loses connectivity for whatever reason
+  - Events in the queue will fail to send and be retried and stored according to the agent's retry logic
   - There is no hard limit on the number of events stored in the queue
-  - Once connectivity is regained, queued events will be pushed out automatically
+  - Once connectivity is regained, queued events may be pushed out automatically
+  - In the case of prolonged outages, sends can be manually retried
+    > <https://support.pagerduty.com/docs/pagerduty-agent-integration-guide#manage-the-queue>
 
-- If the agent runs up against the API Rate Limit, the rate limited events will be added to the queue of failed events, which will automatically be retried later 
-
+  - If the agent runs up against the API Rate Limit, the rate limited events will be retried in perpetuty until they are either successfully delivered, or receive a `5xx` response, which will invoke the retry logic
 
 ## Developing
 
