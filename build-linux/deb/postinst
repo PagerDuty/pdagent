@@ -60,6 +60,17 @@ if [ "$1" = "configure" ]; then
 
     pycompile -p pdagent
 
+    # If you install pdagent in a container without systemd,
+    # but remnants of systemd exist even though they won't
+    # be used, like with ubuntu, the install will fail.
+    # Particularly annoying when building Docker images.
+    # Setting PDAGENT_SKIP_SERVICE_START=yes gives user the
+    # option to not start service after install to avoid
+    # this problem.
+    if [[ -z "${PDAGENT_SKIP_SERVICE_START}" ]]; then
+        exit 0
+    fi
+
     if which systemctl >/dev/null; then
         install_systemd
     else
