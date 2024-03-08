@@ -10,6 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV DOCKER_WORKDIR ${DOCKER_WORKDIR}
 
 RUN apt-get update -y -qq
+
 RUN apt-get install -y -q apt-utils
 RUN apt-get install -y -q build-essential
 RUN apt-get install -y -q ca-certificates
@@ -24,7 +25,8 @@ RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN update-ca-certificates
-
+RUN gem install -q --no-ri --no-rdoc -v 2.8.1 dotenv
+RUN gem install -q --no-ri --no-rdoc -v 1.15.5 ffi
 RUN gem install -q --no-ri --no-rdoc -v ${FPM_VERSION} fpm
 RUN apt-get install -y -q python${PYTHON_VERSION}
 RUN cd /lib/systemd/system/sysinit.target.wants/ \
