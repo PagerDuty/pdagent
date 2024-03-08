@@ -823,11 +823,18 @@ class PDQueueTest(unittest.TestCase):
             ("failed", 0, 0, 0, 0),
             ])
         self.maxDiff = None
+        expected_stats = {
+            "snapshot": snapshot_stats,
+            "aggregate": {
+                "successful_events_count": 20,
+                "failed_events_count": 2,
+                "started_on": "some_utc_time"
+                }
+            }
         self.assertEqual(
             q.get_stats(detailed_snapshot=True, per_service_key_snapshot=True),
             expected_stats
             )
-
         # test service-key stats for a given service key.
         snapshot_stats.pop("svckey2")
         snapshot_stats.pop("svckey3")
