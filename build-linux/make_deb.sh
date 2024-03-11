@@ -42,6 +42,7 @@ mkdir -p $2
 
 if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
+    echo "Make sure the specified directories exist"
     exit 2
 fi
 gpg_home="$1"

@@ -10,16 +10,16 @@ To build Linux packages, you will need GPG v1 keys to sign the packages.  Do the
 
 ```
 brew install gpg1
-mkdir build-linux/gnupg
-chmod 700 build-linux/gnupg
-gpg1 --homedir=build-linux/gnupg --gen-key
+mkdir build-linux/gpg-deb
+chmod 700 build-linux/gpg-deb
+gpg1 --homedir=build-linux/gpg-deb --gen-key
 ```
 
 For key generation use the suggested defaults and *no passphrase*. (when
 asked to enter a passphrase, just press *Enter*)
 
-If you use a different `gpg-home`, please adjust the `gpg-home` parameter in
-the following instructions accordingly.
+If you use a different `homedir`, please adjust the `homedir` parameter in
+the following instructions accordingly. Specifically, the `make ubuntu` command and other like build automations assume the value to be `gpg-deb`.
 
 ## Ubuntu
 

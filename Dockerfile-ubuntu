@@ -25,6 +25,13 @@ RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN update-ca-certificates
 
+
+# Lock dotenv version to prevent ruby 3.0 requirement
+RUN gem install -q --no-ri --no-rdoc -v 2.8.1 dotenv
+
+# Lock ffi version to prevent ruby 2.5 requirement
+RUN gem install -q --no-ri --no-rdoc -v 1.15.5 ffi
+
 RUN gem install -q --no-ri --no-rdoc -v ${FPM_VERSION} fpm
 RUN apt-get install -y -q python${PYTHON_VERSION}
 RUN cd /lib/systemd/system/sysinit.target.wants/ \
