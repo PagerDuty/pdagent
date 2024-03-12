@@ -12,7 +12,7 @@ centos: target/rpm target/tmp/GPG-KEY-RPM-pagerduty
 
 .PHONY: build-ubuntu
 build-ubuntu:
-	docker build . \
+	docker build --no-cache . \
 		-t pdagent-ubuntu \
 		-f Dockerfile-ubuntu \
 		--build-arg FPM_VERSION="${FPM_VERSION}" \

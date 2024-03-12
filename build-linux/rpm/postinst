@@ -70,7 +70,9 @@ chmod -R a+r $INSTALL_PATH/root_certs
 # Compile module .py to .pyc
 python -m compileall -q -f "$INSTALL_PATH/"
 
-if which systemctl >/dev/null; then
+# Only systemd if PDAGENT_IGNORE_SYSTEMD is empty and systemd is defined
+# -z is a test for variable empty
+if [ -z $PDAGENT_IGNORE_SYSTEMD ] && which systemctl >/dev/null; then
     install_systemd
 else
     install_init
