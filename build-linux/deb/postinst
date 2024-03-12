@@ -60,11 +60,11 @@ if [ "$1" = "configure" ]; then
 
     pycompile -p pdagent
 
-    if which systemctl >/dev/null; then
-        install_systemd
-    else
+    # if which systemctl >/dev/null; then
+    #     install_systemd
+    # else
         install_init
-    fi
+    # fi
 fi
 
 exit 0
