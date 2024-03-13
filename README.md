@@ -57,7 +57,9 @@ You can stop the daemon as follows:
 
 #### With Docker
 
-To run the Agent in a production-like environment, use Docker. We currently have two supported operating systems: Ubuntu 16.04 and CentOS 7. With Docker installed, run `./scripts/run-console.sh <ubuntu>` or `./scripts/run-console.sh <centos>` to spin up the Docker container, run the Agent, and drop into a console.
+To run the Agent in a production-like environment, use Docker. A known issue with Docker is that it has trouble interacting with systemd. To run the agent in Docker, update `SKIP_SYSTEMD` to `true` in `./build-linux/make_common.env`.
+
+We currently have two supported operating systems: Ubuntu 16.04 and CentOS 7. With Docker installed, run `./scripts/run-console.sh <ubuntu>` or `./scripts/run-console.sh <centos>` to spin up the Docker container, run the Agent, and drop into a console.
 
 Once in the console, you can send events via `pd-send`.
 

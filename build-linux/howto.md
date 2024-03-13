@@ -21,6 +21,10 @@ asked to enter a passphrase, just press *Enter*)
 If you use a different `homedir`, please adjust the `homedir` parameter in
 the following instructions accordingly. Specifically, the `make ubuntu` command and other like build automations assume the value to be `gpg-deb`.
 
+## Docker
+
+Docker has issues with systemd and so, if you want to install and test the package, you will need to build the package with `SKIP_SYSTEMD` set to `true` in `build-linux/make_common.env`. However, for any package you publish, make sure `SKIP_SYSTEMD` is set to `false`.
+
 ## Ubuntu
 
 Building the .deb:
