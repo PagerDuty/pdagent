@@ -178,6 +178,8 @@ $FPM -s dir \
      --${pkg_type}-user root \
      --${pkg_type}-group root \
      --config-files /etc/pdagent.conf \
+     --template-scripts \
+     --template-value skip_systemd=$SKIP_SYSTEMD \
      --before-install ../$pkg_type/preinst \
      --after-install ../$pkg_type/postinst \
      --before-remove ../$pkg_type/prerm \

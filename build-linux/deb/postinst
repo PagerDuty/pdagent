@@ -60,19 +60,9 @@ if [ "$1" = "configure" ]; then
 
     pycompile -p pdagent
 
-    if [ -z $PDAGENT_IGNORE_SYSTEMD ]; then
-        echo "true when we expect it false"
-    else
-        echo "sounds right"
-    fi
-
-    # Only systemd if PDAGENT_IGNORE_SYSTEMD is empty and systemd is defined
-    # -z is a test for variable empty
-    if [ -z $PDAGENT_IGNORE_SYSTEMD ] && which systemctl >/dev/null; then
-        echo "wrong"
+    if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
         install_systemd
     else
-        echo "right"
         install_init
     fi
 fi

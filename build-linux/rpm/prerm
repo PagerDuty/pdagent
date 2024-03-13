@@ -52,7 +52,7 @@ if [ $1 -gt 0 ]; then # this is an upgrade
 else # this is a remove
     # Only systemd if PDAGENT_IGNORE_SYSTEMD is empty and systemd is defined
     # -z is a test for variable empty
-    if [ -z $PDAGENT_IGNORE_SYSTEMD ] && which systemctl >/dev/null; then
+    if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
         uninstall_systemd
     else
         uninstall_init

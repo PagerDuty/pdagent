@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV DOCKER_WORKDIR ${DOCKER_WORKDIR}
 
 # There is known issues with Docker + systemd
-ENV PDAGENT_IGNORE_SYSTEMD "foo"
+ENV SKIP_SYSTEMD true
 
 RUN apt-get update -y -qq
 RUN apt-get install -y -q apt-utils
