@@ -1,16 +1,18 @@
-ARG UBUNTU_VERSION=14.04
+ARG UBUNTU_VERSION=16.04
 FROM ubuntu:${UBUNTU_VERSION}
 
 ARG FPM_VERSION=1.11.0
 ARG PYTHON_VERSION=3
 ARG DOCKER_WORKDIR=/usr/share/pdagent
+ARG SKIP_SYSTEMD=false
+
 ENV PYTHON_VERSION ${PYTHON_VERSION}
 ENV container docker
 ENV DEBIAN_FRONTEND noninteractive
 ENV DOCKER_WORKDIR ${DOCKER_WORKDIR}
 
 # There is known issues with Docker + systemd
-ENV SKIP_SYSTEMD true
+ENV SKIP_SYSTEMD ${SKIP_SYSTEMD}
 
 RUN apt-get update -y -qq
 RUN apt-get install -y -q apt-utils
