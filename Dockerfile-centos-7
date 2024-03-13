@@ -3,9 +3,13 @@ FROM centos/systemd
 ARG FPM_VERSION=1.11.0
 ARG PYTHON_VERSION=3
 ARG DOCKER_WORKDIR=/usr/share/pdagent
+ARG SKIP_SYSTEMD=false
 ENV PYTHON_VERSION ${PYTHON_VERSION}
 ENV container docker
 ENV DOCKER_WORKDIR ${DOCKER_WORKDIR}
+
+# There is known issues with Docker + systemd
+ENV SKIP_SYSTEMD ${SKIP_SYSTEMD}
 
 RUN yum install -y -q centos-release-scl
 RUN yum install -y -q createrepo
@@ -21,6 +25,14 @@ RUN yum install -y -q rh-ruby23
 RUN yum install -y -q rh-ruby23-ruby-devel
 RUN yum install -y -q sudo
 RUN yum install -y -q which
+RUN yum install -y -q initscripts
+
+RUN source /opt/rh/rh-ruby23/enable && \
+  /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v 2.8.1 dotenv
+
+# Lock ffi version to prevent ruby 2.5 requirement
+RUN source /opt/rh/rh-ruby23/enable && \
+  /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v 1.15.5 ffi
 
 RUN source /opt/rh/rh-ruby23/enable && \
   /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v $FPM_VERSION fpm
