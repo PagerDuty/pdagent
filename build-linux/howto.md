@@ -92,3 +92,6 @@ sudo yum remove -y pdagent
 sudo service pdagent status
 which pd-send
 ```
+
+## Troubleshooting
+If you run into problems installing `pdagent` inside Docker, try rebuilding the Docker image completely, making sure that you have set `SKIP_SYSTEMD` to `true`, and that Docker has rebuilt with the flags you expect.
