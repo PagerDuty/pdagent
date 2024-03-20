@@ -27,6 +27,7 @@ RUN yum install -y -q sudo
 RUN yum install -y -q which
 RUN yum install -y -q initscripts
 
+# Lock dotenv version to prevent ruby 3.0 requirement
 RUN source /opt/rh/rh-ruby23/enable && \
   /opt/rh/rh-ruby23/root/usr/bin/gem install -q --no-ri --no-rdoc -v 2.8.1 dotenv
 
