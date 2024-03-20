@@ -134,7 +134,7 @@ class HeartbeatTask(RepeatingTask):
         # Note that Request here is from urllib2, not self._urllib2.
         request = Request(HEARTBEAT_URI)
         request.add_header("Content-Type", "application/json")
-        heartbeat_json_str = json.dumps(heartbeat_data)
+        heartbeat_json_str = json.dumps(heartbeat_data).encode()
         request.data = heartbeat_json_str
         response = self._urllib2.urlopen(request,
             source_address=self._source_address)

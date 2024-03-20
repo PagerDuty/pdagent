@@ -47,7 +47,6 @@ if [ "$1" = "remove" ]; then  # remove-only; not upgrade.
         uninstall_init
     fi
 
-    pyclean -p pdagent
     rm -rf /usr/lib/python2.7/dist-packages/pdagent
     rm -rf /usr/lib/pymodules/python2.7/pdagent
 fi
