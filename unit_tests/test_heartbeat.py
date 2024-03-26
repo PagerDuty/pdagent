@@ -83,7 +83,7 @@ class HeartbeatTest(unittest.TestCase):
             "system_info": SYSTEM_INFO,
             "agent_stats": hb._pd_queue.status
         }
-        self.assertEqual(json.loads(hb._urllib2.request.data), expected)
+        self.assertEqual(json.loads(hb._urllib2.request.data.decode('utf-8')), expected)
 
     def test_data(self):
         hb = self.new_heartbeat_task()
@@ -94,14 +94,14 @@ class HeartbeatTest(unittest.TestCase):
             "system_info": SYSTEM_INFO,
             "agent_stats": hb._pd_queue.status
         }
-        self.assertEqual(json.loads(hb._urllib2.request.data), expected)
+        self.assertEqual(json.loads(hb._urllib2.request.data.decode('utf-8')), expected)
 
     def test_new_frequency(self):
         hb = self.new_heartbeat_task()
         hb._urllib2.response = MockResponse(
             data=json.dumps({
                 "heartbeat_interval_secs": RESPONSE_FREQUENCY_SEC
-            })
+            }).encode()
         )
         hb.tick()
         self.assertEqual(RESPONSE_FREQUENCY_SEC, hb._interval_secs)
