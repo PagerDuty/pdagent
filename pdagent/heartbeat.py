@@ -144,7 +144,7 @@ class HeartbeatTask(RepeatingTask):
 
     def _process_response(self, response_str):
         try:
-            result = json.loads(response_str)
+            result = json.loads(response_str.decode('utf-8'))
         except:
             logger.warning(
                 "Error reading heartbeat response data:",
