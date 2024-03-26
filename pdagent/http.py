@@ -65,17 +65,6 @@ except ImportError:
     # From Python > 2.7.9, < 3.6.
     from ssl import PROTOCOL_TLSv1_2 as ssl_client_protocol
 
-DEFAULT_CA_CERTS_FILE = find_in_sys_path("pdagent/root_certs/ca_certs.pem")
-
-# For caching SSL contexts and openersbased on provided `ca_certs`.
-#
-# This imitates the previous caching behavior of this module. It isn't thread
-# safe, doesn't provide much optimization in its current form, so may be worth
-# removing or otherwise reevaluating.
-ssl_context_cache = dict()
-url_opener_cache = dict()
-
-
 # Custom HTTPS handler primarily for allowing us to pass a `source_address`
 # through to `HTTPSConnection`
 class CustomHTTPSHandler(request.HTTPSHandler):
@@ -93,35 +82,21 @@ class CustomHTTPSHandler(request.HTTPSHandler):
 
 
 def urlopen(url, **kwargs):
-    ca_certs = kwargs.pop("ca_certs", DEFAULT_CA_CERTS_FILE)
-    context = kwargs.pop("context", _get_cached_context(ca_certs=ca_certs))
     source_address = kwargs.pop("source_address", '0.0.0.0')
 
-    opener = _get_cached_opener(context, source_address)
+    opener = request.build_opener(CustomHTTPSHandler(
+            context=_create_ssl_context(),
+            source_address=(source_address, 0)
+        ))
 
     return opener.open(url, **kwargs)
 
-
-def _get_cached_context(ca_certs):
-    if ca_certs not in ssl_context_cache:
-        ssl_context_cache[ca_certs] = _create_ssl_context(ca_certs)
-    return ssl_context_cache[ca_certs]
-
-
-def _create_ssl_context(ca_certs):
+def _create_ssl_context():
     # Some of this configuration is redundant for PROTOCOL_TLS_CLIENT, but
     # repeating for the benefit of legacy protocols.
     context = ssl.SSLContext(ssl_client_protocol)
     context.verify_mode = ssl.CERT_REQUIRED
     context.check_hostname = True
-    context.load_verify_locations(cafile=ca_certs)
+    context.load_default_certs()
     return context
 
-
-def _get_cached_opener(context, source_address):
-    if context not in url_opener_cache:
-        url_opener_cache[context] = request.build_opener(CustomHTTPSHandler(
-            context=context,
-            source_address=(source_address, 0)
-        ))
-    return url_opener_cache[context]

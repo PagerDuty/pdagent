@@ -4,8 +4,7 @@
 This project includes files that have a different license than the one below.
 See each individual file for the license for that file.
 
-Specifically, the folder `pdagent/thirdparty/` contains third-party code and
-the file `pdagent/root_certs/ca_certs.pem` is derived from third-party code.
+Specifically, the folder `pdagent/thirdparty/` contains third-party code.
 
 All other files and any file that does not mention a license are licensed under
 the terms below.

@@ -113,7 +113,7 @@ echo = python modules...
 mkdir -p $_PY27_SITE_PACKAGES
 cd ..
 find pdagent -type d -exec mkdir -p build-linux/$_PY27_SITE_PACKAGES/{} \;
-find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
+find pdagent -type f -name "*.py" \
     -exec cp {} build-linux/$_PY27_SITE_PACKAGES/{} \;
 cd -
 
