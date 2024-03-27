@@ -41,13 +41,12 @@ uninstall_systemd () {
 }
 
 if [ "$1" = "remove" ]; then  # remove-only; not upgrade.
-    if which systemctl >/dev/null; then
+    if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
         uninstall_systemd
     else
         uninstall_init
     fi
 
-    pyclean -p pdagent
     rm -rf /usr/lib/python2.7/dist-packages/pdagent
     rm -rf /usr/lib/pymodules/python2.7/pdagent
 fi

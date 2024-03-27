@@ -130,7 +130,7 @@ class SendEventTask(RepeatingTask):
             return ConsumeEvent.BACKOFF_SVCKEY_NOT_CONSUMED
 
         try:
-            result = json.loads(result_str)
+            result = json.loads(result_str.decode('utf-8'))
         except:
             logger.warning(
                 "Error reading response data while sending event:",

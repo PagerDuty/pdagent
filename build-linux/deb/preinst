@@ -31,7 +31,7 @@
 set -e
 
 if [ $# -gt 1 ]; then # this is an upgrade - shutdown the old agent
-   if which systemctl >/dev/null; then
+   if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
       systemctl stop pdagent
    else
       service pdagent stop

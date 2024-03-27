@@ -36,7 +36,7 @@ reinstate_init () {
 }
 
 if [ -e "/tmp/pdagent_upgrade.txt" ]; then
-    if which systemctl >/dev/null; then
+    if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
         :
     else
         # reinstate /etc/init.d/pdagent that was deleted by v1.4 pkg removal

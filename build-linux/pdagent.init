@@ -60,7 +60,7 @@ get_pid() {
 
 is_running() {
   pid=$(get_pid)
-  [ -n "$pid" ] && ps -p $pid | grep "$EXEC_NAME" >/dev/null 2>&1
+  [ -n "$pid" ] && ps $pid | grep "$EXEC_NAME" >/dev/null 2>&1
 }
 
 setup() {

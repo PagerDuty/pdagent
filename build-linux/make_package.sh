@@ -78,8 +78,8 @@ cp ../bin/pd-* data/usr/bin
 
 echo = ${DOCKER_WORKDIR}/bin
 mkdir -p data${DOCKER_WORKDIR}/bin
-cp ../bin/pdagentd.py data${DOCKER_WORKDIR}/bin
-chmod a+rx data${DOCKER_WORKDIR}/bin/pdagentd.py
+cp ../bin/pdagentd* data${DOCKER_WORKDIR}/bin
+chmod a+rx data${DOCKER_WORKDIR}/bin/pdagentd*
 
 echo = /var/...
 mkdir -p data/var/log/pdagent
@@ -113,7 +113,7 @@ echo = python modules...
 mkdir -p $_PY27_SITE_PACKAGES
 cd ..
 find pdagent -type d -exec mkdir -p build-linux/$_PY27_SITE_PACKAGES/{} \;
-find pdagent -type f \( -name "*.py" -o -name "ca_certs.pem" \) \
+find pdagent -type f -name "*.py" \
     -exec cp {} build-linux/$_PY27_SITE_PACKAGES/{} \;
 cd -
 
@@ -178,6 +178,8 @@ $FPM -s dir \
      --${pkg_type}-user root \
      --${pkg_type}-group root \
      --config-files /etc/pdagent.conf \
+     --template-scripts \
+     --template-value skip_systemd=$SKIP_SYSTEMD \
      --before-install ../$pkg_type/preinst \
      --after-install ../$pkg_type/postinst \
      --before-remove ../$pkg_type/prerm \

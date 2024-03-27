@@ -18,7 +18,8 @@ build-ubuntu:
 		--build-arg FPM_VERSION="${FPM_VERSION}" \
 		--build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
 		--build-arg UBUNTU_VERSION="${UBUNTU_VERSION}" \
-		--build-arg DOCKER_WORKDIR="${DOCKER_WORKDIR}"
+		--build-arg DOCKER_WORKDIR="${DOCKER_WORKDIR}" \
+		--build-arg SKIP_SYSTEMD="${SKIP_SYSTEMD}"
 
 .PHONY: build-centos
 build-centos:
@@ -28,7 +29,8 @@ build-centos:
 		--build-arg FPM_VERSION="${FPM_VERSION}" \
 		--build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
 		--build-arg CENTOS_VERSION="${CENTOS_VERSION}" \
-		--build-arg DOCKER_WORKDIR="${DOCKER_WORKDIR}"
+		--build-arg DOCKER_WORKDIR="${DOCKER_WORKDIR}" \
+		--build-arg SKIP_SYSTEMD="${SKIP_SYSTEMD}"
 
 target/deb: build-ubuntu
 	docker run \

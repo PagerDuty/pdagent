@@ -38,7 +38,12 @@ install_init () {
 }
 
 install_systemd () {
-    cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
+    if [ -d "/lib/systemd/system" ]
+    then
+        cp /var/lib/pdagent/scripts/pdagent.service /lib/systemd/system
+    else
+        cp /var/lib/pdagent/scripts/pdagent.service /etc/systemd/system
+    fi
     systemctl enable pdagent
     systemctl start pdagent
 }
@@ -64,13 +69,10 @@ else
     INSTALL_PATH="/usr/lib/python2.6/site-packages/pdagent"
 fi
 
-# ensure that our root certs are readable
-chmod -R a+r $INSTALL_PATH/root_certs
-
 # Compile module .py to .pyc
 python -m compileall -q -f "$INSTALL_PATH/"
 
-if which systemctl >/dev/null; then
+if [ <%= skip_systemd %> = false ] && which systemctl >/dev/null; then
     install_systemd
 else
     install_init

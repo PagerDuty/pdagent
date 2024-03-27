@@ -6,20 +6,24 @@ and that the project directory ends up mounted in the VM at
 
 ## One-time setup of Development GPG keys:
 
-To build Linux packages, you will need GPG v1 keys to sign the packages.  Do the following:
+To build Linux packages, you will need GPG v1 keys to sign the packages.  Do the following, replacing {pkg} with `deb` if you are building Ubuntu, and `rpm` if you are building CentOS:
 
 ```
 brew install gpg1
-mkdir build-linux/gnupg
-chmod 700 build-linux/gnupg
-gpg1 --homedir=build-linux/gnupg --gen-key
+mkdir build-linux/gpg-{pkg}
+chmod 700 build-linux/gpg-{pkg}
+gpg1 --homedir=build-linux/gpg-{pkg} --gen-key
 ```
 
 For key generation use the suggested defaults and *no passphrase*. (when
 asked to enter a passphrase, just press *Enter*)
 
-If you use a different `gpg-home`, please adjust the `gpg-home` parameter in
-the following instructions accordingly.
+If you use a different `homedir`, please adjust the `homedir` parameter in
+the following instructions accordingly. Specifically,  `make ubuntu` command assumes the value to be `gpg-deb`, and `make centos` assumes it to be `gpg-rpm`.
+
+## Docker
+
+Docker has issues with systemd and so, if you want to install and test the package, you will need to build the package with `SKIP_SYSTEMD` set to `true` in `build-linux/make_common.env`. However, for any package you publish, make sure `SKIP_SYSTEMD` is set to `false`.
 
 ## Ubuntu
 
@@ -88,3 +92,6 @@ sudo yum remove -y pdagent
 sudo service pdagent status
 which pd-send
 ```
+
+## Troubleshooting
+If you run into problems installing `pdagent` inside Docker, try rebuilding the Docker image completely, making sure that you have set `SKIP_SYSTEMD` to `true`, and that Docker has rebuilt with the flags you expect.

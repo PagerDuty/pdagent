@@ -32,7 +32,7 @@ on a Mac.
 You can run the Agent in development without any setup. Start the Agent daemon
 as follows:
 
-`bin/pdagentd.py`
+`bin/pdagentd`
 
 When run in development the daemon automatically creates a `tmp` directory
 inside the project where it stores its various work files.
@@ -57,7 +57,9 @@ You can stop the daemon as follows:
 
 #### With Docker
 
-To run the Agent in a production-like environment, use Docker. We currently have two supported operating systems: Ubuntu 16.04 and CentOS 7. With Docker installed, run `./scripts/run-console.sh <ubuntu>` or `./scripts/run-console.sh <centos>` to spin up the Docker container, run the Agent, and drop into a console. 
+To run the Agent in a production-like environment, use Docker. A known issue with Docker is that it has trouble interacting with systemd. To run the agent in Docker, update `SKIP_SYSTEMD` to `true` in `./build-linux/make_common.env`.
+
+We currently have two supported operating systems: Ubuntu 16.04 and CentOS 7. With Docker installed, run `./scripts/run-console.sh <ubuntu>` or `./scripts/run-console.sh <centos>` to spin up the Docker container, run the Agent, and drop into a console.
 
 Once in the console, you can send events via `pd-send`.
 
