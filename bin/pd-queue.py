@@ -93,7 +93,6 @@ def _status(agent_config, _, args):
     # key1                                        1         0         0
     # key2                                        1         0         1
 
-    from pdagent.thirdparty.six import iteritems
     from pdagent.thirdparty.six.moves import zip_longest
     from pdagent.pdagentutil import get_stats
 
@@ -107,9 +106,9 @@ def _status(agent_config, _, args):
         print("Nothing to report.")
     else:
         # left-aligned service key, right-aligned counts.
-        flags = ["-", "", "", "", ""]
-        widths = [35, 10, 10, 10, 10]
-        types = ["s", "s", "s", "s", "s"]
+        flags = ["-", "", "", ""]
+        widths = [35, 10, 10, 10]
+        types = ["s", "s", "s", "s"]
         column_fmts = [
             "%" + "".join(e)
             for e in zip_longest(flags, map(str, widths), types)
@@ -118,13 +117,12 @@ def _status(agent_config, _, args):
         print(fmt % ("Service Key", "Pending", "Success", "In Error"))
         print("=" * sum(widths))
         empty_dict = dict()
-        for (svc_key, state) in sorted(iteritems(snapshot)):
+        for (svc_key, state) in sorted(snapshot.items()):
             print(fmt % (
                 svc_key,
                 state.get("pending_events", empty_dict).get("count", 0),
                 state.get("succeeded_events", empty_dict).get("count", 0),
                 state.get("failed_events", empty_dict).get("count", 0)
-                (1 if state.get("throttled", False) else 0)
             ))
 
 
