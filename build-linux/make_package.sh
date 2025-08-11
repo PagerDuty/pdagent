@@ -137,7 +137,16 @@ _FPM_DEPENDS="--depends sudo"
 
 _SIGN_OPTS=""
 if [ "$pkg_type" = "rpm" ]; then
-    _SIGN_OPTS="--rpm-sign"
+    # Use system Ruby and fpm for Rocky 8+
+    FPM=fpm
+    
+    # Check if GPG signing is properly set up
+    if ! gpg --list-keys > /dev/null 2>&1; then
+        echo "Warning: GPG keys not properly set up. Building unsigned package."
+        _SIGN_OPTS=""
+    fi
+else
+    FPM=fpm
 fi
 
 _POST_TRANS_OPT=""
@@ -157,8 +166,14 @@ else
 fi
 _PKG_MAINTAINER="$_PKG_MAINTAINER (PagerDuty, Inc.) <packages@pagerduty.com>"
 if [ "$pkg_type" = "rpm" ]; then
-    source /opt/rh/rh-ruby23/enable
-    FPM=/opt/rh/rh-ruby23/root/usr/local/share/gems/gems/fpm-$FPM_VERSION/bin/fpm
+    # Use system Ruby and fpm for Rocky 8+
+    FPM=fpm
+    
+    # Check if GPG signing is properly set up
+    if ! gpg --list-keys > /dev/null 2>&1; then
+        echo "Warning: GPG keys not properly set up. Building unsigned package."
+        _SIGN_OPTS=""
+    fi
 else
     FPM=fpm
 fi

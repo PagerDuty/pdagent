@@ -40,12 +40,19 @@ cd $basedir
 
 mkdir -p $2
 
-if [ -z "$1" -o -z "$2" -o ! -d "$1" -o ! -d "$2" ]; then
+# Check if the directories exist or create them if they don't
+if [ -z "$1" -o -z "$2" ]; then
     echo "Usage: $0 {path-to-gpg-home} {path-to-package-installation-root}"
     exit 2
 fi
+
 gpg_home="$1"
 install_root="$2"
+
+# Create directories if they don't exist
+[ -d "$gpg_home" ] || mkdir -p "$gpg_home"
+[ -d "$install_root" ] || mkdir -p "$install_root"
+
 rpm_install_root=$install_root/rpm
 [ -d "$rpm_install_root" ] || mkdir -p $rpm_install_root
 

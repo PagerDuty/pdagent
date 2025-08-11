@@ -25,7 +25,7 @@ build-ubuntu:
 build-centos:
 	docker build . \
 		-t pdagent-centos \
-		-f Dockerfile-centos-7 \
+		-f Dockerfile-centos \
 		--build-arg FPM_VERSION="${FPM_VERSION}" \
 		--build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
 		--build-arg CENTOS_VERSION="${CENTOS_VERSION}" \
