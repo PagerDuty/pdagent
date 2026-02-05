@@ -115,7 +115,8 @@ def _status(agent_config, _, args):
             for e in zip_longest(flags, map(str, widths), types)
         ]
         fmt = "".join(column_fmts)
-        print(fmt % ("Service Key", "Pending", "Success", "In Error"))
+        print(fmt % ("Service Key", "Pending", "Success", "In Error",
+                     "Throttled"))
         print("=" * sum(widths))
         empty_dict = dict()
         for (svc_key, state) in sorted(iteritems(snapshot)):
@@ -123,7 +124,7 @@ def _status(agent_config, _, args):
                 svc_key,
                 state.get("pending_events", empty_dict).get("count", 0),
                 state.get("succeeded_events", empty_dict).get("count", 0),
-                state.get("failed_events", empty_dict).get("count", 0)
+                state.get("failed_events", empty_dict).get("count", 0),
                 (1 if state.get("throttled", False) else 0)
             ))
 
