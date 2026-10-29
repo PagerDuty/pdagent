@@ -35,6 +35,7 @@ import uuid
 
 from pdagent.confdirs import getconfdirs
 from pdagent.thirdparty.filelock import FileLock
+from pdagent.thirdparty.six import PY2
 from pdagent.thirdparty.six.moves import configparser
 
 
@@ -138,7 +139,12 @@ def load_agent_config():
 
     # Load config file
     try:
-        config = configparser.SafeConfigParser()
+        # SafeConfigParser was renamed ConfigParser in Python 3.2 and the
+        # old name was removed in 3.12.
+        if PY2:
+            config = configparser.SafeConfigParser()
+        else:
+            config = configparser.ConfigParser()
         config.read(conf_file)
     except configparser.Error as e:
         raise SystemExit(

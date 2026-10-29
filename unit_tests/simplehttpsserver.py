@@ -42,11 +42,20 @@ class SimpleHTTPSServer(Thread):
             self.address,
             BaseHTTPRequestHandler
             )
-        self.httpd.socket = ssl.wrap_socket(
-            self.httpd.socket,
-            certfile=self.cert_file_path,
-            server_side=True
-            )
+        if hasattr(ssl, "PROTOCOL_TLS_SERVER"):
+            # ssl.wrap_socket() was removed in Python 3.12.
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(self.cert_file_path)
+            self.httpd.socket = context.wrap_socket(
+                self.httpd.socket,
+                server_side=True
+                )
+        else:
+            self.httpd.socket = ssl.wrap_socket(
+                self.httpd.socket,
+                certfile=self.cert_file_path,
+                server_side=True
+                )
 
     def run(self):
         self.httpd.serve_forever()
